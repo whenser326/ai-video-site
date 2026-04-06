@@ -444,7 +444,6 @@ return (
 } else {
   alert('鎖定失敗，請重試');
 }
-              }
             } catch (err) {
               alert('鎖定失敗，請重試');
             }
