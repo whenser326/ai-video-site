@@ -159,11 +159,16 @@ STRIPE_PRICE_PRO=price_1TGJ2KAhme0aGntH48ertjOZ
 
 12. 待完成項目（下一步）
 
+鎖定角色按鈕下方加提示文字
+中文輸入自動翻譯成英文（或 UI 提示用英文）
+鎖定角色跨帳號問題測試確認（需兩個帳號驗證）
+Kling vs Seedance 使用情境說明加到 UI
 綠界審核通過 → 串接綠界金流（取代 Stripe）
 部署上線 Vercel
 設定 Vercel 上的 Webhook URL
 成人專區正式開放（待日後規劃）
 Seedance 2.0 串接（待官方 API 開放）
+
 
 13. 已知問題備忘
 
