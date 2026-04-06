@@ -7,13 +7,15 @@ const replicate = new Replicate({
 
 export async function POST(req: Request) {
   try {
-    const { image_url } = await req.json();
+    const { prompt, gender, style } = await req.json();
+
+    const fullPrompt = `${gender}, ${style}, ${prompt}`;
 
     const output = await replicate.run(
-      "stability-ai/stable-video-diffusion",
+      "black-forest-labs/flux-1.1-pro",
       {
         input: {
-          input_image: image_url,
+          prompt: fullPrompt,
         },
       }
     );
@@ -21,7 +23,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ output });
 
   } catch (error: any) {
-    console.error("VIDEO ERROR:", error);
     return NextResponse.json(
       { error: error.message },
       { status: 500 }
