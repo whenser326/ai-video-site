@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     }
 
     // [DNA_PATCH_START]
-    const { prompt, image, mode, userEmail, lockedCharacter, videoPrompt, aspectRatio, duration, videoModel } = await req.json();
+    const { prompt, image, mode, userEmail, videoPrompt, aspectRatio, duration, videoModel } = await req.json();
     // [DNA_PATCH_END]
 
     // 必須登入才能使用
@@ -53,7 +53,7 @@ export async function POST(req: Request) {
     // 取得用戶資料
     const { data: userProfile } = await supabase
       .from('profiles')
-      .select('credits, plan, daily_image_count, daily_image_date')
+      .select('credits, plan, daily_image_count, daily_image_date, locked_character')
       .eq('email', userEmail)
       .maybeSingle();
 
@@ -127,6 +127,7 @@ export async function POST(req: Request) {
       }
     // [DNA_PATCH_END]
     } else {
+      const lockedCharacter = userProfile.locked_character || null;
       if (lockedCharacter) {
         prediction = await replicate.predictions.create({
           model: "black-forest-labs/flux-kontext-pro",

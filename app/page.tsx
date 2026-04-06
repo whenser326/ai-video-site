@@ -170,7 +170,7 @@ if (session?.user?.email && finalUrl && genType === "image") {
     setGenType("image");
 
     try {
-      const lockedCharacter = localStorage.getItem('locked_character');
+      const lockedCharacter = session?.user?.email ? await fetch(`/api/user/credits?email=${session.user.email}`).then(r => r.json()).then(d => d.locked_character || null) : null;
       const res = await fetch("/api/character", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -510,6 +510,17 @@ return (
             </div>
           </div>
           {/* [DNA_PATCH_END] */}
+      {/* 影片動作指令 */}
+<div>
+  <p className="text-white/40 text-xs mb-2">影片動作指令（選填）</p>
+  <textarea
+    value={videoPrompt}
+    onChange={(e) => setVideoPrompt(e.target.value)}
+    placeholder="例如：在雪地打仗、在逛街、跳舞..."
+    rows={2}
+    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder-white/20 resize-none focus:outline-none focus:border-[#89f5a2]/50"
+  />
+</div>
       {/* 比例選擇 */}
       <div>
         <p className="text-white/40 text-xs mb-2">影片比例</p>

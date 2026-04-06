@@ -19,7 +19,7 @@ export async function GET(req: Request) {
     // 1. 查詢點數 (使用 maybeSingle 避免報錯)
     const { data, error } = await supabase
       .from('profiles')
-      .select('credits, plan, referral_code')
+      .select('credits, plan, referral_code, locked_character')
       .eq('email', email)
       .maybeSingle();
 
@@ -53,7 +53,7 @@ export async function GET(req: Request) {
 
     // 3. 正常回傳現有用戶的點數
     // [DNA_PATCH_START]
-return NextResponse.json({ credits: data.credits, plan: data.plan || 'free', referral_code: data.referral_code });
+return NextResponse.json({ credits: data.credits, plan: data.plan || 'free', referral_code: data.referral_code, locked_character: data.locked_character || null });
 // [DNA_PATCH_END]
 
   } catch (err: any) {
