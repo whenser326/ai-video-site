@@ -1,11 +1,12 @@
 "use client";
 
 import { signIn, signOut, useSession } from "next-auth/react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 // [DNA_PATCH_START] 防止視窗切換時自動刷新
 import { useRouter } from 'next/navigation';
 
 export default function Home() {
+  const hasLoadedFromStorage = useRef(false);
   const { data: session } = useSession();
   const [prompt, setPrompt] = useState("");
   const [selectedStyle, setSelectedStyle] = useState("");
@@ -44,8 +45,12 @@ const [copiedLink, setCopiedLink] = useState(false);
 
   // 1. 初始化與點數同步
   useEffect(() => {
-    const savedPrediction = localStorage.getItem("last_prediction");
-    if (savedPrediction && !prediction) setPrediction(JSON.parse(savedPrediction));
+    if (!hasLoadedFromStorage.current) {
+      hasLoadedFromStorage.current = true;
+      const savedPrediction = localStorage.getItem("last_prediction");
+      if (savedPrediction) setPrediction(JSON.parse(savedPrediction));
+    }
+    
     if (session?.user?.email) {
       // 抓取歷史紀錄
       fetch(`/api/history?email=${session.user.email}`)
