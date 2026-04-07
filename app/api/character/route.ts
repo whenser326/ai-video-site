@@ -2,7 +2,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from "next/server";
 import Replicate from "replicate";
-export const maxDuration = 300; // 5分鐘
+export const maxDuration = 60;
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || '',

@@ -47,8 +47,11 @@ const [copiedLink, setCopiedLink] = useState(false);
   useEffect(() => {
     if (!hasLoadedFromStorage.current) {
       hasLoadedFromStorage.current = true;
-      const savedPrediction = localStorage.getItem("last_prediction");
-      if (savedPrediction) setPrediction(JSON.parse(savedPrediction));
+      if (session?.user?.email) {
+        const savedKey = `last_prediction_${session.user.email}`;
+        const savedPrediction = localStorage.getItem(savedKey);
+        if (savedPrediction) setPrediction(JSON.parse(savedPrediction));
+      }
     }
     
     if (session?.user?.email) {
@@ -145,19 +148,20 @@ useEffect(() => {
           fetch(`/api/user/credits?email=${session.user.email}`).then(res => res.json()).then(data => setCredits(data.credits));
         }
 // [DNA_PATCH_START] 寫入歷史紀錄
-if (session?.user?.email && finalUrl && genType === "image") {
+if (session?.user?.email && finalUrl) {
   fetch("/api/history", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       user_email: session.user.email,
-      image_url: finalUrl,
-      prompt: prompt,
+      image_url: genType === "image" ? finalUrl : null,
+      video_url: genType === "video" ? finalUrl : null,
+      prompt: prompt || videoPrompt,
     }),
   });
 }
 // [DNA_PATCH_END]
-        localStorage.setItem("last_prediction", JSON.stringify(formattedData));
+        localStorage.setItem(`last_prediction_${session?.user?.email}`, JSON.stringify(formattedData));
         setLoading(false);
         setSeconds(0);
       } else if (data.status === "failed") {
