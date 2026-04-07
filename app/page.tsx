@@ -45,13 +45,11 @@ const [copiedLink, setCopiedLink] = useState(false);
 
   // 1. 初始化與點數同步
   useEffect(() => {
-    if (!hasLoadedFromStorage.current) {
+    if (!hasLoadedFromStorage.current && session?.user?.email) {
       hasLoadedFromStorage.current = true;
-      if (session?.user?.email) {
-        const savedKey = `last_prediction_${session.user.email}`;
-        const savedPrediction = localStorage.getItem(savedKey);
-        if (savedPrediction) setPrediction(JSON.parse(savedPrediction));
-      }
+      const savedKey = `last_prediction_${session.user.email}`;
+      const savedPrediction = localStorage.getItem(savedKey);
+      if (savedPrediction) setPrediction(JSON.parse(savedPrediction));
     }
     
     if (session?.user?.email) {
