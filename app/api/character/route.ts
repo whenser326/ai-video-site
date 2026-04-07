@@ -65,9 +65,10 @@ export async function POST(req: Request) {
     const userPlan = userProfile.plan || 'free';
 
     // 點數不足檢查
-    if (currentCredits <= 0) {
-      return NextResponse.json({ error: "點數不足！請前往購買點數" }, { status: 403 });
-    }
+    const requiredCredits = mode === 'video' ? 4 : 1;
+if (currentCredits < requiredCredits) {
+  return NextResponse.json({ error: mode === 'video' ? "點數不足！影片生成需要至少 4 點" : "點數不足！請前往購買點數" }, { status: 403 });
+}
 
     // 免費用戶每日圖片生成限制（每天最多2張）
     if (userPlan === 'free' && mode !== 'video') {
