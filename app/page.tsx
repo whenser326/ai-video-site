@@ -42,8 +42,11 @@ const [copiedLink, setCopiedLink] = useState(false);
 
   // 1. 初始化與點數同步
   useEffect(() => {
-    const savedPrediction = localStorage.getItem("last_prediction");
-    if (savedPrediction) setPrediction(JSON.parse(savedPrediction));
+    // 只在第一次載入且沒有 prediction 時才讀取 localStorage
+    if (!prediction) {
+      const savedPrediction = localStorage.getItem("last_prediction");
+      if (savedPrediction) setPrediction(JSON.parse(savedPrediction));
+    }
     
     if (session?.user?.email) {
       // 抓取歷史紀錄
