@@ -42,7 +42,8 @@ const [copiedLink, setCopiedLink] = useState(false);
 
   // 1. 初始化與點數同步
   useEffect(() => {
-    
+    const savedPrediction = localStorage.getItem("last_prediction");
+    if (savedPrediction && !prediction) setPrediction(JSON.parse(savedPrediction));
     if (session?.user?.email) {
       // 抓取歷史紀錄
       fetch(`/api/history?email=${session.user.email}`)
