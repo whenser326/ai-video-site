@@ -13,7 +13,7 @@ export default function Home() {
   const [history, setHistory] = useState<any[]>([]);
   const [seconds, setSeconds] = useState(0);
   const VIDEO_COUNTDOWN = 120; // 影片預估 120 秒
-const IMAGE_COUNTDOWN = 30; // 圖片預估 30 秒
+const IMAGE_COUNTDOWN = 60; // 圖片預估 60 秒
   const [genType, setGenType] = useState<"image" | "video">("image");
   const [credits, setCredits] = useState<number | null>(null); // ✨ 點數狀態
   const [plan, setPlan] = useState<string>('free');
@@ -27,6 +27,10 @@ const [videoDuration, setVideoDuration] = useState(5);
 const [showVideoModal, setShowVideoModal] = useState(false);
 // [DNA_PATCH_START]
 const [videoModel, setVideoModel] = useState<"kling" | "seedance">("kling");
+// [DNA_PATCH_START] 翻譯相關狀態
+const [translatedPrompt, setTranslatedPrompt] = useState<string | null>(null);
+const [isTranslating, setIsTranslating] = useState(false);
+const [useTranslated, setUseTranslated] = useState(false);
 // [DNA_PATCH_END]
 // [DNA_PATCH_START] 推薦賺點狀態
 const [showReferralModal, setShowReferralModal] = useState(false);
@@ -186,6 +190,29 @@ if (session?.user?.email && finalUrl && genType === "image") {
     } catch (err) { setError("連線失敗"); setLoading(false); }
   };
 
+  // [DNA_PATCH_START] 翻譯函式
+const hasChinese = (text: string) => /[\u4e00-\u9fff]/.test(text);
+
+const handleTranslate = async () => {
+  if (!prompt.trim() || !hasChinese(prompt)) return;
+  setIsTranslating(true);
+  setTranslatedPrompt(null);
+  setUseTranslated(false);
+  try {
+    const res = await fetch("/api/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: prompt }),
+    });
+    const data = await res.json();
+    if (data.translated) setTranslatedPrompt(data.translated);
+  } catch {
+    // 翻譯失敗靜默處理
+  } finally {
+    setIsTranslating(false);
+  }
+};
+// [DNA_PATCH_END]
   // 5. ✨ 接通影片生成
 // [DNA_PATCH_START]
   const handleGenerateVideo = async (imageUrl: string, prompt?: string, ratio?: string, duration?: number, model?: string) => {
@@ -294,16 +321,64 @@ return (
   </div>
 </div>
 
+{/* [DNA_PATCH_START] textarea + 翻譯按鈕 + 翻譯確認 + 提示文字 */}
 <div className="relative">
   <textarea
     value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder="描述你想生成的角色,用英文判讀會更準...&#10;例如：a fierce warrior elf girl with silver hair"
-                className="w-full p-4 rounded-2xl bg-white/8 border border-white/10 text-white placeholder-white/25 focus:outline-none focus:ring-2 focus:ring-[#89f5a2]/40 focus:border-[#89f5a2]/40 text-sm resize-none transition-all"
-                rows={4}
-              />
-              <div className="absolute bottom-3 right-3 text-white/20 text-xs">{prompt.length}/500</div>
-            </div>
+    onChange={(e) => {
+      setPrompt(e.target.value);
+      setTranslatedPrompt(null);
+      setUseTranslated(false);
+    }}
+    placeholder="描述你想生成的角色，建議英文效果更準&#10;格式：場景 + 角色關鍵字&#10;例：a fierce warrior elf girl with silver hair, standing in a forest"
+    className="w-full p-4 rounded-2xl bg-white/8 border border-white/10 text-white placeholder-white/25 focus:outline-none focus:ring-2 focus:ring-[#89f5a2]/40 focus:border-[#89f5a2]/40 text-sm resize-none transition-all"
+    rows={4}
+  />
+  <div className="absolute bottom-3 right-3 flex items-center gap-2">
+    {hasChinese(prompt) && !translatedPrompt && (
+      <button
+        type="button"
+        onClick={handleTranslate}
+        disabled={isTranslating}
+        className="px-2 py-1 bg-[#89f5a2]/20 border border-[#89f5a2]/40 text-[#89f5a2] text-xs rounded-lg font-bold hover:bg-[#89f5a2]/30 transition-all disabled:opacity-40"
+      >
+        {isTranslating ? "翻譯中..." : "🌐 翻譯成英文"}
+      </button>
+    )}
+    <span className="text-white/20 text-xs">{prompt.length}/500</span>
+  </div>
+</div>
+
+{/* 翻譯結果確認 */}
+{translatedPrompt && (
+  <div className="bg-[#89f5a2]/10 border border-[#89f5a2]/30 rounded-xl p-3 space-y-2">
+    <p className="text-white/40 text-xs font-bold tracking-wider uppercase">🌐 翻譯結果</p>
+    <p className="text-[#89f5a2] text-sm font-medium">{translatedPrompt}</p>
+    <div className="flex gap-2">
+      <button
+        type="button"
+        onClick={() => { setPrompt(translatedPrompt); setTranslatedPrompt(null); setUseTranslated(true); }}
+        className="flex-1 py-1.5 bg-[#89f5a2] text-[#0d2318] rounded-lg text-xs font-black hover:opacity-90 transition-all"
+      >
+        ✅ 採用翻譯
+      </button>
+      <button
+        type="button"
+        onClick={() => { setTranslatedPrompt(null); setUseTranslated(false); }}
+        className="px-3 py-1.5 bg-white/5 border border-white/10 text-white/40 rounded-lg text-xs font-bold hover:bg-white/10 transition-all"
+      >
+        略過
+      </button>
+    </div>
+  </div>
+)}
+
+{/* 提示文字 */}
+<div className="px-1 space-y-0.5">
+  <p className="text-white/30 text-xs">💡 格式建議：<span className="text-white/50">場景描述 + 角色關鍵字</span></p>
+  <p className="text-white/25 text-xs">偵測到中文時可點「翻譯成英文」自動轉換</p>
+</div>
+{/* [DNA_PATCH_END] */}
             <button
               type="submit"
               disabled={loading || (credits !== null && credits <= 0)}
@@ -410,16 +485,38 @@ return (
     {plan === 'free' ? (
       <>
         <button
-          onClick={() => window.location.href = '/pricing'}
-          className="w-full py-3 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 text-yellow-300 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:from-yellow-500/30 hover:to-orange-500/30 transition-all"
+          onClick={async () => {
+            try {
+              const res = await fetch("/api/upload-image", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ imageUrl: prediction.output, email: session?.user?.email }),
+              });
+              const data = await res.json();
+              if (data.url) {
+                await fetch("/api/user/save-locked-character", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ email: session?.user?.email ?? '', url: data.url }),
+                });
+                setError('');
+                alert('✅ 角色已鎖定！下次生成將保持同一角色外觀（每日限額內）');
+              } else {
+                alert('鎖定失敗，請重試');
+              }
+            } catch (err) {
+              alert('鎖定失敗，請重試');
+            }
+          }}
+          className="w-full py-3 bg-gradient-to-r from-[#89f5a2]/20 to-[#4ade80]/20 border border-[#89f5a2]/40 text-[#89f5a2] rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:from-[#89f5a2]/30 transition-all"
         >
-          🔒 角色一致性（需付費升級）
+          🎯 鎖定此角色（每日限額內可用）
         </button>
         <button
-          onClick={() => window.location.href = '/pricing'}
-          className="w-full py-3 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 text-yellow-300 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:from-yellow-500/30 hover:to-orange-500/30 transition-all"
+          onClick={() => setShowUploadModal(true)}
+          className="w-full py-3 bg-gradient-to-r from-[#89f5a2]/20 to-[#4ade80]/20 border border-[#89f5a2]/40 text-[#89f5a2] rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:from-[#89f5a2]/30 transition-all"
         >
-          🔒 上傳圖片轉影片（需付費升級）
+          📁 上傳照片轉影片（每日限額內可用）
         </button>
       </>
     ) : (
@@ -452,6 +549,22 @@ return (
         >
           🎯 鎖定此角色（一致性生成）
         </button>
+        {/* [DNA_PATCH_START] 解除鎖定按鈕 */}
+<button
+  onClick={async () => {
+    if (!confirm('確定要解除鎖定角色嗎？')) return;
+    await fetch("/api/user/clear-locked-character", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: session?.user?.email }),
+    });
+    alert('✅ 已解除鎖定，下次生成將創造新角色');
+  }}
+  className="w-full py-3 bg-white/5 border border-white/10 text-white/50 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-white/10 transition-all"
+>
+  🔓 解除角色鎖定
+</button>
+{/* [DNA_PATCH_END] */}
         
         <button
   onClick={() => setShowUploadModal(true)}
@@ -461,6 +574,14 @@ return (
         </button>
       </>
     )}
+    {/* [DNA_PATCH_START] 鎖定角色提示文字 */}
+<div className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 space-y-1">
+  <p className="text-white/50 text-xs font-bold">💡 生成提示建議</p>
+  <p className="text-white/35 text-xs">格式：<span className="text-white/55">場景描述 + 角色關鍵字</span></p>
+  <p className="text-white/25 text-xs">例：standing in a neon city, wearing red armor</p>
+  <p className="text-white/25 text-xs">建議英文輸入，或用上方翻譯按鈕轉換</p>
+</div>
+{/* [DNA_PATCH_END] */}
     <p className="text-white/70 text-xs tracking-wider text-center pt-1">✨ 想讓你的角色突破界限？</p>
 <a href="/adult" className="w-full py-3.5 bg-red-900/20 border border-red-500/20 rounded-xl text-red-300/60 text-base font-bold flex items-center justify-center gap-2 hover:bg-red-900/30 hover:text-red-300/80 transition-all">
   🔞成人專區<span className="text-red-300/30">Coming Soon</span>

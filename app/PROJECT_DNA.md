@@ -156,6 +156,13 @@ STRIPE_PRICE_PRO=price_1TGJ2KAhme0aGntH48ertjOZ
 ✅ pricing 頁面介紹碼自動讀取 URL ref 參數
 ✅ 介紹碼存入 localStorage（關頁面後仍記住，付款後自動清除）
 ✅ pricing 頁面介紹碼說明文字更新
+✅ Vercel 部署上線（網址：https://ai-video-site-psi.vercel.app）
+✅ GitHub 程式碼同步（whenser326/ai-video-site）
+✅ Google OAuth 設定 Vercel 網址授權
+✅ 鎖定角色改存 Supabase profiles.locked_character 欄位（綁定帳號，不跨帳號共用）
+✅ 影片 Modal 加入動作指令輸入框
+✅ /api/user/save-locked-character/route.ts 新增
+✅ profiles 表新增 locked_character 欄位
 
 12. 待完成項目（下一步）
 
@@ -185,3 +192,6 @@ admin_settings route.ts 需放在 app/api/admin/settings/route.ts（曾建立到
 PowerShell 不支援 rm -rf，改用 Remove-Item -Recurse -Force .next
 後台驗證用 URL email 參數（GET）和 body.adminEmail（POST），非 getServerSession
 settings-public route.ts 需放在 app/api/referral/settings-public/route.ts（與 settings 同層，曾建立到錯誤位置）
+next.config.ts 的 eslint 設定會產生警告但不影響運作
+app/character/page.tsx 原本誤放 API route 程式碼含明文 Token，已清空並由 GitHub 自動停用舊 Token
+NEXTAUTH_URL 在 Vercel 環境變數需設為 https://ai-video-site-psi.vercel.app

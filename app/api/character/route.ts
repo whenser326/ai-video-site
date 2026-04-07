@@ -76,8 +76,10 @@ export async function POST(req: Request) {
       const dailyCount = lastDate === today ? (userProfile.daily_image_count || 0) : 0;
 
       if (dailyCount >= 2) {
+        const tomorrow = new Date(new Date().toLocaleDateString('zh-TW', { timeZone: 'Asia/Taipei' }));
+        tomorrow.setDate(tomorrow.getDate() + 1);
         return NextResponse.json({ 
-          error: "免費用戶每天最多生成 2 張圖片，明天再來或升級方案！" 
+          error: `免費用戶每天最多生成 2 張圖片，明天 00:00（台灣時間）重置，或升級方案繼續使用！` 
         }, { status: 403 });
       }
 
@@ -129,10 +131,11 @@ export async function POST(req: Request) {
     } else {
       const lockedCharacter = userProfile.locked_character || null;
       if (lockedCharacter) {
+        const lockedPrompt = `${prompt || "standing naturally"}, same person from reference image`;
         prediction = await replicate.predictions.create({
           model: "black-forest-labs/flux-kontext-pro",
           input: {
-            prompt: prompt || "AI Character",
+            prompt: lockedPrompt,
             input_image: lockedCharacter,
             aspect_ratio: "1:1",
             output_format: "png",
