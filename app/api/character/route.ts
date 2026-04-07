@@ -94,11 +94,17 @@ if (currentCredits < requiredCredits) {
         .eq('email', userEmail);
     }
 
-    // 扣除點數
-    await supabase
-      .from('profiles')
-      .update({ credits: currentCredits - 1 })
-      .eq('email', userEmail);
+    // 扣除點數（影片依秒數扣點，圖片扣1點）
+const creditCost = mode === 'video' 
+  ? (videoModel === 'seedance' 
+    ? (duration === 10 ? 8 : 4)
+    : (duration === 10 ? 6 : 4))
+  : 1;
+
+await supabase
+  .from('profiles')
+  .update({ credits: currentCredits - creditCost })
+  .eq('email', userEmail);
 
     let prediction;
 
