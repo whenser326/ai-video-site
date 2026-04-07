@@ -2,6 +2,8 @@
 
 import { signIn, signOut, useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
+// [DNA_PATCH_START] 防止視窗切換時自動刷新
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
   const { data: session } = useSession();
