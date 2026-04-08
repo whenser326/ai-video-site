@@ -957,8 +957,10 @@ return (
           </div>
           <div className="flex gap-3 overflow-x-auto pb-2 px-1 scrollbar-hide">
             {history.slice(0, 5).map((item, idx) => {
-              const url = typeof item === 'string' ? item : item.image_url;
-              const isVideo = url?.includes('.mp4');
+              // [DNA_PATCH_START]
+const url = typeof item === 'string' ? item : (item.video_url || item.image_url);
+const isVideo = !!(typeof item === 'object' && item.video_url);
+// [DNA_PATCH_END]
               return (
                 <div
                   key={idx}
