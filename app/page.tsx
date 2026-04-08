@@ -152,13 +152,17 @@ if (session?.user?.email && finalUrl) {
   let permanentUrl = finalUrl;
   if (genType === "image") {
     try {
-      const uploadRes = await fetch("/api/upload-image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrl: finalUrl, email: session.user.email }),
-      });
-      const uploadData = await uploadRes.json();
-      if (uploadData.url) permanentUrl = uploadData.url;
+      // [DNA_PATCH_START]
+console.log("上傳圖片到 Storage:", { imageUrl: finalUrl, email: session.user.email });
+const uploadRes = await fetch("/api/upload-image", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ imageUrl: finalUrl, email: session.user.email }),
+});
+const uploadData = await uploadRes.json();
+console.log("上傳結果:", uploadData);
+if (uploadData.url) permanentUrl = uploadData.url;
+// [DNA_PATCH_END]
     } catch {
       // 上傳失敗用原始 URL
     }
