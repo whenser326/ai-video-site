@@ -133,6 +133,7 @@ useEffect(() => {
       const res = await fetch(`/api/character?id=${id}&email=${session?.user?.email}`);
       const data = await res.json();
       setSeconds(prev => prev + 2);
+      console.log("Polling status:", data.status, "Error:", data.error, data);
 
       if (data.status === "succeeded") {
         const finalUrl = Array.isArray(data.output) ? data.output[0] : data.output;
@@ -147,12 +148,28 @@ useEffect(() => {
         }
 // [DNA_PATCH_START] 寫入歷史紀錄
 if (session?.user?.email && finalUrl) {
+  // 圖片自動上傳到 Supabase Storage 永久保存
+  let permanentUrl = finalUrl;
+  if (genType === "image") {
+    try {
+      const uploadRes = await fetch("/api/upload-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl: finalUrl, email: session.user.email }),
+      });
+      const uploadData = await uploadRes.json();
+      if (uploadData.url) permanentUrl = uploadData.url;
+    } catch {
+      // 上傳失敗用原始 URL
+    }
+  }
+
   fetch("/api/history", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       user_email: session.user.email,
-      image_url: genType === "image" ? finalUrl : null,
+      image_url: genType === "image" ? permanentUrl : null,
       video_url: genType === "video" ? finalUrl : null,
       prompt: prompt || videoPrompt,
     }),
@@ -302,6 +319,22 @@ return (
         {/* 輸入卡片 */}
         <div className="bg-black/25 backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden">
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
+           {/* [DNA_PATCH_START] 鎖定角色狀態列 */}
+{(() => {
+  const lockedUrl = typeof window !== 'undefined'
+    ? localStorage.getItem('locked_character')
+    : null;
+  return lockedUrl ? (
+    <div className="mb-4 flex items-center gap-3 px-4 py-3 bg-[#89f5a2]/10 border border-[#89f5a2]/30 rounded-2xl">
+      <img src={lockedUrl} className="w-12 h-12 rounded-xl object-cover border border-[#89f5a2]/40 flex-shrink-0" />
+      <div className="flex-1 min-w-0">
+        <p className="text-[#89f5a2] text-xs font-black">🔒 角色鎖定中</p>
+        <p className="text-white/40 text-xs mt-0.5">生成將套用此角色（-1點）</p>
+      </div>
+    </div>
+  ) : null;
+})()}
+{/* [DNA_PATCH_END] */}
             {/* 風格選擇 */}
 <div className="mb-3">
   <p className="text-white/40 text-xs mb-2 font-bold tracking-wider uppercase">角色風格</p>
