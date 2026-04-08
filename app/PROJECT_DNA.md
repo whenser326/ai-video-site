@@ -195,6 +195,8 @@ STRIPE_PRICE_PRO=price_1TGJ2KAhme0aGntH48ertjOZ
 ✅ 鎖定按鈕點擊後顯示「🔄 鎖定中...」載入提示
 ✅ 退點 API（POST /api/character 帶 refundCredits 參數）
 ✅ 鎖定角色圖片失效時自動退點
+✅ checkStatus 加入 genType 參數（解決影片/圖片 state race condition）
+✅ 影片警告樣式加大加粗（黃色邊框+醒目字體）
 
 12. 待完成項目（下一步）
 
@@ -202,6 +204,8 @@ STRIPE_PRICE_PRO=price_1TGJ2KAhme0aGntH48ertjOZ
 ⬜ 上傳圖片轉影片提示詞加翻譯功能
 ⬜ 綠界金流串接（待審核通過）
 ⬜ 影片永久保存至 Supabase Storage（目前影片 URL 為 Replicate 臨時連結，數小時後失效）
+⬜ 測試確認：影片生成後 video_url 是否正確寫入 Supabase（明天測試）
+⬜ 影片歷史作品區 🎬 圖示顯示確認（待 video_url 寫入後驗證）
 
 13. 已知問題備忘
 
@@ -230,3 +234,4 @@ localStorage key：locked_character，存鎖定角色 Supabase Storage 永久 UR
 Flux Kontext Pro output_format 只支援 "jpg" 或 "png"，不支援 "webp"
 Flux Kontext Pro E006 錯誤為模型內部不穩定，已加 retry 機制（最多2次）
 退點邏輯：POST /api/character 帶 { refundCredits: number, userEmail: string } 即退點，不需另開 API
+checkStatus 需傳入 currentGenType 參數避免 React state race condition，handleSubmit 傳 "image"，handleGenerateVideo 傳 "video"，polling retry 傳 currentGenType
