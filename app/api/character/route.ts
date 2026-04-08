@@ -137,8 +137,19 @@ await supabase
       }
     // [DNA_PATCH_END]
     } else {
+      // [DNA_PATCH_START]
       const lockedCharacter = userProfile.locked_character || null;
       if (lockedCharacter) {
+        let imageValid = false;
+        try {
+          const checkRes = await fetch(lockedCharacter, { method: "HEAD" });
+          imageValid = checkRes.ok;
+        } catch { imageValid = false; }
+
+        if (!imageValid) {
+          return NextResponse.json({ error: "鎖定角色圖片已失效，請重新鎖定角色" }, { status: 400 });
+        }
+
         const lockedPrompt = `${prompt || "standing naturally"}, same person from reference image`;
         prediction = await replicate.predictions.create({
           model: "black-forest-labs/flux-kontext-pro",
@@ -146,10 +157,11 @@ await supabase
             prompt: lockedPrompt,
             input_image: lockedCharacter,
             aspect_ratio: "1:1",
-            output_format: "png",
+            output_format: "webp",
           }
         });
       } else {
+// [DNA_PATCH_END]
         prediction = await replicate.predictions.create({
           model: "black-forest-labs/flux-1.1-pro",
           input: { 
