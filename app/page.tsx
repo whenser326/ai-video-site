@@ -39,6 +39,8 @@ const [useTranslated, setUseTranslated] = useState(false);
 const [showReferralModal, setShowReferralModal] = useState(false);
 // [DNA_PATCH_START]
 const [lockedCharacterUrl, setLockedCharacterUrl] = useState<string | null>(null);
+const [kontextRetryCount, setKontextRetryCount] = useState(0);
+const [retryMessage, setRetryMessage] = useState("");
 // [DNA_PATCH_END]
 const [referralCode, setReferralCode] = useState<string | null>(null);
 const [referralCredits, setReferralCredits] = useState<{ starter: string; standard: string; pro: string } | null>(null);
@@ -191,9 +193,62 @@ if (uploadData.url) permanentUrl = uploadData.url;
         localStorage.setItem(`last_prediction_${session?.user?.email}`, JSON.stringify(formattedData));
         setLoading(false);
         setSeconds(0);
+      // [DNA_PATCH_START]
       } else if (data.status === "failed") {
-        setError("生成失敗，請檢查點數或重試");
-        setLoading(false);
+        const isKontext = data.model?.includes('flux-kontext-pro');
+        if (isKontext && kontextRetryCount < 2) {
+          const nextCount = kontextRetryCount + 1;
+          setKontextRetryCount(nextCount);
+          setRetryMessage(`角色一致性生成遇到問題，正在第 ${nextCount} 次重試...`);
+          // 重新呼叫生成
+          try {
+            const res = await fetch("/api/character", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                prompt: prompt,
+                userEmail: session?.user?.email,
+              }),
+            });
+            const retryData = await res.json();
+            if (retryData.id) {
+              setTimeout(() => checkStatus(retryData.id), 2000);
+            } else {
+              // retry 也啟動失敗，退點
+              await fetch("/api/character", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ refundCredits: 1, userEmail: session?.user?.email }),
+              });
+              fetch(`/api/user/credits?email=${session?.user?.email}`).then(r => r.json()).then(d => setCredits(d.credits));
+              setRetryMessage("");
+              setKontextRetryCount(0);
+              setError("角色一致性生成失敗，點數已退還");
+              setLoading(false);
+            }
+          } catch {
+            setRetryMessage("");
+            setKontextRetryCount(0);
+            setError("角色一致性生成失敗，請重試");
+            setLoading(false);
+          }
+        } else if (isKontext && kontextRetryCount >= 2) {
+          // 2次都失敗，退點
+          await fetch("/api/character", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ refundCredits: 1, userEmail: session?.user?.email }),
+          });
+          fetch(`/api/user/credits?email=${session?.user?.email}`).then(r => r.json()).then(d => setCredits(d.credits));
+          setRetryMessage("");
+          setKontextRetryCount(0);
+          setError("角色一致性生成失敗，點數已退還");
+          setLoading(false);
+        } else {
+          setError("生成失敗，請檢查點數或重試");
+          setLoading(false);
+        }
+      // [DNA_PATCH_END]
       } else {
         setTimeout(() => checkStatus(id), 2000);
       }
@@ -447,6 +502,15 @@ return (
           </form>
         </div>
 
+{/* [DNA_PATCH_START] retry 提示訊息 */}
+{retryMessage && (
+  <div className="w-full max-w-lg relative z-10">
+    <div className="px-4 py-3 bg-yellow-400/10 border border-yellow-400/30 rounded-2xl text-yellow-300 text-sm text-center font-bold">
+      ⚡ {retryMessage}
+    </div>
+  </div>
+)}
+{/* [DNA_PATCH_END] */}
         {/* 錯誤訊息 */}
         {error && (
           <div className="mt-4 p-4 bg-red-500/20 border border-red-500/30 text-red-300 rounded-2xl text-center text-sm font-bold backdrop-blur-sm">

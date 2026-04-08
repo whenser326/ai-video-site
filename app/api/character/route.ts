@@ -13,45 +13,53 @@ const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN,
 });
 
-// Rate limiting：記憶體存每個 IP 的請求時間
 const ipRequestMap = new Map<string, number[]>();
 
 function checkRateLimit(ip: string): boolean {
   const now = Date.now();
-  const windowMs = 60 * 1000; // 1分鐘視窗
-  const maxRequests = 10; // 每分鐘最多10次請求
-
+  const windowMs = 60 * 1000;
+  const maxRequests = 10;
   const requests = ipRequestMap.get(ip) || [];
   const recent = requests.filter(t => now - t < windowMs);
   recent.push(now);
   ipRequestMap.set(ip, recent);
-
   return recent.length <= maxRequests;
 }
 
-// 取得今天日期字串（台灣時區）
 function getTodayString(): string {
   return new Date().toLocaleDateString('zh-TW', { timeZone: 'Asia/Taipei' });
 }
 
 export async function POST(req: Request) {
   try {
-    // IP Rate Limiting
     const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
     if (!checkRateLimit(ip)) {
       return NextResponse.json({ error: "請求過於頻繁，請稍後再試" }, { status: 429 });
     }
 
-    // [DNA_PATCH_START]
-    const { prompt, image, mode, userEmail, videoPrompt, aspectRatio, duration, videoModel } = await req.json();
+    const { prompt, image, mode, userEmail, videoPrompt, aspectRatio, duration, videoModel, refundCredits } = await req.json();
+
+    // [DNA_PATCH_START] 退點功能
+    if (refundCredits && userEmail) {
+      const { data: userProfile } = await supabase
+        .from('profiles')
+        .select('credits')
+        .eq('email', userEmail)
+        .maybeSingle();
+      if (userProfile) {
+        await supabase
+          .from('profiles')
+          .update({ credits: (userProfile.credits ?? 0) + refundCredits })
+          .eq('email', userEmail);
+        return NextResponse.json({ success: true, refunded: refundCredits });
+      }
+    }
     // [DNA_PATCH_END]
 
-    // 必須登入才能使用
     if (!userEmail || userEmail === "null") {
       return NextResponse.json({ error: "請先登入" }, { status: 401 });
     }
 
-    // 取得用戶資料
     const { data: userProfile } = await supabase
       .from('profiles')
       .select('credits, plan, daily_image_count, daily_image_date, locked_character')
@@ -65,51 +73,37 @@ export async function POST(req: Request) {
     const currentCredits = userProfile.credits ?? 0;
     const userPlan = userProfile.plan || 'free';
 
-    // 點數不足檢查
     const requiredCredits = mode === 'video' ? 4 : 1;
-if (currentCredits < requiredCredits) {
-  return NextResponse.json({ error: mode === 'video' ? "點數不足！影片生成需要至少 4 點" : "點數不足！請前往購買點數" }, { status: 403 });
-}
+    if (currentCredits < requiredCredits) {
+      return NextResponse.json({ error: mode === 'video' ? "點數不足！影片生成需要至少 4 點" : "點數不足！請前往購買點數" }, { status: 403 });
+    }
 
-    // 免費用戶每日圖片生成限制（每天最多2張）
     if (userPlan === 'free' && mode !== 'video') {
       const today = getTodayString();
       const lastDate = userProfile.daily_image_date || '';
       const dailyCount = lastDate === today ? (userProfile.daily_image_count || 0) : 0;
-
       if (dailyCount >= 2) {
-        const tomorrow = new Date(new Date().toLocaleDateString('zh-TW', { timeZone: 'Asia/Taipei' }));
-        tomorrow.setDate(tomorrow.getDate() + 1);
         return NextResponse.json({ 
           error: `免費用戶每天最多生成 2 張圖片，明天 00:00（台灣時間）重置，或升級方案繼續使用！` 
         }, { status: 403 });
       }
-
-      // 更新每日計數
       await supabase
         .from('profiles')
-        .update({ 
-          daily_image_count: dailyCount + 1,
-          daily_image_date: today
-        })
+        .update({ daily_image_count: dailyCount + 1, daily_image_date: today })
         .eq('email', userEmail);
     }
 
-    // 扣除點數（影片依秒數扣點，圖片扣1點）
-const creditCost = mode === 'video' 
-  ? (videoModel === 'seedance' 
-    ? (duration === 10 ? 8 : 4)
-    : (duration === 10 ? 6 : 4))
-  : 1;
+    const creditCost = mode === 'video' 
+      ? (videoModel === 'seedance' ? (duration === 10 ? 8 : 4) : (duration === 10 ? 6 : 4))
+      : 1;
 
-await supabase
-  .from('profiles')
-  .update({ credits: currentCredits - creditCost })
-  .eq('email', userEmail);
+    await supabase
+      .from('profiles')
+      .update({ credits: currentCredits - creditCost })
+      .eq('email', userEmail);
 
     let prediction;
 
-    // [DNA_PATCH_START]
     if (mode === "video") {
       if (videoModel === "seedance") {
         prediction = await replicate.predictions.create({
@@ -135,9 +129,7 @@ await supabase
           }
         });
       }
-    // [DNA_PATCH_END]
     } else {
-      // [DNA_PATCH_START]
       const lockedCharacter = userProfile.locked_character || null;
       if (lockedCharacter) {
         let imageValid = false;
@@ -147,7 +139,12 @@ await supabase
         } catch { imageValid = false; }
 
         if (!imageValid) {
-          return NextResponse.json({ error: "鎖定角色圖片已失效，請重新鎖定角色" }, { status: 400 });
+          // 圖片失效退點
+          await supabase
+            .from('profiles')
+            .update({ credits: currentCredits })
+            .eq('email', userEmail);
+          return NextResponse.json({ error: "鎖定角色圖片已失效，請重新鎖定角色，點數已退還" }, { status: 400 });
         }
 
         const lockedPrompt = `${prompt || "standing naturally"}, same person from reference image`;
@@ -160,6 +157,9 @@ await supabase
             output_format: "png",
           }
         });
+        // [DNA_PATCH_START] 標記這是 kontext-pro，讓前端知道可以 retry
+        return NextResponse.json({ ...prediction, isKontextPro: true, creditCost });
+        // [DNA_PATCH_END]
       } else {
         prediction = await replicate.predictions.create({
           model: "black-forest-labs/flux-1.1-pro",
@@ -180,7 +180,6 @@ await supabase
   }
 }
 
-// [DNA_PATCH_START]
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
@@ -191,7 +190,6 @@ export async function GET(req: Request) {
 
   try {
     const prediction = await replicate.predictions.get(id);
-
     if (prediction.status === "failed") {
       console.error("❌ Prediction FAILED", {
         id: prediction.id,
@@ -200,7 +198,6 @@ export async function GET(req: Request) {
         logs: prediction.logs,
       });
     }
-
     return NextResponse.json(prediction);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
