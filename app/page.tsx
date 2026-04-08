@@ -1026,7 +1026,9 @@ return (
             {history.slice(0, 50).map((item, idx) => {
               // [DNA_PATCH_START]
 const url = typeof item === 'string' ? item : (item.video_url || item.image_url);
-const isVideo = !!(typeof item === 'object' && item.video_url);
+// [DNA_PATCH_START]
+const isVideo = !!(typeof item === 'object' && item.video_url) || (typeof url === 'string' && url.includes('.mp4'));
+// [DNA_PATCH_END]
 // [DNA_PATCH_END]
               return (
                 <div
