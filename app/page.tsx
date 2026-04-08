@@ -589,7 +589,11 @@ return (
                 </button>
                 {/* [DNA_PATCH_START] 影片不保存提示 */}
 {genType === "video" && (
-  <p className="text-white/30 text-xs text-center px-4 pt-1">⚠️ 影片不會保存至歷史紀錄，請自行下載保存</p>
+  // [DNA_PATCH_START]
+<div className="mx-4 mt-2 px-4 py-2 bg-yellow-400/15 border border-yellow-400/30 rounded-xl">
+  <p className="text-yellow-300 text-xs text-center font-bold">⚠️ 影片不會保存至歷史紀錄，請立即下載保存</p>
+</div>
+// [DNA_PATCH_END]
 )}
 {/* [DNA_PATCH_END] */}
               </div>
@@ -604,8 +608,10 @@ return (
       <>
         <button
           onClick={async () => {
-            try {
-              const res = await fetch("/api/upload-image", {
+  try {
+    const lockBtn = document.activeElement as HTMLButtonElement;
+    if (lockBtn) lockBtn.textContent = '🔄 鎖定中...';
+    const res = await fetch("/api/upload-image", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ imageUrl: prediction.output, email: session?.user?.email }),
@@ -643,8 +649,10 @@ return (
       <>
         <button
           onClick={async () => {
-            try {
-              const res = await fetch("/api/upload-image", {
+  try {
+    const lockBtn = document.activeElement as HTMLButtonElement;
+    if (lockBtn) lockBtn.textContent = '🔄 鎖定中...';
+    const res = await fetch("/api/upload-image", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ imageUrl: prediction.output, email: session?.user?.email }),
@@ -1027,8 +1035,7 @@ return (
               // [DNA_PATCH_START]
 const url = typeof item === 'string' ? item : (item.video_url || item.image_url);
 // [DNA_PATCH_START]
-const isVideo = !!(typeof item === 'object' && item.video_url) || (typeof url === 'string' && url.includes('.mp4'));
-// [DNA_PATCH_END]
+const isVideo = !!(typeof item === 'object' && (item.video_url || (typeof item.image_url === 'string' && item.image_url?.includes('.mp4'))));
 // [DNA_PATCH_END]
               return (
                 <div
