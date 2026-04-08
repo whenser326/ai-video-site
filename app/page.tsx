@@ -136,7 +136,9 @@ useEffect(() => {
   };
 
   // 3. 狀態檢查 (接通影片與圖片)
-  const checkStatus = async (id: string) => {
+  // [DNA_PATCH_START]
+const checkStatus = async (id: string, currentGenType?: string) => {
+// [DNA_PATCH_END]
     try {
       const res = await fetch(`/api/character?id=${id}&email=${session?.user?.email}`);
       const data = await res.json();
@@ -146,7 +148,8 @@ useEffect(() => {
       if (data.status === "succeeded") {
         // [DNA_PATCH_START]
 const finalUrl = Array.isArray(data.output) ? data.output[0] : data.output;
-console.log("finalUrl:", finalUrl, "genType:", genType, "output:", data.output);
+const resolvedGenType = currentGenType || genType;
+console.log("finalUrl:", finalUrl, "resolvedGenType:", resolvedGenType, "output:", data.output);
 // [DNA_PATCH_END]
         const formattedData = { ...data, output: finalUrl };
         
@@ -160,7 +163,7 @@ console.log("finalUrl:", finalUrl, "genType:", genType, "output:", data.output);
 if (session?.user?.email && finalUrl) {
   // 圖片自動上傳到 Supabase Storage 永久保存
   let permanentUrl = finalUrl;
-  if (genType === "image") {
+  if (resolvedGenType === "image") {
     try {
       // [DNA_PATCH_START]
 console.log("上傳圖片到 Storage:", { imageUrl: finalUrl, email: session.user.email });
@@ -183,8 +186,8 @@ if (uploadData.url) permanentUrl = uploadData.url;
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       user_email: session.user.email,
-      image_url: genType === "image" ? permanentUrl : null,
-      video_url: genType === "video" ? finalUrl : null,
+      image_url: resolvedGenType === "image" ? permanentUrl : null,
+video_url: resolvedGenType === "video" ? finalUrl : null,
       prompt: prompt || videoPrompt,
     }),
   });
@@ -251,7 +254,7 @@ if (session?.user?.email) fetch(`/api/history?email=${session.user.email}`).then
         }
       // [DNA_PATCH_END]
       } else {
-        setTimeout(() => checkStatus(id), 2000);
+        setTimeout(() => checkStatus(id, currentGenType), 2000);
       }
     } catch (err) { setLoading(false); }
   };
@@ -278,7 +281,7 @@ if (session?.user?.email) fetch(`/api/history?email=${session.user.email}`).then
 }),
       });
       const data = await res.json();
-      if (data.id) checkStatus(data.id);
+      if (data.id) checkStatus(data.id, "video");
       else { setError(data.error || "啟動失敗"); setLoading(false); }
     } catch (err) { setError("連線失敗"); setLoading(false); }
   };
@@ -330,7 +333,7 @@ const handleTranslate = async () => {
        }),
       });
       const data = await res.json();
-      if (data.id) checkStatus(data.id);
+      if (data.id) checkStatus(data.id, "video");
       else { setError(data.error || "影片啟動失敗"); setLoading(false); }
     } catch (err) { setError("影片連線失敗"); setLoading(false); }
   };
