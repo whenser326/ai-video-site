@@ -157,7 +157,7 @@ await supabase
             prompt: lockedPrompt,
             input_image: lockedCharacter,
             aspect_ratio: "1:1",
-            output_format: "webp",
+            output_format: "png",
           }
         });
       } else {
