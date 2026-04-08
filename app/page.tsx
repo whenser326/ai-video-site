@@ -545,6 +545,7 @@ return (
                   body: JSON.stringify({ email: session?.user?.email ?? '', url: data.url }),
                 });
                 setError('');
+                localStorage.setItem('locked_character', data.url);
                 alert('✅ 角色已鎖定！下次生成將保持同一角色外觀（每日限額內）');
               } else {
                 alert('鎖定失敗，請重試');
@@ -582,6 +583,7 @@ return (
     body: JSON.stringify({ email: session?.user?.email ?? '', url: data.url }),
   });
   setError('');
+  localStorage.setItem('locked_character', data.url);
   alert('✅ 角色已鎖定！下次生成將保持同一角色外觀');
 } else {
   alert('鎖定失敗，請重試');
