@@ -169,6 +169,7 @@ await supabase
   }
 }
 
+// [DNA_PATCH_START]
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
@@ -179,6 +180,16 @@ export async function GET(req: Request) {
 
   try {
     const prediction = await replicate.predictions.get(id);
+
+    if (prediction.status === "failed") {
+      console.error("❌ Prediction FAILED", {
+        id: prediction.id,
+        model: prediction.model,
+        error: prediction.error,
+        logs: prediction.logs,
+      });
+    }
+
     return NextResponse.json(prediction);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
