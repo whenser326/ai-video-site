@@ -151,8 +151,7 @@ useEffect(() => {
         
         // 更新點數與歷史
         if (session?.user?.email) {
-          fetch(`/api/history?email=${session.user.email}`).then(res => res.json()).then(data => setHistory(data));
-          fetch(`/api/user/credits?email=${session.user.email}`).then(res => res.json()).then(data => setCredits(data.credits));
+                    fetch(`/api/user/credits?email=${session.user.email}`).then(res => res.json()).then(data => setCredits(data.credits));
         }
 // [DNA_PATCH_START] 寫入歷史紀錄
 if (session?.user?.email && finalUrl) {
@@ -176,9 +175,7 @@ if (uploadData.url) permanentUrl = uploadData.url;
     }
   }
 
-  // [DNA_PATCH_START]
   await fetch("/api/history", {
-// [DNA_PATCH_END]
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -190,6 +187,7 @@ if (uploadData.url) permanentUrl = uploadData.url;
   });
 }
 // [DNA_PATCH_END]
+if (session?.user?.email) fetch(`/api/history?email=${session.user.email}`).then(res => res.json()).then(data => setHistory(data));
         localStorage.setItem(`last_prediction_${session?.user?.email}`, JSON.stringify(formattedData));
         setLoading(false);
         setSeconds(0);
@@ -1020,7 +1018,7 @@ return (
             <div className="flex-1 h-px bg-white/10" />
           </div>
           <div className="flex gap-3 overflow-x-auto pb-2 px-1 scrollbar-hide">
-            {history.slice(0, 5).map((item, idx) => {
+            {history.slice(0, 50).map((item, idx) => {
               // [DNA_PATCH_START]
 const url = typeof item === 'string' ? item : (item.video_url || item.image_url);
 const isVideo = !!(typeof item === 'object' && item.video_url);
