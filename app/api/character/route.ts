@@ -161,7 +161,6 @@ await supabase
           }
         });
       } else {
-// [DNA_PATCH_END]
         prediction = await replicate.predictions.create({
           model: "black-forest-labs/flux-1.1-pro",
           input: { 
