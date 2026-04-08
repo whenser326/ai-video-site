@@ -5,6 +5,7 @@
 精確執行：嚴格遵守細節。
 格式要求：所有解決方案必須以「代碼塊」呈現，支援一鍵複製。
 用白話說明每個修改，把使用者當程式白癡。
+若使用者有網站功能上的問題，須以高階顧問的腳色反問以避免思考誤區
 
 2. 代碼維護防禦機制 (Anti-Corruption Rules)
 
@@ -28,8 +29,8 @@
 
 4. 資料庫 (Supabase)
 
-表格：profiles（欄位：id, created_at, email, credits, plan, daily_image_count, daily_image_date, history_limit, referral_code, referred_by, referral_credits_earned）
-表格：user_generations（欄位：id, user_email, image_url, prompt, status, created_at）
+表格：profiles（欄位：id, created_at, email, credits, plan, daily_image_count, daily_image_date, history_limit, referral_code, referred_by, referral_credits_earned, locked_character）
+表格：user_generations（欄位：id, user_email, image_url, video_url, prompt, status, created_at）
 RLS：已停用
 plan 預設值：free
 新用戶自動建立 profiles 並給 5 點
@@ -40,9 +41,9 @@ Storage bucket：character-images（Public，已設定 allow all policy）
 5. 定價方案
 方案 | 點數 | 售價(NTD) | 圖片 | 影片 | 歷史保存
 🆓 免費 | 5點 | $0 | 1點 | ❌ | 7天/5筆
-🌱 入門包 | 30點 | NT$250 | 1點 | 6點/支 | 30天/5筆
-⭐ 標準包 | 80點 | NT$450 | 1點 | 5點/支 | 30天/10筆
-🚀 專業包 | 200點 | NT$799 | 1點 | 4點/支 | 90天/30筆
+🌱 入門包 | 30點 | NT$250 | 1點 | 6點/支 | 30天/50筆
+⭐ 標準包 | 80點 | NT$450 | 1點 | 5點/支 | 30天/50筆
+🚀 專業包 | 200點 | NT$799 | 1點 | 4點/支 | 90天/50筆
 
 6. AI 模型
 
@@ -54,18 +55,21 @@ Storage bucket：character-images（Public，已設定 allow all policy）
 
 7. UI 互動邏輯
 
-進度條：圖片 30 秒倒數，影片 120 秒倒數
+進度條：圖片 60 秒倒數，影片 120 秒倒數
 影片超過 120 秒顯示「排隊中...」提示，繼續 polling 不中斷
-Gallery 依方案等級顯示：免費/入門5筆、標準10筆、專業30筆（同時受天數限制）
-localStorage (key: last_prediction) 保持最後一次生成狀態
+Gallery 依方案等級顯示：免費5筆、付費方案50筆（同時受天數限制）
+localStorage (key: last_prediction_${userEmail}) 保持最後一次生成狀態（依帳號分開）
 localStorage (key: locked_character) 儲存鎖定角色的 Supabase 永久 URL
 角色風格選擇：動漫/寫實/油畫/遊戲/素描，點選後自動拼入 prompt
-免費用戶：每天最多生成 2 張圖片（超過顯示錯誤訊息）
-免費用戶：「角色一致性」和「上傳圖片轉影片」按鈕顯示鎖定，點擊導向 /pricing
+免費用戶：每天最多生成 2 張圖片（超過顯示錯誤訊息，明天00:00台灣時間重置）
+鎖定角色狀態列：輸入框上方顯示縮圖 + 鎖定中文字，解除鎖定後即時消失
 付費用戶：
-「🎯 鎖定此角色」→ 上傳圖片到 Supabase Storage → 儲存永久 URL
-「🎬 轉成影片」→ 彈出比例/秒數選項 Modal → 生成影片
+「🎯 鎖定此角色」→ 上傳圖片到 Supabase Storage → 儲存永久 URL → localStorage 同步
+「🎬 轉成影片」→ 彈出比例/秒數/模型選項 Modal → 生成影片
 「📁 上傳圖片轉影片」→ 法律聲明 → 上傳圖片 → 選比例/秒數 → 生成影片
+影片生成後顯示警告：「⚠️ 影片不會保存至歷史紀錄，請立即下載保存」
+鎖定按鈕點擊後顯示「🔄 鎖定中...」提示，避免用戶誤以為當機
+Flux Kontext Pro 失敗（E006）自動 retry 最多 2 次，顯示黃色提示訊息，全部失敗退還點數
 成人專區入口：顯示在鎖定角色/上傳影片按鈕下方，點擊進入 /adult
 推薦賺點橫幅：顯示在成人專區按鈕下方，點擊開啟推薦賺點 Modal
 推薦賺點 Modal：顯示專屬介紹碼、一鍵複製介紹碼/連結、三方案獎勵對照（從 admin_settings 動態抓取）
@@ -78,6 +82,7 @@ localStorage (key: locked_character) 儲存鎖定角色的 Supabase 永久 URL
 Checkout API：app/api/stripe/checkout/route.ts（待換成綠界）
 Webhook：app/api/stripe/webhook/route.ts（付款成功自動加點數+更新plan+更新history_limit）
 圖片上傳 API：app/api/upload-image/route.ts
+退點 API：POST /api/character 帶 { refundCredits, userEmail } 即退點
 Stripe Price IDs（沙盒）：
 入門包：price_1TGH0OAhme0aGntHGmDHuxR8
 標準包：price_1TGJ1KAhme0aGntHzNOHQHfF
@@ -90,6 +95,7 @@ IP Rate Limiting：每分鐘最多 10 次請求（記憶體存儲）
 必須登入才能呼叫 API（無 session 回傳 401）
 Replicate 預付點數制（用完自動停止，無超支風險）
 歷史紀錄自動清理：每次查詢歷史時自動刪除超過保存期限的紀錄
+鎖定角色圖片失效時自動退點並回傳錯誤訊息
 
 10. .env.local 必要欄位
 
@@ -151,7 +157,7 @@ STRIPE_PRICE_PRO=price_1TGJ2KAhme0aGntH48ertjOZ
 ✅ pricing 頁面價格連動後台 admin_settings（動態抓取，不再寫死）
 ✅ pricing 頁面功能描述更新（歷史紀錄天數+筆數、影片費用優惠）
 ✅ admin 後台幣別改為 NTD，Stripe 說明改為綠界
-✅ 歷史紀錄依方案天數+筆數雙重限制（免費7天/5筆、入門標準30天/5-10筆、專業90天/30筆）
+✅ 歷史紀錄依方案天數+筆數雙重限制（免費7天/5筆、付費方案50筆）
 ✅ 歷史紀錄自動清理超過期限的資料（每次查詢時觸發）
 ✅ pricing 頁面介紹碼自動讀取 URL ref 參數
 ✅ 介紹碼存入 localStorage（關頁面後仍記住，付款後自動清除）
@@ -163,19 +169,39 @@ STRIPE_PRICE_PRO=price_1TGJ2KAhme0aGntH48ertjOZ
 ✅ 影片 Modal 加入動作指令輸入框
 ✅ /api/user/save-locked-character/route.ts 新增
 ✅ profiles 表新增 locked_character 欄位
+✅ 免費用戶開放鎖定角色（每日限額內可用）
+✅ 免費用戶開放上傳照片轉影片
+✅ 解除角色鎖定按鈕
+✅ 中文自動翻譯英文（輸入框偵測中文，旁邊出現翻譯按鈕，確認後採用）
+✅ 鎖定角色提示文字（格式建議 + 英文建議）
+✅ 影片依秒數正確扣點（Kling 5秒=4點/10秒=6點，Seedance 5秒=4點/10秒=8點）
+✅ 點數不足時依生成類型顯示對應錯誤訊息（影片需至少4點）
+✅ 免費用戶每日限制提示改為「明天00:00（台灣時間）重置」
+✅ localStorage 依帳號分開存儲（key: last_prediction_${email}）
+✅ 防止切換視窗時覆蓋當前圖片（useRef hasLoadedFromStorage）
+✅ SessionProvider 加 refetchOnWindowFocus={false}
+✅ 圖片生成後自動上傳 Supabase Storage 永久保存（await 確保順序正確）
+✅ 影片 URL 寫入 user_generations.video_url 欄位
+✅ vercel.json 設定 maxDuration 60秒
+✅ Vercel Function Region 改為 Tokyo (hnd1)
+✅ /api/user/clear-locked-character/route.ts 新增
+✅ /api/translate/route.ts 新增（Google 免費翻譯 API）
+✅ 鎖定角色狀態列（輸入框上方顯示縮圖+文字，鎖定/解除即時更新不需F5）
+✅ 歷史作品區即時更新（生成完成後自動刷新，不需F5）
+✅ 歷史作品區付費方案顯示50筆
+✅ 歷史作品支援影片（🎬圖示顯示）
+✅ Flux Kontext Pro E006 失敗自動 retry 最多2次 + 全部失敗退點
+✅ 影片生成後顯示「不保存至歷史」警告（黃色醒目樣式）
+✅ 鎖定按鈕點擊後顯示「🔄 鎖定中...」載入提示
+✅ 退點 API（POST /api/character 帶 refundCredits 參數）
+✅ 鎖定角色圖片失效時自動退點
 
 12. 待完成項目（下一步）
 
-鎖定角色按鈕下方加提示文字
-中文輸入自動翻譯成英文（或 UI 提示用英文）
-鎖定角色跨帳號問題測試確認（需兩個帳號驗證）
-Kling vs Seedance 使用情境說明加到 UI
-綠界審核通過 → 串接綠界金流（取代 Stripe）
-部署上線 Vercel
-設定 Vercel 上的 Webhook URL
-成人專區正式開放（待日後規劃）
-Seedance 2.0 串接（待官方 API 開放）
-
+⬜ 影片提示詞輸入框加翻譯功能（影片 Modal 的動作指令輸入框）
+⬜ 上傳圖片轉影片提示詞加翻譯功能
+⬜ 綠界金流串接（待審核通過）
+⬜ 影片永久保存至 Supabase Storage（目前影片 URL 為 Replicate 臨時連結，數小時後失效）
 
 13. 已知問題備忘
 
@@ -185,6 +211,7 @@ history 變數在所有地方強制 Array.isArray 檢查
 Stripe Webhook 本地測試用 stripe listen --forward-to localhost:3000/api/stripe/webhook
 上線後 Webhook URL 要改成 Vercel 網址
 Replicate 圖片 URL 有效期約 24 小時，鎖定角色時已改為上傳到 Supabase Storage 永久保存
+Replicate 影片 URL 有效期約數小時，目前不永久保存影片，用戶需自行下載
 // [DNA_PATCH_START] 標記不能放在 JSX return 區塊內，否則會顯示在畫面上
 從聊天介面複製含 `<a` 標籤的程式碼時，`<a` 可能被吃掉，貼上後需手動確認
 綠界申請需商家類別選「其他」→「其他」，販售網址填 Vercel 網址
@@ -195,3 +222,11 @@ settings-public route.ts 需放在 app/api/referral/settings-public/route.ts（�
 next.config.ts 的 eslint 設定會產生警告但不影響運作
 app/character/page.tsx 原本誤放 API route 程式碼含明文 Token，已清空並由 GitHub 自動停用舊 Token
 NEXTAUTH_URL 在 Vercel 環境變數需設為 https://ai-video-site-psi.vercel.app
+鎖定角色使用 Flux Kontext Pro，Vercel Hobby 方案 timeout 限制，已設 maxDuration=60 + vercel.json
+localStorage key 格式：last_prediction_${userEmail}，依帳號分開存儲
+localStorage key：locked_character，存鎖定角色 Supabase Storage 永久 URL
+圖片生成成功後自動上傳 Supabase Storage，await 確保寫入歷史前完成上傳
+鎖定角色 prompt 前綴：${prompt}, same person from reference image
+Flux Kontext Pro output_format 只支援 "jpg" 或 "png"，不支援 "webp"
+Flux Kontext Pro E006 錯誤為模型內部不穩定，已加 retry 機制（最多2次）
+退點邏輯：POST /api/character 帶 { refundCredits: number, userEmail: string } 即退點，不需另開 API

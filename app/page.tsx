@@ -144,7 +144,10 @@ useEffect(() => {
       console.log("Polling status:", data.status, "Error:", data.error, data);
 
       if (data.status === "succeeded") {
-        const finalUrl = Array.isArray(data.output) ? data.output[0] : data.output;
+        // [DNA_PATCH_START]
+const finalUrl = Array.isArray(data.output) ? data.output[0] : data.output;
+console.log("finalUrl:", finalUrl, "genType:", genType, "output:", data.output);
+// [DNA_PATCH_END]
         const formattedData = { ...data, output: finalUrl };
         
         setPrediction(formattedData);
@@ -590,8 +593,8 @@ return (
                 {/* [DNA_PATCH_START] 影片不保存提示 */}
 {genType === "video" && (
   // [DNA_PATCH_START]
-<div className="mx-4 mt-2 px-4 py-2 bg-yellow-400/15 border border-yellow-400/30 rounded-xl">
-  <p className="text-yellow-300 text-xs text-center font-bold">⚠️ 影片不會保存至歷史紀錄，請立即下載保存</p>
+<div className="mx-2 mt-3 px-4 py-3 bg-yellow-400/20 border-2 border-yellow-400/50 rounded-2xl">
+  <p className="text-yellow-300 text-sm text-center font-black tracking-wide">⚠️ 影片不會保存至歷史紀錄，請立即下載保存</p>
 </div>
 // [DNA_PATCH_END]
 )}
