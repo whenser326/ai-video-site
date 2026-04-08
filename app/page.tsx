@@ -174,7 +174,9 @@ if (uploadData.url) permanentUrl = uploadData.url;
     }
   }
 
-  fetch("/api/history", {
+  // [DNA_PATCH_START]
+  await fetch("/api/history", {
+// [DNA_PATCH_END]
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -612,6 +614,7 @@ return (
       body: JSON.stringify({ email: session?.user?.email }),
     });
     localStorage.removeItem('locked_character');
+    setLockedCharacterUrl(null);
     alert('✅ 已解除鎖定，下次生成將創造新角色');
   }}
   className="w-full py-3 bg-white/5 border border-white/10 text-white/50 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-white/10 transition-all"
