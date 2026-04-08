@@ -37,6 +37,9 @@ const [useTranslated, setUseTranslated] = useState(false);
 // [DNA_PATCH_END]
 // [DNA_PATCH_START] 推薦賺點狀態
 const [showReferralModal, setShowReferralModal] = useState(false);
+// [DNA_PATCH_START]
+const [lockedCharacterUrl, setLockedCharacterUrl] = useState<string | null>(null);
+// [DNA_PATCH_END]
 const [referralCode, setReferralCode] = useState<string | null>(null);
 const [referralCredits, setReferralCredits] = useState<{ starter: string; standard: string; pro: string } | null>(null);
 const [copiedCode, setCopiedCode] = useState(false);
@@ -52,6 +55,9 @@ const [copiedLink, setCopiedLink] = useState(false);
       if (savedPrediction) setPrediction(JSON.parse(savedPrediction));
     }
     
+    // [DNA_PATCH_START]
+    setLockedCharacterUrl(localStorage.getItem('locked_character'));
+// [DNA_PATCH_END]
     if (session?.user?.email) {
       // 抓取歷史紀錄
       fetch(`/api/history?email=${session.user.email}`)
@@ -325,9 +331,7 @@ return (
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
            {/* [DNA_PATCH_START] 鎖定角色狀態列 */}
 {(() => {
-  const lockedUrl = typeof window !== 'undefined'
-    ? localStorage.getItem('locked_character')
-    : null;
+  const lockedUrl = lockedCharacterUrl;
   return lockedUrl ? (
     <div className="mb-4 flex items-center gap-3 px-4 py-3 bg-[#89f5a2]/10 border border-[#89f5a2]/30 rounded-2xl">
       <img src={lockedUrl} className="w-12 h-12 rounded-xl object-cover border border-[#89f5a2]/40 flex-shrink-0" />
@@ -546,6 +550,7 @@ return (
                 });
                 setError('');
                 localStorage.setItem('locked_character', data.url);
+                setLockedCharacterUrl(data.url);
                 alert('✅ 角色已鎖定！下次生成將保持同一角色外觀（每日限額內）');
               } else {
                 alert('鎖定失敗，請重試');
@@ -584,6 +589,7 @@ return (
   });
   setError('');
   localStorage.setItem('locked_character', data.url);
+  setLockedCharacterUrl(data.url);
   alert('✅ 角色已鎖定！下次生成將保持同一角色外觀');
 } else {
   alert('鎖定失敗，請重試');
