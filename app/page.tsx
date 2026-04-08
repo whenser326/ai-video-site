@@ -587,6 +587,11 @@ return (
                     <><span>🎬 轉成影片</span><span className="text-white/40 text-xs">Kling 3.0 · 4-6點</span></>
                   )}
                 </button>
+                {/* [DNA_PATCH_START] 影片不保存提示 */}
+{genType === "video" && (
+  <p className="text-white/30 text-xs text-center px-4 pt-1">⚠️ 影片不會保存至歷史紀錄，請自行下載保存</p>
+)}
+{/* [DNA_PATCH_END] */}
               </div>
             </div>
           </div>
