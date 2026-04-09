@@ -30,6 +30,10 @@ const [videoDuration, setVideoDuration] = useState(5);
 const [showVideoModal, setShowVideoModal] = useState(false);
 // [DNA_PATCH_START]
 const [videoModel, setVideoModel] = useState<"kling" | "seedance">("kling");
+// [DNA_PATCH_START] 影片提示詞翻譯狀態
+const [videoTranslatedPrompt, setVideoTranslatedPrompt] = useState<string | null>(null);
+const [isVideoTranslating, setIsVideoTranslating] = useState(false);
+// [DNA_PATCH_END]
 // [DNA_PATCH_START] 翻譯相關狀態
 const [translatedPrompt, setTranslatedPrompt] = useState<string | null>(null);
 const [isTranslating, setIsTranslating] = useState(false);
@@ -160,25 +164,19 @@ console.log("finalUrl:", finalUrl, "resolvedGenType:", resolvedGenType, "output:
                     fetch(`/api/user/credits?email=${session.user.email}`).then(res => res.json()).then(data => setCredits(data.credits));
         }
 // [DNA_PATCH_START] 寫入歷史紀錄
+// [DNA_PATCH_START] 圖片+影片永久保存至 Supabase Storage
 if (session?.user?.email && finalUrl) {
-  // 圖片自動上傳到 Supabase Storage 永久保存
   let permanentUrl = finalUrl;
-  if (resolvedGenType === "image") {
-    try {
-      // [DNA_PATCH_START]
-console.log("上傳圖片到 Storage:", { imageUrl: finalUrl, email: session.user.email });
-const uploadRes = await fetch("/api/upload-image", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ imageUrl: finalUrl, email: session.user.email }),
-});
-const uploadData = await uploadRes.json();
-console.log("上傳結果:", uploadData);
-if (uploadData.url) permanentUrl = uploadData.url;
-// [DNA_PATCH_END]
-    } catch {
-      // 上傳失敗用原始 URL
-    }
+  try {
+    const uploadRes = await fetch("/api/upload-image", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ imageUrl: finalUrl, email: session.user.email }),
+    });
+    const uploadData = await uploadRes.json();
+    if (uploadData.url) permanentUrl = uploadData.url;
+  } catch {
+    // 上傳失敗用原始 URL
   }
 
   await fetch("/api/history", {
@@ -187,7 +185,7 @@ if (uploadData.url) permanentUrl = uploadData.url;
     body: JSON.stringify({
       user_email: session.user.email,
       image_url: resolvedGenType === "image" ? permanentUrl : null,
-video_url: resolvedGenType === "video" ? finalUrl : null,
+      video_url: resolvedGenType === "video" ? permanentUrl : null,
       prompt: prompt || videoPrompt,
     }),
   });
@@ -306,6 +304,26 @@ const handleTranslate = async () => {
     // 翻譯失敗靜默處理
   } finally {
     setIsTranslating(false);
+  }
+};
+// [DNA_PATCH_END]
+// [DNA_PATCH_START] 影片提示詞翻譯函式
+const handleVideoTranslate = async () => {
+  if (!videoPrompt.trim() || !hasChinese(videoPrompt)) return;
+  setIsVideoTranslating(true);
+  setVideoTranslatedPrompt(null);
+  try {
+    const res = await fetch("/api/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: videoPrompt }),
+    });
+    const data = await res.json();
+    if (data.translated) setVideoTranslatedPrompt(data.translated);
+  } catch {
+    // 翻譯失敗靜默處理
+  } finally {
+    setIsVideoTranslating(false);
   }
 };
 // [DNA_PATCH_END]
@@ -774,16 +792,55 @@ return (
           </div>
           {/* [DNA_PATCH_END] */}
       {/* 影片動作指令 */}
+{/* 影片動作指令 */}
+{/* [DNA_PATCH_START] 影片動作指令 + 翻譯 */}
 <div>
   <p className="text-white/40 text-xs mb-2">影片動作指令（選填）</p>
-  <textarea
-    value={videoPrompt}
-    onChange={(e) => setVideoPrompt(e.target.value)}
-    placeholder="例如：在雪地打仗、在逛街、跳舞..."
-    rows={2}
-    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder-white/20 resize-none focus:outline-none focus:border-[#89f5a2]/50"
-  />
+  <div className="relative">
+    <textarea
+      value={videoPrompt}
+      onChange={(e) => { setVideoPrompt(e.target.value); setVideoTranslatedPrompt(null); }}
+      placeholder="例如：在雪地打仗、在逛街、跳舞..."
+      rows={2}
+      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder-white/20 resize-none focus:outline-none focus:border-[#89f5a2]/50"
+    />
+    <div className="absolute bottom-2 right-2">
+      {hasChinese(videoPrompt) && !videoTranslatedPrompt && (
+        <button
+          type="button"
+          onClick={handleVideoTranslate}
+          disabled={isVideoTranslating}
+          className="px-2 py-1 bg-[#89f5a2]/20 border border-[#89f5a2]/40 text-[#89f5a2] text-xs rounded-lg font-bold hover:bg-[#89f5a2]/30 transition-all disabled:opacity-40"
+        >
+          {isVideoTranslating ? "翻譯中..." : "🌐 翻譯"}
+        </button>
+      )}
+    </div>
+  </div>
+  {videoTranslatedPrompt && (
+    <div className="mt-2 bg-[#89f5a2]/10 border border-[#89f5a2]/30 rounded-xl p-3 space-y-2">
+      <p className="text-white/40 text-xs font-bold uppercase">🌐 翻譯結果</p>
+      <p className="text-[#89f5a2] text-sm">{videoTranslatedPrompt}</p>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => { setVideoPrompt(videoTranslatedPrompt); setVideoTranslatedPrompt(null); }}
+          className="flex-1 py-1.5 bg-[#89f5a2] text-[#0d2318] rounded-lg text-xs font-black hover:opacity-90 transition-all"
+        >
+          ✅ 採用
+        </button>
+        <button
+          type="button"
+          onClick={() => setVideoTranslatedPrompt(null)}
+          className="px-3 py-1.5 bg-white/5 border border-white/10 text-white/40 rounded-lg text-xs font-bold hover:bg-white/10 transition-all"
+        >
+          略過
+        </button>
+      </div>
+    </div>
+  )}
 </div>
+{/* [DNA_PATCH_END] */}
       {/* 比例選擇 */}
       <div>
         <p className="text-white/40 text-xs mb-2">影片比例</p>
@@ -922,13 +979,51 @@ return (
           </label>
 
           {/* 描述框 */}
-          <textarea
-            value={videoPrompt}
-            onChange={(e) => setVideoPrompt(e.target.value)}
-            placeholder="描述想要的動作或場景,用英文判讀會更準（選填）&#10;例如：walking in a park, waving hand, dancing"
-            className="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/25 text-xs resize-none focus:outline-none focus:ring-1 focus:ring-[#89f5a2]/40"
-            rows={3}
-          />
+          {/* [DNA_PATCH_START] 上傳圖片描述框 + 翻譯 */}
+          <div className="relative">
+            <textarea
+              value={videoPrompt}
+              onChange={(e) => { setVideoPrompt(e.target.value); setVideoTranslatedPrompt(null); }}
+              placeholder="描述想要的動作或場景,用英文判讀會更準（選填）&#10;例如：walking in a park, waving hand, dancing"
+              className="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/25 text-xs resize-none focus:outline-none focus:ring-1 focus:ring-[#89f5a2]/40"
+              rows={3}
+            />
+            <div className="absolute bottom-2 right-2">
+              {hasChinese(videoPrompt) && !videoTranslatedPrompt && (
+                <button
+                  type="button"
+                  onClick={handleVideoTranslate}
+                  disabled={isVideoTranslating}
+                  className="px-2 py-1 bg-[#89f5a2]/20 border border-[#89f5a2]/40 text-[#89f5a2] text-xs rounded-lg font-bold hover:bg-[#89f5a2]/30 transition-all disabled:opacity-40"
+                >
+                  {isVideoTranslating ? "翻譯中..." : "🌐 翻譯"}
+                </button>
+              )}
+            </div>
+          </div>
+          {videoTranslatedPrompt && (
+            <div className="mt-2 bg-[#89f5a2]/10 border border-[#89f5a2]/30 rounded-xl p-3 space-y-2">
+              <p className="text-white/40 text-xs font-bold uppercase">🌐 翻譯結果</p>
+              <p className="text-[#89f5a2] text-sm">{videoTranslatedPrompt}</p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setVideoPrompt(videoTranslatedPrompt); setVideoTranslatedPrompt(null); }}
+                  className="flex-1 py-1.5 bg-[#89f5a2] text-[#0d2318] rounded-lg text-xs font-black hover:opacity-90 transition-all"
+                >
+                  ✅ 採用
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVideoTranslatedPrompt(null)}
+                  className="px-3 py-1.5 bg-white/5 border border-white/10 text-white/40 rounded-lg text-xs font-bold hover:bg-white/10 transition-all"
+                >
+                  略過
+                </button>
+              </div>
+            </div>
+          )}
+          {/* [DNA_PATCH_END] */}
 
           {/* [DNA_PATCH_START] 模型選擇 */}
           <div>
