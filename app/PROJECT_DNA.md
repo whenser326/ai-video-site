@@ -197,15 +197,15 @@ STRIPE_PRICE_PRO=price_1TGJ2KAhme0aGntH48ertjOZ
 ✅ 鎖定角色圖片失效時自動退點
 ✅ checkStatus 加入 genType 參數（解決影片/圖片 state race condition）
 ✅ 影片警告樣式加大加粗（黃色邊框+醒目字體）
+✅ 影片 Modal 動作指令翻譯功能（偵測中文自動顯示翻譯按鈕）
+✅ 上傳圖片轉影片提示詞翻譯功能
+✅ 影片永久保存至 Supabase Storage（video_url 改為永久連結）
+✅ handleSubmit checkStatus genType 修正（圖片生成正確傳 "image"）
+✅ 影片警告訊息置中顯示修正
 
 12. 待完成項目（下一步）
 
-⬜ 影片提示詞輸入框加翻譯功能（影片 Modal 的動作指令輸入框）
-⬜ 上傳圖片轉影片提示詞加翻譯功能
-⬜ 綠界金流串接（待審核通過）
-⬜ 影片永久保存至 Supabase Storage（目前影片 URL 為 Replicate 臨時連結，數小時後失效）
-⬜ 測試確認：影片生成後 video_url 是否正確寫入 Supabase（明天測試）
-⬜ 影片歷史作品區 🎬 圖示顯示確認（待 video_url 寫入後驗證）
+⬜ 綠界金流串接（待審核通過
 
 13. 已知問題備忘
 

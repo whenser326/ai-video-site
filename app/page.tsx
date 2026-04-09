@@ -279,7 +279,7 @@ if (session?.user?.email) fetch(`/api/history?email=${session.user.email}`).then
 }),
       });
       const data = await res.json();
-      if (data.id) checkStatus(data.id, "video");
+      if (data.id) checkStatus(data.id, "image");
       else { setError(data.error || "啟動失敗"); setLoading(false); }
     } catch (err) { setError("連線失敗"); setLoading(false); }
   };
@@ -614,8 +614,8 @@ return (
                 {/* [DNA_PATCH_START] 影片不保存提示 */}
 {genType === "video" && (
   // [DNA_PATCH_START]
-<div className="mx-2 mt-3 px-4 py-3 bg-yellow-400/20 border-2 border-yellow-400/50 rounded-2xl">
-  <p className="text-yellow-300 text-sm text-center font-black tracking-wide">⚠️ 影片不會保存至歷史紀錄，請立即下載保存</p>
+<div className="col-span-2 mx-2 mt-3 px-4 py-3 bg-yellow-400/20 border-2 border-yellow-400/50 rounded-2xl text-center">
+  <p className="text-yellow-300 text-sm font-black tracking-wide">⚠️ 影片不會保存至歷史紀錄，請立即下載保存</p>
 </div>
 // [DNA_PATCH_END]
 )}
