@@ -549,7 +549,7 @@ return (
               </span>
               <span className="text-white/60 text-xs font-mono">
   {genType === "video" && seconds >= 120 
-    ? "⏳ 排隊中..." 
+    ? "🔄 影片生成中，等待時間較長，請保持頁面開啟 😊" 
     : `剩餘約 ${Math.max((genType === "video" ? 120 : 30) - seconds, 0)} 秒`}
 </span>
             </div>
