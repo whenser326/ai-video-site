@@ -51,6 +51,22 @@ const [referralCredits, setReferralCredits] = useState<{ starter: string; standa
 const [copiedCode, setCopiedCode] = useState(false);
 const [copiedLink, setCopiedLink] = useState(false);
 const [activeTab, setActiveTab] = useState<"gallery" | "history">("gallery");
+// [DNA_PATCH_START] 靈感畫廊熱門圖片狀態
+const [galleryItems, setGalleryItems] = useState<{ title: string; prompt: string; image: string }[]>([]);
+// [DNA_PATCH_END]
+// [DNA_PATCH_START] 角色收藏狀態
+const [savedCharacters, setSavedCharacters] = useState<any[]>([]);
+const [showSaveModal, setShowSaveModal] = useState(false);
+const [saveCharacterName, setSaveCharacterName] = useState("");
+const [isSaving, setIsSaving] = useState(false);
+// [DNA_PATCH_END]
+// [DNA_PATCH_START] TTS 狀態
+const [showTtsModal, setShowTtsModal] = useState(false);
+const [ttsText, setTtsText] = useState("");
+const [ttsVoice, setTtsVoice] = useState("gentle-female");
+const [ttsAudio, setTtsAudio] = useState<string | null>(null);
+const [isTtsLoading, setIsTtsLoading] = useState(false);
+const [ttsTrimmed, setTtsTrimmed] = useState(false);
 // [DNA_PATCH_END]
 
   // 1. 初始化與點數同步
@@ -69,7 +85,35 @@ const [activeTab, setActiveTab] = useState<"gallery" | "history">("gallery");
       // 抓取歷史紀錄
       fetch(`/api/history?email=${session.user.email}`)
         .then(res => res.json())
-        .then(data => setHistory(data));
+        .then(data => {
+          setHistory(data);
+          // [DNA_PATCH_START] 靈感畫廊：從歷史抓最多4張有 prompt 的圖
+          const FALLBACK_GALLERY = [
+            { title: "迷人貓咪", prompt: "Breathtakingly beautiful cat", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719479381.png" },
+            { title: "韓系男生", prompt: "A handsome Korean man looks at the camera with a smile ~ the background is a men's clothing store", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719447992.png" },
+            { title: "城市女孩", prompt: "Beautiful woman walking on city street", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719327300.png" },
+            { title: "走向鏡頭", prompt: "Slowly walk into the camera ~ getting closer and closer", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775716736592.png" },
+            { title: "貓狗好友", prompt: "Beautiful cat playing with dog", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775658563619.png" },
+            { title: "校園奔跑", prompt: "Running on campus", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775657672714.png" },
+            { title: "健壯男士", prompt: "Handsome man showing off his strong muscles and wiping sweat", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719396914.png" },
+            { title: "沙灘活力", prompt: "A fit woman playing beach volleyball on a tropical beach, action shot, dynamic movement, cinematic lighting", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719296354.png" },
+          ];
+          if (Array.isArray(data)) {
+            const fromHistory = data
+              .filter((item: any) => item.image_url && item.prompt && !item.video_url)
+              .slice(0, 4)
+              .map((item: any) => ({
+                title: "我的作品",
+                prompt: item.prompt,
+                image: item.image_url,
+              }));
+            const combined = [...fromHistory, ...FALLBACK_GALLERY].slice(0, 8);
+            setGalleryItems(combined);
+          } else {
+            setGalleryItems(FALLBACK_GALLERY);
+          }
+          // [DNA_PATCH_END]
+        });
 
       // 抓取點數 (包含新用戶免費 3 張的邏輯應在後端 profiles 表格初始值設定為 3)
       fetch(`/api/user/credits?email=${session.user.email}`)
@@ -78,6 +122,11 @@ const [activeTab, setActiveTab] = useState<"gallery" | "history">("gallery");
   setCredits(data.credits);
   setPlan(data.plan || 'free');
 });
+// [DNA_PATCH_START] 載入收藏角色
+fetch(`/api/saved-characters?email=${session.user.email}`)
+  .then(res => res.json())
+  .then(data => { if (Array.isArray(data)) setSavedCharacters(data); });
+// [DNA_PATCH_END]
     }
   }, [session]);
   // [DNA_PATCH_START] 推薦賺點事件監聽 + 資料載入
@@ -358,7 +407,7 @@ const handleVideoTranslate = async () => {
   };
 
 return (
-    <main className="flex min-h-screen flex-col items-center p-4 bg-gradient-to-br from-[#0d2318] via-[#1a3a25] to-[#2d5a3d] relative overflow-y-auto">
+    <main className="flex min-h-screen flex-col items-center px-3 sm:px-4 pt-4 pb-4 bg-gradient-to-br from-[#0d2318] via-[#1a3a25] to-[#2d5a3d] relative overflow-y-auto">
       
       {/* 背景裝飾光暈 */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
@@ -367,10 +416,11 @@ return (
       </div>
 
       {/* 登入與點數顯示區 */}
-      <div className="absolute top-5 right-5 z-50 flex flex-col items-end gap-1.5">
+      <div className="absolute top-3 right-3 sm:top-5 sm:right-5 z-50 flex flex-col items-end gap-1.5">
         {session ? (
           <>
-            <div className="flex items-center gap-2">
+            {/* 手機版：直排 / 電腦版：橫排 */}
+            <div className="flex flex-col sm:flex-row items-end sm:items-center gap-1.5 sm:gap-2">
               <div className="flex items-center gap-1.5 px-3 py-1.5 bg-black/30 backdrop-blur-md rounded-full border border-[#89f5a2]/30 text-white text-xs font-bold">
                 <span className="w-2 h-2 bg-[#89f5a2] rounded-full animate-pulse inline-block" />
                 {credits !== null ? credits : "..."} 點
@@ -387,7 +437,7 @@ return (
       </div>
 
       {/* 主卡片 */}
-      <div className="w-full max-w-lg mt-16 mb-8 relative z-10">
+      <div className="w-full max-w-lg mt-14 sm:mt-16 mb-8 relative z-10">
         
 {/* [DNA_PATCH_START] 標題區加入 LOGO */}
 <div className="text-center mb-8">
@@ -401,7 +451,7 @@ return (
   >
     <img src="/logo.png" alt="Consistent Flow" className="w-full h-full object-contain" />
   </div>
-  <h1 className="text-4xl font-black text-white tracking-tight drop-shadow-lg">AI Character Studio</h1>
+  <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight drop-shadow-lg">AI Character Studio</h1>
   <p className="text-white/40 text-sm mt-2 font-medium tracking-widest uppercase">高精度角色生成平台</p>
 </div>
 {/* [DNA_PATCH_END] */}
@@ -609,9 +659,37 @@ return (
                   {loading && genType === "video" ? (
                     <><span className="w-3 h-3 border border-white/40 border-t-white rounded-full animate-spin inline-block" /> 生成中...</>
                   ) : (
-                    <><span>🎬 轉成影片</span><span className="text-white/40 text-xs">Kling 3.0 · 4-6點</span></>
+                    <span className="flex flex-col items-center leading-tight"><span>🎬 轉成影片</span><span className="text-white/40 text-xs">Kling 3.0 · 4-6點</span></span>
                   )}
                 </button>
+                {/* [DNA_PATCH_START] 分享按鈕 */}
+                <button
+                  onClick={async () => {
+                    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                    if (isMobile && navigator.share) {
+                      // 手機：跳系統選單
+                      try {
+                        await navigator.share({
+                          title: 'AI Character Studio',
+                          text: '我用 AI Character Studio 生成了這張角色圖！來試試看 👉',
+                          url: 'https://ai-video-site-psi.vercel.app',
+                        });
+                      } catch {}
+                    } else {
+                      // 電腦：下載圖片 + 開FB
+                      await downloadFile(prediction.output);
+                      setTimeout(() => {
+                        window.open('https://www.facebook.com', '_blank');
+                        alert('圖片已下載！\n\n請到 FB 建立新貼文 → 選擇剛下載的圖片 📘');
+                      }, 1000);
+                    }
+                  }}
+                  className="col-span-2 flex items-center justify-center gap-2 py-3 bg-white/5 border border-white/15 text-white rounded-xl text-sm font-bold hover:bg-white/10 transition-colors"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                  分享作品
+                </button>
+                {/* [DNA_PATCH_END] */}
                 {/* [DNA_PATCH_START] 影片不保存提示 */}
 {genType === "video" && (
   // [DNA_PATCH_START]
@@ -704,6 +782,24 @@ return (
         >
           🎯 鎖定此角色（一致性生成）
         </button>
+        {/* [DNA_PATCH_START] 收藏此角色按鈕 */}
+        <button
+          onClick={() => { setSaveCharacterName(""); setShowSaveModal(true); }}
+          className="w-full py-3 bg-gradient-to-r from-yellow-400/20 to-yellow-300/10 border border-yellow-400/30 text-yellow-300 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:from-yellow-400/30 transition-all"
+        >
+          ⭐ 收藏此角色
+        </button>
+        {/* [DNA_PATCH_END] */}
+        {/* [DNA_PATCH_START] TTS 語音合成按鈕（付費專屬，僅影片生成後顯示） */}
+        {plan !== 'free' && (prediction?.output?.includes('.mp4') || genType === 'video') && (
+          <button
+            onClick={() => { setTtsText(""); setTtsAudio(null); setShowTtsModal(true); }}
+            className="w-full py-3 bg-gradient-to-r from-purple-500/20 to-blue-500/20 border border-purple-500/30 text-purple-300 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:from-purple-500/30 transition-all"
+          >
+            🎙️ 語音合成 <span className="text-purple-300/50 text-xs">6點/次</span>
+          </button>
+        )}
+        {/* [DNA_PATCH_END] */}
         {/* [DNA_PATCH_START] 解除鎖定按鈕 */}
 <button
   onClick={async () => {
@@ -756,6 +852,46 @@ return (
 </button>
   </div>
 )}
+{/* [DNA_PATCH_START] 收藏角色列表 */}
+{savedCharacters.length > 0 && (
+  <div className="mt-3 px-4">
+    <p className="text-white/40 text-xs font-bold tracking-wider uppercase mb-2">⭐ 收藏的角色</p>
+    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+      {savedCharacters.map((char) => (
+        <div key={char.id} className="flex-shrink-0 w-20 group relative cursor-pointer"
+          onClick={() => {
+            localStorage.setItem('locked_character', char.image_url);
+            setLockedCharacterUrl(char.image_url);
+            fetch("/api/user/save-locked-character", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email: session?.user?.email, url: char.image_url }),
+            });
+            alert(`✅ 已切換到「${char.name}」`);
+          }}
+        >
+          <div className="w-20 h-20 rounded-xl overflow-hidden border border-white/10 group-hover:border-yellow-400/50 transition-all">
+            <img src={char.image_url} className="w-full h-full object-cover" />
+          </div>
+          <p className="text-white/50 text-[9px] text-center mt-1 truncate font-bold">{char.name}</p>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!confirm(`確定刪除「${char.name}」？`)) return;
+              fetch("/api/saved-characters", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id: char.id, email: session?.user?.email }),
+              }).then(() => setSavedCharacters(prev => prev.filter(c => c.id !== char.id)));
+            }}
+            className="absolute top-0 right-0 w-5 h-5 bg-red-500/80 rounded-full text-white text-[10px] font-black flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+          >×</button>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+{/* [DNA_PATCH_END] */}
 {/* [DNA_PATCH_START] 影片設定 Modal */}
 {showVideoModal && (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
@@ -1149,16 +1285,7 @@ return (
         {/* 靈感畫廊 */}
         {activeTab === "gallery" && (
           <div className="flex gap-3 overflow-x-auto pb-2 px-1 scrollbar-hide">
-            {[
-              { title: "迷人貓咪", prompt: "Breathtakingly beautiful cat", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719479381.png" },
-              { title: "韓系男生", prompt: "A handsome Korean man looks at the camera with a smile ~ the background is a men's clothing store", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719447992.png" },
-              { title: "城市女孩", prompt: "Beautiful woman walking on city street", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719327300.png" },
-              { title: "走向鏡頭", prompt: "Slowly walk into the camera ~ getting closer and closer", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775716736592.png" },
-              { title: "貓狗好友", prompt: "Beautiful cat playing with dog", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775658563619.png" },
-              { title: "校園奔跑", prompt: "Running on campus", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775657672714.png" },
-              { title: "健壯男士", prompt: "Handsome man showing off his strong muscles and wiping sweat", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719396914.png" },
-              { title: "沙灘活力", prompt: "A fit woman playing beach volleyball on a tropical beach, action shot, dynamic movement, cinematic lighting", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719296354.png" },
-            ].map((item, idx) => (
+            {galleryItems.map((item, idx) => (
               <div
                 key={idx}
                 className="group flex-shrink-0 w-32 cursor-pointer"
@@ -1218,6 +1345,183 @@ return (
         )}
       </div>
       {/* [DNA_PATCH_END] */}
+        {/* [DNA_PATCH_START] TTS Modal */}
+{showTtsModal && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+    <div className="w-full max-w-sm bg-[#0d2318] border border-purple-500/20 rounded-3xl p-6 space-y-4 shadow-2xl">
+      <div className="text-center">
+        <p className="text-3xl mb-1">🎙️</p>
+        <h2 className="text-white font-black text-lg">語音合成</h2>
+        <p className="text-white/40 text-xs mt-1">輸入台詞，讓角色開口說話</p>
+      </div>
+
+      {/* 聲音選擇 */}
+      <div>
+        <p className="text-white/40 text-xs font-bold mb-2">選擇聲音</p>
+        <div className="grid grid-cols-5 gap-2">
+          {[
+            { id: "female-1", label: "👩 低沉女聲" },
+            { id: "female-2", label: "👩 甜美女聲" },
+            { id: "female-3", label: "👩 清晰女聲" },
+            { id: "female-4", label: "👩 活潑女聲" },
+            { id: "female-5", label: "👩 溫柔女聲" },
+            { id: "male-1", label: "👨 專業男聲" },
+            { id: "male-2", label: "👨 溫暖男聲" },
+            { id: "male-3", label: "👨 成熟男聲" },
+            { id: "male-4", label: "👨 旁白男聲" },
+            { id: "male-5", label: "👨 深沉男聲" },
+          ].map((v) => (
+            <button
+              key={v.id}
+              onClick={() => { setTtsVoice(v.id); setTtsAudio(null); setTtsTrimmed(false); }}
+              className={`py-2 rounded-lg text-xs font-bold border transition-all ${
+                ttsVoice === v.id
+                  ? "bg-purple-500/30 text-purple-200 border-purple-500"
+                  : "bg-white/5 text-white/50 border-white/10 hover:border-white/30"
+              }`}
+            >
+              {v.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 台詞輸入 */}
+      <div>
+        <div className="flex justify-between items-center mb-2">
+          <p className="text-white/40 text-xs font-bold">輸入台詞</p>
+          <p className="text-white/30 text-xs">{ttsText.length}/150字</p>
+        </div>
+        <textarea
+          value={ttsText}
+          onChange={(e) => { setTtsText(e.target.value); setTtsAudio(null); }}
+          placeholder="中英文皆可，例如：大家好，我是AI生成的角色！"
+          rows={3}
+          maxLength={300}
+          className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 text-sm resize-none focus:outline-none focus:border-purple-500/50"
+        />
+        {ttsTrimmed && (
+          <p className="text-yellow-300 text-xs mt-1">⚠️ 文字已超過上限，自動截斷</p>
+        )}
+      </div>
+
+      {/* 試聽區 */}
+      {ttsAudio && (
+          <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-3 space-y-3">
+            <p className="text-purple-300 text-xs font-bold">🎵 試聽結果</p>
+            <audio controls className="w-full" src={`data:audio/mp3;base64,${ttsAudio}`} />
+            <button
+              onClick={async () => {
+                // 下載音訊
+                const link = document.createElement("a");
+                link.href = `data:audio/mp3;base64,${ttsAudio}`;
+                link.download = `ai-voice-${Date.now()}.mp3`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                // 扣點
+                const planCredits = plan === 'starter' ? 8 : plan === 'standard' ? 7 : 6;
+                await fetch("/api/character", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ refundCredits: -planCredits, userEmail: session?.user?.email }),
+                });
+                fetch(`/api/user/credits?email=${session?.user?.email}`).then(r => r.json()).then(d => setCredits(d.credits));
+                alert("✅ 語音已下載，點數已扣除！");
+              }}
+              className="w-full py-2 rounded-xl bg-gradient-to-r from-purple-500 to-blue-500 text-white text-sm font-black hover:opacity-90 transition-all"
+            >
+              ⬇️ 下載語音（扣 {plan === 'starter' ? 8 : plan === 'standard' ? 7 : 6} 點）
+            </button>
+          </div>
+        )}
+
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          onClick={() => { setShowTtsModal(false); setTtsAudio(null); }}
+          className="py-3 rounded-xl border border-white/10 text-white/50 text-sm font-bold hover:bg-white/5 transition-all"
+        >取消</button>
+        <button
+          disabled={isTtsLoading || !ttsText.trim()}
+          onClick={async () => {
+            setIsTtsLoading(true);
+            setTtsAudio(null);
+            setTtsTrimmed(false);
+            const res = await fetch("/api/tts", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ text: ttsText, voiceId: ttsVoice }),
+            });
+            const data = await res.json();
+            if (data.audio) {
+              setTtsAudio(data.audio);
+              setTtsTrimmed(data.trimmed);
+            } else {
+              alert(data.error || "語音生成失敗");
+            }
+            setIsTtsLoading(false);
+          }}
+          className="py-3 rounded-xl bg-gradient-to-r from-purple-500 to-blue-500 text-white text-sm font-black disabled:opacity-40 hover:opacity-90 transition-all"
+        >{isTtsLoading ? "生成中..." : "🎙️ 免費試聽"}</button>
+      </div>
+    </div>
+  </div>
+)}
+{/* [DNA_PATCH_END] */}
+{/* [DNA_PATCH_START] 收藏命名 Modal */}
+{showSaveModal && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+    <div className="w-full max-w-sm bg-[#0d2318] border border-yellow-400/20 rounded-3xl p-6 space-y-4 shadow-2xl">
+      <div className="text-center">
+        <p className="text-3xl mb-1">⭐</p>
+        <h2 className="text-white font-black text-lg">收藏此角色</h2>
+        <p className="text-white/40 text-xs mt-1">幫這個角色取個名字吧！</p>
+      </div>
+      <input
+        type="text"
+        value={saveCharacterName}
+        onChange={(e) => setSaveCharacterName(e.target.value)}
+        placeholder="例如：我的主角、帥氣男生..."
+        maxLength={20}
+        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/25 text-sm focus:outline-none focus:border-yellow-400/50"
+      />
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          onClick={() => setShowSaveModal(false)}
+          className="py-3 rounded-xl border border-white/10 text-white/50 text-sm font-bold hover:bg-white/5 transition-all"
+        >取消</button>
+        <button
+          disabled={isSaving}
+          onClick={async () => {
+            if (!prediction?.output) return;
+            setIsSaving(true);
+            const res = await fetch("/api/saved-characters", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                email: session?.user?.email,
+                name: saveCharacterName || "未命名角色",
+                image_url: prediction.output,
+                plan,
+              }),
+            });
+            const data = await res.json();
+            if (data.error) {
+              alert(data.error);
+            } else {
+              setSavedCharacters(prev => [data.data, ...prev]);
+              setShowSaveModal(false);
+              alert("✅ 角色已收藏！");
+            }
+            setIsSaving(false);
+          }}
+          className="py-3 rounded-xl bg-gradient-to-r from-yellow-400 to-yellow-300 text-[#0d2318] text-sm font-black disabled:opacity-40 hover:opacity-90 transition-all"
+        >{isSaving ? "收藏中..." : "⭐ 確認收藏"}</button>
+      </div>
+    </div>
+  </div>
+)}
+{/* [DNA_PATCH_END] */}
         {/* [DNA_PATCH_START] 推薦賺點 Modal */}
 {showReferralModal && (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
