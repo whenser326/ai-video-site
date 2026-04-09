@@ -25,6 +25,19 @@ export async function GET(req: Request) {
     const retentionDays = plan === 'pro' ? 90 : plan === 'standard' || plan === 'starter' ? 30 : 7;
     const retentionLimit = plan === 'pro' ? 50 : plan === 'standard' ? 50 : plan === 'starter' ? 50 : 5;
 
+    // [DNA_PATCH_START] 影片獨立清理天數：免費3天，付費7天
+    const videoRetentionDays = plan === 'free' ? 3 : 7;
+    const videoCutoffDate = new Date();
+    videoCutoffDate.setDate(videoCutoffDate.getDate() - videoRetentionDays);
+
+    await supabase
+      .from('user_generations')
+      .delete()
+      .eq('user_email', email)
+      .not('video_url', 'is', null)
+      .lt('created_at', videoCutoffDate.toISOString());
+    // [DNA_PATCH_END]
+
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
 
@@ -32,6 +45,7 @@ export async function GET(req: Request) {
       .from('user_generations')
       .delete()
       .eq('user_email', email)
+      .is('video_url', null)
       .lt('created_at', cutoffDate.toISOString());
 
     const { data, error } = await supabase
