@@ -202,10 +202,17 @@ STRIPE_PRICE_PRO=price_1TGJ2KAhme0aGntH48ertjOZ
 ✅ 影片永久保存至 Supabase Storage（video_url 改為永久連結）
 ✅ handleSubmit checkStatus genType 修正（圖片生成正確傳 "image"）
 ✅ 影片警告訊息置中顯示修正
+✅ 靈感畫廊 Tab 切換（靈感畫廊/我的歷史，預設顯示靈感畫廊）
+✅ 靈感畫廊8張固定圖片+一鍵套用Prompt
+✅ 影片生成超時提示文字優化（🔄 影片生成中，等待時間較長，請保持頁面開啟 😊）
+✅ 輸入框提示文字更新（說明支援中文+翻譯按鈕引導）
 
 12. 待完成項目（下一步）
 
 ⬜ 綠界金流串接（待審核通過
+⬜ 綠界金流串接（待審核通過）
+⬜ 手機版 RWD 優化測試
+⬜ 靈感畫廊動態內容（從歷史紀錄自動抓取熱門）
 
 13. 已知問題備忘
 
@@ -235,3 +242,19 @@ Flux Kontext Pro output_format 只支援 "jpg" 或 "png"，不支援 "webp"
 Flux Kontext Pro E006 錯誤為模型內部不穩定，已加 retry 機制（最多2次）
 退點邏輯：POST /api/character 帶 { refundCredits: number, userEmail: string } 即退點，不需另開 API
 checkStatus 需傳入 currentGenType 參數避免 React state race condition，handleSubmit 傳 "image"，handleGenerateVideo 傳 "video"，polling retry 傳 currentGenType
+
+14. 未來功能規劃（優先順序）
+
+短期：
+⬜ 角色命名與收藏（儲存多個鎖定角色）
+⬜ 一鍵分享生成結果至 IG/FB
+⬜ TTS 語音功能（讓角色說話，對標 VisionStory/HeyGen）
+
+中期：
+⬜ 批次生成（付費用戶一次生成多張不同 pose）
+⬜ 自訓角色模型（用戶上傳10-20張圖訓練專屬模型）
+
+長期：
+⬜ Live Portrait 動態呼吸效果（串接 LivePortrait API）
+⬜ API 開放（讓第三方開發者串接）
+⬜ 成人專區正式上線
