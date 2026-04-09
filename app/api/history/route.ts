@@ -45,6 +45,7 @@ export async function GET(req: Request) {
       .from('user_generations')
       .delete()
       .eq('user_email', email)
+      .not('image_url', 'is', null)
       .is('video_url', null)
       .lt('created_at', cutoffDate.toISOString());
 

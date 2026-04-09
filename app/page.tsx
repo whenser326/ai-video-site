@@ -614,8 +614,8 @@ return (
                 {/* [DNA_PATCH_START] 影片不保存提示 */}
 {genType === "video" && (
   // [DNA_PATCH_START]
-<div className="col-span-2 w-full mt-3 px-4 py-3 bg-yellow-400/20 border-2 border-yellow-400/50 rounded-2xl flex items-center justify-center">
-  <p className="text-yellow-300 text-sm font-black tracking-wide text-center">⚠️ 影片不會保存至歷史紀錄，請立即下載保存</p>
+<div className="col-span-2 w-full mt-1 px-4 py-3 bg-yellow-400/20 border-2 border-yellow-400/50 rounded-2xl text-center">
+  <p className="text-yellow-300 text-sm font-black tracking-wide">⚠️ 影片保存僅3天(付費7天)，請立即下載保存</p>
 </div>
 // [DNA_PATCH_END]
 )}
