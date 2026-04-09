@@ -50,6 +50,7 @@ const [referralCode, setReferralCode] = useState<string | null>(null);
 const [referralCredits, setReferralCredits] = useState<{ starter: string; standard: string; pro: string } | null>(null);
 const [copiedCode, setCopiedCode] = useState(false);
 const [copiedLink, setCopiedLink] = useState(false);
+const [activeTab, setActiveTab] = useState<"gallery" | "history">("gallery");
 // [DNA_PATCH_END]
 
   // 1. 初始化與點數同步
@@ -458,7 +459,7 @@ return (
       setTranslatedPrompt(null);
       setUseTranslated(false);
     }}
-    placeholder="描述你想生成的角色，建議英文效果更準&#10;格式：場景 + 角色關鍵字&#10;例：a fierce warrior elf girl with silver hair, standing in a forest"
+    placeholder="描述你想生成的角色（中文也可以！輸入後點「翻譯成英文」按鈕，我們幫你自動翻譯 🌐）&#10;格式：場景 + 角色關鍵字&#10;例：a fierce warrior elf girl with silver hair, standing in a forest"
     className="w-full p-4 rounded-2xl bg-white/8 border border-white/10 text-white placeholder-white/25 focus:outline-none focus:ring-2 focus:ring-[#89f5a2]/40 focus:border-[#89f5a2]/40 text-sm resize-none transition-all"
     rows={4}
   />
@@ -1123,48 +1124,100 @@ return (
 )}
 {/* [DNA_PATCH_END] */}
 
-      {/* 歷史作品區 */}
-      {Array.isArray(history) && history.length > 0 && (
-        <div className="w-full max-w-lg mb-24 relative z-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
-          <div className="flex items-center gap-3 mb-4 px-1">
-            <div className="flex-1 h-px bg-white/10" />
-            <span className="text-white/30 text-xs font-bold uppercase tracking-[0.3em]">歷史作品</span>
-            <div className="flex-1 h-px bg-white/10" />
+{/* [DNA_PATCH_START] 歷史+靈感 Tab 區 */}
+      <div className="w-full max-w-lg mb-24 relative z-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
+        {/* Tab 切換 */}
+        <div className="flex items-center gap-3 mb-4 px-1">
+          <div className="flex-1 h-px bg-white/10" />
+          <div className="flex bg-white/5 rounded-xl p-1 border border-white/10">
+            <button
+              onClick={() => setActiveTab("gallery")}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === "gallery" ? "bg-[#89f5a2] text-[#0d2318]" : "text-white/40 hover:text-white/70"}`}
+            >
+              ✨ 靈感畫廊
+            </button>
+            <button
+              onClick={() => setActiveTab("history")}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === "history" ? "bg-[#89f5a2] text-[#0d2318]" : "text-white/40 hover:text-white/70"}`}
+            >
+              🕘 我的歷史
+            </button>
           </div>
+          <div className="flex-1 h-px bg-white/10" />
+        </div>
+
+        {/* 靈感畫廊 */}
+        {activeTab === "gallery" && (
           <div className="flex gap-3 overflow-x-auto pb-2 px-1 scrollbar-hide">
-            {history.slice(0, 50).map((item, idx) => {
-              // [DNA_PATCH_START]
-const url = typeof item === 'string' ? item : (item.video_url || item.image_url);
-// [DNA_PATCH_START]
-const isVideo = !!(typeof item === 'object' && (item.video_url || (typeof item.image_url === 'string' && item.image_url?.includes('.mp4'))));
-// [DNA_PATCH_END]
-              return (
-                <div
-                  key={idx}
-                  className="group flex-shrink-0 w-32 h-32 rounded-2xl border border-white/10 overflow-hidden shadow-lg cursor-pointer relative transition-all duration-200 hover:scale-105 hover:border-[#89f5a2]/50 hover:shadow-[0_0_20px_rgba(137,245,162,0.15)]"
-                  onClick={() => {
-                    setPrediction({ output: url, status: 'succeeded' });
-                    setGenType(isVideo ? "video" : "image");
-                  }}
-                >
-                  {isVideo ? (
-                    <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-900 flex flex-col items-center justify-center gap-1">
-                      <span className="text-2xl">🎬</span>
-                      <span className="text-[9px] text-[#89f5a2] font-black tracking-wider">VIDEO</span>
-                    </div>
-                  ) : (
-                    <img src={url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
-                  )}
-                  {/* 懸停遮罩 */}
-                  <div className="absolute inset-0 bg-[#89f5a2]/0 group-hover:bg-[#89f5a2]/10 transition-colors duration-200 flex items-center justify-center">
-                    <span className="text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 drop-shadow-lg">點擊查看</span>
+            {[
+              { title: "迷人貓咪", prompt: "Breathtakingly beautiful cat", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719479381.png" },
+              { title: "韓系男生", prompt: "A handsome Korean man looks at the camera with a smile ~ the background is a men's clothing store", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719447992.png" },
+              { title: "城市女孩", prompt: "Beautiful woman walking on city street", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719327300.png" },
+              { title: "走向鏡頭", prompt: "Slowly walk into the camera ~ getting closer and closer", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775716736592.png" },
+              { title: "貓狗好友", prompt: "Beautiful cat playing with dog", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775658563619.png" },
+              { title: "校園奔跑", prompt: "Running on campus", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775657672714.png" },
+              { title: "健壯男士", prompt: "Handsome man showing off his strong muscles and wiping sweat", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719396914.png" },
+              { title: "沙灘活力", prompt: "A fit woman playing beach volleyball on a tropical beach, action shot, dynamic movement, cinematic lighting", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719296354.png" },
+            ].map((item, idx) => (
+              <div
+                key={idx}
+                className="group flex-shrink-0 w-32 cursor-pointer"
+                onClick={() => { setPrompt(item.prompt); setTranslatedPrompt(null); setUseTranslated(false); }}
+              >
+                <div className="w-32 h-32 rounded-2xl border border-white/10 overflow-hidden shadow-lg transition-all duration-200 hover:scale-105 hover:border-[#89f5a2]/50 hover:shadow-[0_0_20px_rgba(137,245,162,0.15)] relative">
+                  <img src={item.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-200 flex items-end justify-center pb-2">
+                    <span className="text-white text-[10px] font-black opacity-0 group-hover:opacity-100 transition-opacity duration-200 drop-shadow-lg bg-black/50 px-2 py-0.5 rounded-full">套用靈感</span>
                   </div>
                 </div>
-              );
-            })}
+                <p className="text-white/40 text-[10px] text-center mt-1.5 font-bold">{item.title}</p>
+              </div>
+            ))}
           </div>
-        </div>
-      )}
+        )}
+
+        {/* 我的歷史 */}
+        {activeTab === "history" && (
+          <>
+            {Array.isArray(history) && history.length > 0 ? (
+              <div className="flex gap-3 overflow-x-auto pb-2 px-1 scrollbar-hide">
+                {history.slice(0, 50).map((item, idx) => {
+                  const url = typeof item === 'string' ? item : (item.video_url || item.image_url);
+                  const isVideo = !!(typeof item === 'object' && (item.video_url || (typeof item.image_url === 'string' && item.image_url?.includes('.mp4'))));
+                  return (
+                    <div
+                      key={idx}
+                      className="group flex-shrink-0 w-32 h-32 rounded-2xl border border-white/10 overflow-hidden shadow-lg cursor-pointer relative transition-all duration-200 hover:scale-105 hover:border-[#89f5a2]/50 hover:shadow-[0_0_20px_rgba(137,245,162,0.15)]"
+                      onClick={() => { setPrediction({ output: url, status: 'succeeded' }); setGenType(isVideo ? "video" : "image"); }}
+                    >
+                      {isVideo ? (
+                        <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-900 flex flex-col items-center justify-center gap-1">
+                          <span className="text-2xl">🎬</span>
+                          <span className="text-[9px] text-[#89f5a2] font-black tracking-wider">VIDEO</span>
+                        </div>
+                      ) : (
+                        <img src={url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
+                      )}
+                      <div className="absolute inset-0 bg-[#89f5a2]/0 group-hover:bg-[#89f5a2]/10 transition-colors duration-200 flex items-center justify-center">
+                        <span className="text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 drop-shadow-lg">點擊查看</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                {session ? (
+                  <p className="text-white/30 text-sm">還沒有歷史紀錄，快去生成第一張吧！</p>
+                ) : (
+                  <p className="text-white/30 text-sm">登入後可查看歷史紀錄</p>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+      {/* [DNA_PATCH_END] */}
         {/* [DNA_PATCH_START] 推薦賺點 Modal */}
 {showReferralModal && (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
