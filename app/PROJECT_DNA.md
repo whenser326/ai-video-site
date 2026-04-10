@@ -38,6 +38,7 @@ plan 預設值：free
 Storage bucket：character-images（Public，已設定 allow all policy）
 表格：admin_settings（欄位：key, value, updated_at）
 表格：referral_logs（欄位：id, referrer_email, referred_email, plan, credits_awarded, created_at）
+表格：model_tracker（欄位：id, model_id, model_name, status, note, created_at, updated_at）
 
 5. 定價方案
 方案 | 點數 | 售價(NTD) | 圖片 | 影片 | 語音合成 | 角色收藏 | 歷史保存
@@ -240,10 +241,30 @@ ELEVENLABS_API_KEY=
 ✅ GlobalHeader 新增「我的角色」按鈕
 ✅ saved_characters 新增 description 欄位
 ✅ user_generations 新增 character_id 欄位
+✅ 我的角色列表頁（/characters）
+✅ 角色詳情頁（/characters/[id]，身份卡+作品相簿+快速操作）
+✅ 作品相簿（圖片/影片點擊大圖預覽）
+✅ 生成時自動歸檔到鎖定角色（character_id 欄位）
+✅ GlobalHeader 新增「我的角色」按鈕（電腦橫排/手機直排）
+✅ saved_characters 新增 description 欄位
+✅ user_generations 新增 character_id 欄位
+✅ 後台 session 驗證加強（改用 getServerSession，不再用 URL email 參數）
+✅ authOptions 從 next-auth route 正確 export
+✅ 後台模型追蹤頁面（/admin/models）
+✅ Replicate 模型搜尋 API（/api/admin/models/search）
+✅ 模型標記功能（觀察中/待測試/已採用/不適用）+ Supabase 儲存
+✅ 模型熱度指標（超熱門/熱門/上升中/新模型）
+✅ 模型名稱可點擊跳 Replicate 頁面
+✅ 同類現用模型對比標示
+✅ model_tracker 資料表新增
 
 12. 待完成項目（下一步）
 
 ⬜ 綠界金流串接（待審核通過）
+⬜ 角色個性描述前端介面（description 欄位已建好）
+⬜ 描述自動帶入 prompt
+⬜ 角色預設風格設定
+⬜ AI 對話功能（讓用戶跟角色對話）
 
 13. 已知問題備忘
 
@@ -281,6 +302,10 @@ Wav2Lip 使用 kwaivgi/kling-lip-sync，需要影片包含清晰正面人臉，�
 ttsSeconds / wav2lipSeconds 各自獨立計時，useEffect 監聽對應 loading state
 角色詳情頁手機版頂部 padding 需 pt-24，電腦版 pt-16
 character_id 歸檔依賴 lockedCharacterId state，需在收藏角色列表載入後才能正確對應
+角色詳情頁手機版頂部需 pt-24，電腦版 pt-16
+character_id 歸檔依賴 lockedCharacterId state，載入收藏角色後才能正確對應
+模型追蹤 route.ts 必須放在 app/api/admin/models/，不能放在 app/admin/models/
+authOptions 必須從 app/api/auth/[...nextauth]/route.ts export 才能給其他 API 使用
 
 14. 未來功能規劃（優先順序）
 
