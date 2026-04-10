@@ -21,7 +21,13 @@ export default function GlobalHeader() {
   // [DNA_PATCH_END]
 
   return (
-    <div className="fixed top-4 left-4 z-50 flex gap-2">
+    <div className="fixed top-3 left-3 sm:top-4 sm:left-4 z-50 flex flex-col sm:flex-row gap-1.5 sm:gap-2">
+      <button
+        onClick={() => router.push('/characters')}
+        className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-400/15 backdrop-blur-md border border-purple-400/40 rounded-full text-purple-300 text-xs font-bold hover:bg-purple-400/25 transition-all hover:scale-105 active:scale-95"
+      >
+        🎭 我的角色
+      </button>
       <button
         onClick={handleTopUp}
         className="flex items-center gap-1.5 px-3 py-1.5 bg-[#89f5a2]/15 backdrop-blur-md border border-[#89f5a2]/40 rounded-full text-[#89f5a2] text-xs font-bold hover:bg-[#89f5a2]/25 transition-all hover:scale-105 active:scale-95"

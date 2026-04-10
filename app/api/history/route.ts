@@ -49,13 +49,23 @@ export async function GET(req: Request) {
       .is('video_url', null)
       .lt('created_at', cutoffDate.toISOString());
 
-    const { data, error } = await supabase
+    const characterId = searchParams.get('character_id');
+
+    let query = supabase
       .from('user_generations')
-      .select('image_url, video_url')
+      .select('id, image_url, video_url, prompt, character_id, created_at')
       .eq('user_email', email)
-      .gte('created_at', cutoffDate.toISOString())
-      .order('created_at', { ascending: false })
-      .limit(retentionLimit);
+      .order('created_at', { ascending: false });
+
+    if (characterId) {
+      query = query.eq('character_id', characterId);
+    } else {
+      query = query
+        .gte('created_at', cutoffDate.toISOString())
+        .limit(retentionLimit);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error('Supabase Error:', error.message);
@@ -70,7 +80,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { user_email, image_url, video_url, prompt } = await req.json();
+    const { user_email, image_url, video_url, prompt, character_id } = await req.json();
 
     if (!user_email || (!image_url && !video_url)) {
       return NextResponse.json({ error: "缺少必要欄位" }, { status: 400 });
@@ -78,7 +88,7 @@ export async function POST(req: Request) {
 
     const { error } = await supabase
       .from('user_generations')
-      .insert([{ user_email, image_url, video_url, prompt, status: 'succeeded' }]);
+      .insert([{ user_email, image_url, video_url, prompt, status: 'succeeded', character_id: character_id || null }]);
 
     if (error) {
       console.error('寫入歷史失敗:', error.message);

@@ -43,6 +43,7 @@ const [useTranslated, setUseTranslated] = useState(false);
 const [showReferralModal, setShowReferralModal] = useState(false);
 // [DNA_PATCH_START]
 const [lockedCharacterUrl, setLockedCharacterUrl] = useState<string | null>(null);
+const [lockedCharacterId, setLockedCharacterId] = useState<number | null>(null);
 const [kontextRetryCount, setKontextRetryCount] = useState(0);
 const [retryMessage, setRetryMessage] = useState("");
 // [DNA_PATCH_END]
@@ -130,7 +131,18 @@ const [ttsSeconds, setTtsSeconds] = useState(0);
 // [DNA_PATCH_START] 載入收藏角色
 fetch(`/api/saved-characters?email=${session.user.email}`)
   .then(res => res.json())
-  .then(data => { if (Array.isArray(data)) setSavedCharacters(data); });
+  .then(data => {
+    if (Array.isArray(data)) {
+      setSavedCharacters(data);
+      // [DNA_PATCH_START] 找到鎖定角色對應的 id
+      const lockedUrl = localStorage.getItem('locked_character');
+      if (lockedUrl) {
+        const matched = data.find((c: any) => c.image_url === lockedUrl);
+        if (matched) setLockedCharacterId(matched.id);
+      }
+      // [DNA_PATCH_END]
+    }
+  });
 // [DNA_PATCH_END]
     }
   }, [session]);
@@ -256,6 +268,7 @@ if (session?.user?.email && finalUrl) {
       image_url: resolvedGenType === "image" ? permanentUrl : null,
       video_url: resolvedGenType === "video" ? permanentUrl : null,
       prompt: prompt || videoPrompt,
+      character_id: lockedCharacterId || null,
     }),
   });
 }
@@ -891,6 +904,7 @@ return (
           onClick={() => {
             localStorage.setItem('locked_character', char.image_url);
             setLockedCharacterUrl(char.image_url);
+            setLockedCharacterId(char.id);
             fetch("/api/user/save-locked-character", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
