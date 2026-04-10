@@ -1,5 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 const ADMIN_EMAIL = "whenser@gmail.com";
 
@@ -9,9 +11,8 @@ const supabase = createClient(
 );
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const email = searchParams.get("email");
-  if (email !== ADMIN_EMAIL) {
+  const session = await getServerSession(authOptions);
+  if (!session || session.user?.email !== ADMIN_EMAIL) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -37,10 +38,12 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  if (body.adminEmail !== ADMIN_EMAIL) {
+  const session = await getServerSession(authOptions);
+  if (!session || session.user?.email !== ADMIN_EMAIL) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const body = await req.json();
 
   const keys = [
     "referral_credits_starter", "referral_credits_standard", "referral_credits_pro",

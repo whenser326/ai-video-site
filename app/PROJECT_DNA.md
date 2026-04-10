@@ -233,6 +233,13 @@ ELEVENLABS_API_KEY=
 ✅ 合成成功後顯示影片預覽 + 下載按鈕 + 關閉視窗按鈕
 ✅ 正面人臉警告提示（合成區塊明顯橘色警告）
 ✅ /api/wav2lip/route.ts 新增
+✅ 我的角色頁面（/characters，列表+詳情）
+✅ 角色詳情頁（/characters/[id]，身份卡+作品相簿+快速操作）
+✅ 作品相簿（圖片/影片點擊大圖預覽）
+✅ 生成時自動歸檔到鎖定角色（character_id 欄位）
+✅ GlobalHeader 新增「我的角色」按鈕
+✅ saved_characters 新增 description 欄位
+✅ user_generations 新增 character_id 欄位
 
 12. 待完成項目（下一步）
 
@@ -272,6 +279,8 @@ TTS 試聽免費，下載才扣點（入門8點/標準7點/專業6點）
 Wav2Lip 使用 kwaivgi/kling-lip-sync，需要影片包含清晰正面人臉，側臉或無臉會失敗退點
 音訊上傳到 Supabase Storage（character-images bucket）後才傳給 Kling Lip Sync
 ttsSeconds / wav2lipSeconds 各自獨立計時，useEffect 監聽對應 loading state
+角色詳情頁手機版頂部 padding 需 pt-24，電腦版 pt-16
+character_id 歸檔依賴 lockedCharacterId state，需在收藏角色列表載入後才能正確對應
 
 14. 未來功能規劃（優先順序）
 

@@ -51,7 +51,7 @@ export default function AdminPage() {
   }, [session, status]);
 
   const fetchData = async () => {
-    const res = await fetch(`/api/admin/settings?email=${session?.user?.email}`);
+    const res = await fetch(`/api/admin/settings`);
     const data = await res.json();
     if (data.settings) setSettings(data.settings);
     if (data.logs) setLogs(data.logs);
@@ -59,7 +59,7 @@ export default function AdminPage() {
 
   const handleSave = async () => {
     setSaving(true);
-    const res = await fetch(`/api/admin/settings?email=${session?.user?.email}`, {
+    const res = await fetch(`/api/admin/settings`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...settings, adminEmail: session?.user?.email }),
@@ -76,7 +76,15 @@ export default function AdminPage() {
   return (
     <main className="min-h-screen bg-[#0d2318] p-6 text-white">
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-2xl font-black text-[#89f5a2] mb-8">🛠 後台管理</h1>
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-2xl font-black text-[#89f5a2]">🛠 後台管理</h1>
+          <button
+            onClick={() => router.push('/admin/models')}
+            className="px-4 py-2 bg-purple-500/20 border border-purple-500/30 rounded-xl text-purple-300 text-sm font-bold hover:bg-purple-500/30 transition-all"
+          >
+            🔭 模型追蹤
+          </button>
+        </div>
 
         {/* 分潤設定 */}
         <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
