@@ -67,6 +67,11 @@ const [ttsVoice, setTtsVoice] = useState("gentle-female");
 const [ttsAudio, setTtsAudio] = useState<string | null>(null);
 const [isTtsLoading, setIsTtsLoading] = useState(false);
 const [ttsTrimmed, setTtsTrimmed] = useState(false);
+// [DNA_PATCH_START] Wav2Lip 狀態
+const [isWav2lipLoading, setIsWav2lipLoading] = useState(false);
+const [wav2lipResult, setWav2lipResult] = useState<string | null>(null);
+const [wav2lipSeconds, setWav2lipSeconds] = useState(0);
+const [ttsSeconds, setTtsSeconds] = useState(0);
 // [DNA_PATCH_END]
 
   // 1. 初始化與點數同步
@@ -129,6 +134,20 @@ fetch(`/api/saved-characters?email=${session.user.email}`)
 // [DNA_PATCH_END]
     }
   }, [session]);
+  // [DNA_PATCH_START] Wav2Lip 倒數計時
+useEffect(() => {
+  if (!isWav2lipLoading) { setWav2lipSeconds(0); return; }
+  const timer = setInterval(() => setWav2lipSeconds(prev => prev + 2), 2000);
+  return () => clearInterval(timer);
+}, [isWav2lipLoading]);
+// [DNA_PATCH_END]
+// [DNA_PATCH_START] TTS 倒數計時
+useEffect(() => {
+  if (!isTtsLoading) { setTtsSeconds(0); return; }
+  const timer = setInterval(() => setTtsSeconds(prev => prev + 2), 2000);
+  return () => clearInterval(timer);
+}, [isTtsLoading]);
+// [DNA_PATCH_END]
   // [DNA_PATCH_START] 推薦賺點事件監聽 + 資料載入
 useEffect(() => {
   const handler = () => setShowReferralModal(true);
@@ -698,6 +717,16 @@ return (
 </div>
 // [DNA_PATCH_END]
 )}
+{/* [DNA_PATCH_START] TTS 語音合成按鈕（付費專屬，僅影片生成後顯示） */}
+{plan !== 'free' && genType === 'video' && (
+  <button
+    onClick={() => { setTtsText(""); setTtsAudio(null); setWav2lipResult(null); setShowTtsModal(true); }}
+    className="col-span-2 w-full py-3 bg-gradient-to-r from-purple-500/20 to-blue-500/20 border border-purple-500/30 text-purple-300 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:from-purple-500/30 transition-all"
+  >
+    🎙️ 語音合成 <span className="text-purple-300/50 text-xs">6點/次</span>
+  </button>
+)}
+{/* [DNA_PATCH_END] */}
 {/* [DNA_PATCH_END] */}
               </div>
             </div>
@@ -937,7 +966,7 @@ return (
     <textarea
       value={videoPrompt}
       onChange={(e) => { setVideoPrompt(e.target.value); setVideoTranslatedPrompt(null); }}
-      placeholder="例如：在雪地打仗、在逛街、跳舞..."
+      placeholder="例如：在雪地打仗、在逛街、跳舞...（中文也可以！輸入後點「翻譯成英文」按鈕，我們幫你自動翻譯 🌐）"
       rows={2}
       className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder-white/20 resize-none focus:outline-none focus:border-[#89f5a2]/50"
     />
@@ -1121,7 +1150,7 @@ return (
             <textarea
               value={videoPrompt}
               onChange={(e) => { setVideoPrompt(e.target.value); setVideoTranslatedPrompt(null); }}
-              placeholder="描述想要的動作或場景,用英文判讀會更準（選填）&#10;例如：walking in a park, waving hand, dancing"
+              placeholder="描述想要的動作或場景，用英文判讀會更準！（選填，中文也可以！輸入後點「翻譯成英文」按鈕，我們幫你自動翻譯 🌐）&#10;例如：walking in a park, waving hand, dancing"
               className="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/25 text-xs resize-none focus:outline-none focus:ring-1 focus:ring-[#89f5a2]/40"
               rows={3}
             />
@@ -1348,7 +1377,7 @@ return (
         {/* [DNA_PATCH_START] TTS Modal */}
 {showTtsModal && (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-    <div className="w-full max-w-sm bg-[#0d2318] border border-purple-500/20 rounded-3xl p-6 space-y-4 shadow-2xl">
+    <div className="w-full max-w-sm bg-[#0d2318] border border-purple-500/20 rounded-3xl p-6 space-y-4 shadow-2xl overflow-y-auto max-h-[90vh]">
       <div className="text-center">
         <p className="text-3xl mb-1">🎙️</p>
         <h2 className="text-white font-black text-lg">語音合成</h2>
@@ -1412,14 +1441,12 @@ return (
             <audio controls className="w-full" src={`data:audio/mp3;base64,${ttsAudio}`} />
             <button
               onClick={async () => {
-                // 下載音訊
                 const link = document.createElement("a");
                 link.href = `data:audio/mp3;base64,${ttsAudio}`;
                 link.download = `ai-voice-${Date.now()}.mp3`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-                // 扣點
                 const planCredits = plan === 'starter' ? 8 : plan === 'standard' ? 7 : 6;
                 await fetch("/api/character", {
                   method: "POST",
@@ -1433,9 +1460,140 @@ return (
             >
               ⬇️ 下載語音（扣 {plan === 'starter' ? 8 : plan === 'standard' ? 7 : 6} 點）
             </button>
+
+            {/* [DNA_PATCH_START] Wav2Lip 合成到影片 */}
+            <div className="border border-orange-400/30 bg-orange-400/5 rounded-xl p-3 space-y-2">
+              <p className="text-orange-300 font-black text-sm">🎬 合成到影片（讓角色開口說話）</p>
+              {/* [DNA_PATCH_START] Wav2Lip 進度條 */}
+              {isWav2lipLoading && (
+                <div className="p-4 bg-black/25 rounded-2xl border border-orange-400/20 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-orange-300 text-xs font-black tracking-widest uppercase">🎬 合成中</span>
+                    <span className="text-white/60 text-xs font-mono">
+                      {wav2lipSeconds >= 120
+                        ? "請保持頁面開啟"
+                        : `剩餘約 ${Math.max(120 - wav2lipSeconds, 0)} 秒`}
+                    </span>
+                  </div>
+                  <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-orange-400 to-red-400 rounded-full transition-all duration-1000"
+                      style={{ width: `${Math.min((wav2lipSeconds / 120) * 100, 95)}%` }}
+                    />
+                  </div>
+                  <p className="text-white/25 text-[10px] text-center">
+                    {wav2lipSeconds >= 60
+                      ? "⚠️ 合成時間較長，請保持頁面開啟，若超過 3 分鐘仍未完成，可能是影片臉部不夠清晰導致，建議換一支影片重試"
+                      : "嘴型合成約需 60～120 秒，請耐心等候"}
+                  </p>
+                </div>
+              )}
+              {/* [DNA_PATCH_END] */}
+              <p className="text-orange-200 text-xs font-bold leading-relaxed">
+                ⚠️ 注意：影片必須包含<span className="text-orange-300 font-black">清晰正面人臉</span>，側臉或無臉的影片將會合成失敗！
+              </p>
+              <p className="text-white/40 text-xs">扣 {plan === 'starter' ? 10 : plan === 'standard' ? 9 : 8} 點，失敗自動退點</p>
+              {wav2lipResult ? (
+                <div className="space-y-2">
+                  <video controls className="w-full rounded-lg" src={wav2lipResult} />
+                  <button
+                    onClick={() => downloadFile(wav2lipResult)}
+                    className="w-full py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white text-sm font-black hover:opacity-90 transition-all"
+                  >
+                    ⬇️ 下載說話影片
+                  </button>
+                  <button
+                    onClick={() => { setWav2lipResult(null); setShowTtsModal(false); setTtsAudio(null); }}
+                    className="w-full py-2 rounded-xl border border-white/10 text-white/50 text-sm font-bold hover:bg-white/5 transition-all"
+                  >
+                    ✅ 完成，關閉視窗
+                  </button>
+                </div>
+                
+              ) : (
+                <button
+                  disabled={isWav2lipLoading}
+                  onClick={async () => {
+                    if (!prediction?.output) {
+                      alert("找不到影片，請重新生成影片後再試");
+                      return;
+                    }
+                    setIsWav2lipLoading(true);
+                    setWav2lipResult(null);
+                    try {
+                      // 啟動合成
+                      const startRes = await fetch("/api/wav2lip", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          videoUrl: prediction.output,
+                          audioBase64: ttsAudio,
+                          userEmail: session?.user?.email,
+                          plan,
+                        }),
+                      });
+                      const startData = await startRes.json();
+                      if (!startData.id) {
+                        alert(startData.error || "合成啟動失敗");
+                        setIsWav2lipLoading(false);
+                        return;
+                      }
+                      fetch(`/api/user/credits?email=${session?.user?.email}`).then(r => r.json()).then(d => setCredits(d.credits));
+                      // Polling
+                      const pollWav2lip = async (id: string) => {
+                        const pollRes = await fetch(`/api/wav2lip?id=${id}&email=${session?.user?.email}`);
+                        const pollData = await pollRes.json();
+                        if (pollData.status === "succeeded" && pollData.output) {
+                          setWav2lipResult(pollData.output);
+                          setIsWav2lipLoading(false);
+                        } else if (pollData.status === "failed") {
+                          alert("合成失敗，點數已退還");
+                          fetch(`/api/user/credits?email=${session?.user?.email}`).then(r => r.json()).then(d => setCredits(d.credits));
+                          setIsWav2lipLoading(false);
+                        } else {
+                          setTimeout(() => pollWav2lip(id), 3000);
+                        }
+                      };
+                      pollWav2lip(startData.id);
+                    } catch (err) {
+                      alert("合成失敗，請重試");
+                      setIsWav2lipLoading(false);
+                    }
+                  }}
+                  className="w-full py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white text-sm font-black hover:opacity-90 transition-all disabled:opacity-40"
+                >
+                  {isWav2lipLoading ? "⏳ 合成中，請稍候..." : `🎬 合成到影片（扣 ${plan === 'starter' ? 10 : plan === 'standard' ? 9 : 8} 點）`}
+                </button>
+              )}
+            </div>
+            {/* [DNA_PATCH_END] */}
           </div>
         )}
-
+{/* [DNA_PATCH_START] TTS 載入提示 */}
+{isTtsLoading && (
+  <div className="p-4 bg-black/25 rounded-2xl border border-purple-500/20 space-y-2">
+    <div className="flex justify-between items-center">
+      <span className="text-purple-300 text-xs font-black tracking-widest uppercase">🎙️ 語音生成中</span>
+      <span className="text-white/60 text-xs font-mono">
+        {ttsSeconds >= 60
+          ? "請耐心等候"
+          : `剩餘約 ${Math.max(60 - ttsSeconds, 0)} 秒`}
+      </span>
+    </div>
+    <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+      <div
+        className="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full transition-all duration-1000"
+        style={{ width: `${Math.min((ttsSeconds / 60) * 100, 95)}%` }}
+      />
+    </div>
+    <p className="text-white/25 text-[10px] text-center">
+      {ttsSeconds >= 60
+        ? "語音生成時間較長，請保持頁面開啟"
+        : "語音生成約需 30 至 60 秒，請耐心等候"}
+    </p>
+  </div>
+)}
+{/* [DNA_PATCH_END] */}
       <div className="grid grid-cols-2 gap-3">
         <button
           onClick={() => { setShowTtsModal(false); setTtsAudio(null); }}
