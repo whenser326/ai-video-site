@@ -878,9 +878,7 @@ return (
 </div>
 {/* [DNA_PATCH_END] */}
     <p className="text-white/70 text-xs tracking-wider text-center pt-1">✨ 想讓你的角色突破界限？</p>
-<a href="/adult" className="w-full py-3.5 bg-red-900/20 border border-red-500/20 rounded-xl text-red-300/60 text-base font-bold flex items-center justify-center gap-2 hover:bg-red-900/30 hover:text-red-300/80 transition-all">
-  🔞成人專區<span className="text-red-300/30">Coming Soon</span>
-</a>
+{/* 成人專區暫時隱藏，等綠界審核通過後再開放 */}
 <button
   onClick={() => setShowReferralModal(true)}
   className="w-full flex items-center gap-3 px-4 py-2 bg-yellow-400/8 border border-yellow-400/20 rounded-xl hover:bg-yellow-400/15 transition-all group mt-1"
