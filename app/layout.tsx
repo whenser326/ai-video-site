@@ -16,8 +16,35 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI Character Studio",
-  description: "AI Character Generator",
+  title: "AI Character Studio｜AI 角色生成平台",
+  description: "用 AI 生成高精度角色圖片與影片，支援角色一致性、不同姿勢批次生成、語音合成、嘴型同步。免費試用，台灣首選 AI 角色創作工具。",
+  keywords: "AI角色生成, AI圖片生成, AI影片生成, 角色一致性, AI繪圖, 台灣AI工具, character AI, AI avatar",
+  openGraph: {
+    title: "AI Character Studio｜AI 角色生成平台",
+    description: "用 AI 生成高精度角色圖片與影片，支援角色一致性、批次生成不同姿勢、語音合成、嘴型同步。",
+    url: "https://ai-video-site-psi.vercel.app",
+    siteName: "AI Character Studio",
+    images: [
+      {
+        url: "https://ai-video-site-psi.vercel.app/logo.png",
+        width: 512,
+        height: 512,
+        alt: "AI Character Studio",
+      },
+    ],
+    locale: "zh_TW",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "AI Character Studio｜AI 角色生成平台",
+    description: "用 AI 生成高精度角色圖片與影片，支援角色一致性、批次生成、語音合成。",
+    images: ["https://ai-video-site-psi.vercel.app/logo.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({

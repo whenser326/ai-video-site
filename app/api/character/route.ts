@@ -37,7 +37,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "請求過於頻繁，請稍後再試" }, { status: 429 });
     }
 
-    const { prompt, image, mode, userEmail, videoPrompt, aspectRatio, duration, videoModel, refundCredits } = await req.json();
+    const { prompt, image, mode, userEmail, videoPrompt, aspectRatio, duration, videoModel, refundCredits, batchPrompts } = await req.json();
 
     // [DNA_PATCH_START] 退點功能
     if (refundCredits && userEmail) {
@@ -62,7 +62,7 @@ export async function POST(req: Request) {
 
     const { data: userProfile } = await supabase
       .from('profiles')
-      .select('credits, plan, daily_image_count, daily_image_date, locked_character')
+      .select('credits, plan, daily_image_count, daily_image_date, daily_video_count, daily_video_date, locked_character')
       .eq('email', userEmail)
       .maybeSingle();
 
@@ -73,11 +73,58 @@ export async function POST(req: Request) {
     const currentCredits = userProfile.credits ?? 0;
     const userPlan = userProfile.plan || 'free';
 
+    // [DNA_PATCH_START] 批次生成：提前攔截，不走一般生成流程
+    if (batchPrompts && Array.isArray(batchPrompts) && batchPrompts.length > 0) {
+      const batchCost = batchPrompts.length;
+      if (currentCredits < batchCost) {
+        return NextResponse.json({ error: `點數不足！批次生成 ${batchCost} 張需要 ${batchCost} 點` }, { status: 403 });
+      }
+      const lockedCharacter = userProfile.locked_character || null;
+      if (!lockedCharacter) {
+        return NextResponse.json({ error: "批次生成必須先鎖定角色" }, { status: 400 });
+      }
+      let imageValid = false;
+      try {
+        const checkRes = await fetch(lockedCharacter, { method: "HEAD" });
+        imageValid = checkRes.ok;
+      } catch { imageValid = false; }
+      if (!imageValid) {
+        return NextResponse.json({ error: "鎖定角色圖片已失效，請重新鎖定角色" }, { status: 400 });
+      }
+      await supabase.from('profiles').update({ credits: currentCredits - batchCost }).eq('email', userEmail);
+      const predictions = await Promise.all(
+        batchPrompts.map(async (item: { prompt: string; note?: string }) => {
+          const finalPrompt = `${item.prompt}${item.note ? ', ' + item.note : ''}, same person from reference image`;
+          const pred = await replicate.predictions.create({
+            model: "black-forest-labs/flux-kontext-pro",
+            input: { prompt: finalPrompt, input_image: lockedCharacter, aspect_ratio: "1:1", output_format: "png" }
+          });
+          return { ...pred, isKontextPro: true };
+        })
+      );
+      return NextResponse.json({ batch: true, predictions, batchCost });
+    }
+    // [DNA_PATCH_END]
     const requiredCredits = mode === 'video' ? 4 : 1;
     if (currentCredits < requiredCredits) {
       return NextResponse.json({ error: mode === 'video' ? "點數不足！影片生成需要至少 4 點" : "點數不足！請前往購買點數" }, { status: 403 });
     }
-
+// [DNA_PATCH_START] 免費用戶每日影片限制
+    if (mode === 'video' && userPlan === 'free') {
+      const today = getTodayString();
+      const lastVideoDate = userProfile.daily_video_date || '';
+      const dailyVideoCount = lastVideoDate === today ? (userProfile.daily_video_count || 0) : 0;
+      if (dailyVideoCount >= 1) {
+        return NextResponse.json({
+          error: `免費用戶每天最多生成 1 支影片，明天 00:00（台灣時間）重置，或升級方案繼續使用！`
+        }, { status: 403 });
+      }
+      await supabase
+        .from('profiles')
+        .update({ daily_video_count: dailyVideoCount + 1, daily_video_date: today })
+        .eq('email', userEmail);
+    }
+    // [DNA_PATCH_END]
     if (userPlan === 'free' && mode !== 'video') {
       const today = getTodayString();
       const lastDate = userProfile.daily_image_date || '';

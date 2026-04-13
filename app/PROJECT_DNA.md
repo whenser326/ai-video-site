@@ -26,12 +26,13 @@
 後端 API：app/api/character/route.ts
 視覺配色：深綠 (#0d2318 → #2d5a3d)，亮綠 (#89f5a2)，圓角現代 UI
 全域 Header 元件：app/components/GlobalHeader.tsx（含儲值點數、推薦賺點、意見回饋按鈕）
+成人站規劃：獨立網域、獨立服務、獨立金流，通過身份驗證後才能購買成人點數及移轉主站資料
 
 4. 資料庫 (Supabase)
 
-表格：profiles（欄位：id, created_at, email, credits, plan, daily_image_count, daily_image_date, history_limit, referral_code, referred_by, referral_credits_earned, locked_character）
-表格：user_generations（欄位：id, user_email, image_url, video_url, prompt, status, created_at）
-表格：saved_characters（欄位：id, user_email, name, image_url, created_at）
+表格：profiles（欄位：id, created_at, email, credits, plan, daily_image_count, daily_image_date, daily_video_count, daily_video_date, history_limit, referral_code, referred_by, referral_credits_earned, locked_character）
+表格：user_generations（欄位：id, user_email, image_url, video_url, prompt, status, created_at, character_id）
+表格：saved_characters（欄位：id, user_email, name, image_url, description, created_at）
 RLS：已停用
 plan 預設值：free
 新用戶自動建立 profiles 並給 5 點
@@ -42,16 +43,18 @@ Storage bucket：character-images（Public，已設定 allow all policy）
 
 5. 定價方案
 方案 | 點數 | 售價(NTD) | 圖片 | 影片 | 語音合成 | 角色收藏 | 歷史保存
-🆓 免費 | 5點 | $0 | 1點 | ❌ | ❌ | 1個 | 7天/5筆
+🆓 免費 | 5點 | $0 | 1點 | 4點/支(每日限1支) | ❌ | 1個 | 7天/5筆
 🌱 入門包 | 30點 | NT$250 | 1點 | 6點/支 | 8點/次 | 3個 | 30天/50筆
 ⭐ 標準包 | 80點 | NT$450 | 1點 | 5點/支 | 7點/次 | 3個 | 30天/50筆
 🚀 專業包 | 200點 | NT$799 | 1點 | 4點/支 | 6點/次 | 無限 | 90天/50筆
+
+批次生成張數上限：入門2張/標準4張/專業6張，每張1點，必須鎖定角色才能使用
 
 6. AI 模型
 
 圖片生成：black-forest-labs/flux-1.1-pro（約 $0.04/張）
 影片生成：kwaivgi/kling-v3-omni-video（約 $0.28/支，mode: "standard"）
-角色一致性（付費功能）：black-forest-labs/flux-kontext-pro（已串接）
+角色一致性：black-forest-labs/flux-kontext-pro（已串接，免費付費均可用）
 影片生成第二選擇：bytedance/seedance-1.5-pro（Replicate，含音訊同步）
 TTS 語音合成：ElevenLabs Multilingual v2（已串接，Starter 方案）
 注意：Seedance 2.0 官方 API 尚未開放（截至 2026/4），等開放後再串接
@@ -65,18 +68,22 @@ Gallery 依方案等級顯示：免費5筆、付費方案50筆（同時受天數
 localStorage (key: last_prediction_${userEmail}) 保持最後一次生成狀態（依帳號分開）
 localStorage (key: locked_character) 儲存鎖定角色的 Supabase 永久 URL
 角色風格選擇：動漫/寫實/油畫/遊戲/素描，點選後自動拼入 prompt
-免費用戶：每天最多生成 2 張圖片（超過顯示錯誤訊息，明天00:00台灣時間重置）
+人設快速標籤：風格選擇下方，點選後取代輸入框內容（不附加），背後對應精準英文 prompt
+人設標籤第一層（已完成）：外型描述標籤（台灣女孩/冷豔名模/清純學生/都市OL/神秘女巫/韓系男生/硬漢型男/帥氣騎士/賽博龐克/奇幻精靈）
+人設標籤第二層（待做）：角色個性/職業/背景設定，存入角色資料，不額外增加 prompt 出錯率
+免費用戶：每天最多生成 2 張圖片 + 1 支影片（分別有獨立計數，明天00:00台灣時間重置）
 鎖定角色狀態列：輸入框上方顯示縮圖 + 鎖定中文字，解除鎖定後即時消失
+批次生成：付費用戶專屬，必須鎖定角色，依方案限制張數，每張獨立 prompt + 備註，依序生成即時顯示，失敗自動 retry 最多2次，全部失敗退點，完成後自動儲存到角色相簿
 付費用戶：
 「🎯 鎖定此角色」→ 上傳圖片到 Supabase Storage → 儲存永久 URL → localStorage 同步
 「🎬 轉成影片」→ 彈出比例/秒數/模型選項 Modal → 生成影片
 「📁 上傳圖片轉影片」→ 法律聲明 → 上傳圖片 → 選比例/秒數 → 生成影片
 「⭐ 收藏此角色」→ 輸入名稱 → 存入 saved_characters 表
+「🎭 批次生成不同Pose」→ 填寫每張 prompt + 備註 → 依序生成 → 自動歸檔角色相簿
 「🎙️ 語音合成」→ 選聲音 → 輸入台詞 → 免費試聽 → 滿意後下載扣點（僅影片生成後顯示，付費專屬）
-影片生成後顯示警告：「⚠️ 影片不會保存至歷史紀錄，請立即下載保存」
+影片生成後顯示警告：「⚠️ 影片保存僅3天(付費7天)，請立即下載保存」
 鎖定按鈕點擊後顯示「🔄 鎖定中...」提示，避免用戶誤以為當機
 Flux Kontext Pro 失敗（E006）自動 retry 最多 2 次，顯示黃色提示訊息，全部失敗退還點數
-成人專區入口：顯示在鎖定角色/上傳影片按鈕下方，點擊進入 /adult
 推薦賺點橫幅：顯示在成人專區按鈕下方，點擊開啟推薦賺點 Modal
 推薦賺點 Modal：顯示專屬介紹碼、一鍵複製介紹碼/連結、三方案獎勵對照（從 admin_settings 動態抓取）
 分享按鈕：手機跳系統選單（Web Share API，支援 FB/IG/Threads/LINE 等），電腦版下載圖片+開 FB
@@ -96,11 +103,18 @@ Stripe Price IDs（沙盒）：
 入門包：price_1TGH0OAhme0aGntHGmDHuxR8
 標準包：price_1TGJ1KAhme0aGntHzNOHQHfF
 專業包：price_1TGJ2KAhme0aGntH48ertjOZ
+成人站金流規劃：
+- 主力：SubscribeStar（個人可申請，信用卡訂閱制，約10%手續費）
+- 補充：NexaPay（免申請，信用卡付款收穩定幣，1-3%手續費，較新平台）
+- 長期目標：CCBill（需公司設立，業界最穩定成人金流）
+- 成人站點數與主站點數完全分離，無移轉機制
+- 主站資料（角色/圖片）可移轉至成人站，不涉及金流
 
 9. 防濫用機制
 
 IP Rate Limiting：每分鐘最多 10 次請求（記憶體存儲）
 免費用戶每日圖片限制：每天最多 2 張（daily_image_count + daily_image_date 欄位）
+免費用戶每日影片限制：每天最多 1 支（daily_video_count + daily_video_date 欄位），有點數也不能超過
 必須登入才能呼叫 API（無 session 回傳 401）
 Replicate 預付點數制（用完自動停止，無超支風險）
 歷史紀錄自動清理：每次查詢歷史時自動刪除超過保存期限的紀錄
@@ -138,16 +152,18 @@ ELEVENLABS_API_KEY=
 ✅ profiles 表加 plan/daily_image_count/daily_image_date/history_limit 欄位
 ✅ LOGO（pricing 頁與首頁均有漸隱效果）
 ✅ Stripe 金流串接（沙盒測試通過，待換綠界）
-✅ 角色一致性功能（Flux Kontext Pro，付費用戶專屬）
+✅ 角色一致性功能（Flux Kontext Pro，免費付費均可用）
 ✅ 鎖定角色圖片永久存到 Supabase Storage
 ✅ 上傳圖片轉影片（付費用戶專屬，含法律聲明視窗）
 ✅ 影片比例選擇（1:1, 16:9, 9:16, 4:3, 3:4）
 ✅ 影片秒數選擇（5秒/10秒）
 ✅ suppressHydrationWarning 修正
 ✅ 免費用戶每日圖片限制（每天最多2張）
+✅ 免費用戶每日影片限制（每天最多1支，有點數也不能超過）
 ✅ IP Rate Limiting 防濫用
 ✅ 全域 Header（儲值點數按鈕 + 推薦賺點按鈕 + 意見回饋按鈕）
 ✅ 角色風格選擇（動漫/寫實/油畫/遊戲/素描）
+✅ 人設快速標籤第一層（10個標籤，點選取代輸入框，含中翻英）
 ✅ 成人專區 Coming Soon 頁面（/adult）
 ✅ Kling 3.0 標示改為粉亮橘色
 ✅ .gitignore 安全確認（.env.local 不會上傳）
@@ -180,6 +196,7 @@ ELEVENLABS_API_KEY=
 ✅ 影片 Modal 加入動作指令輸入框
 ✅ /api/user/save-locked-character/route.ts 新增
 ✅ profiles 表新增 locked_character 欄位
+✅ profiles 表新增 daily_video_count + daily_video_date 欄位
 ✅ 免費用戶開放鎖定角色（每日限額內可用）
 ✅ 免費用戶開放上傳照片轉影片
 ✅ 解除角色鎖定按鈕
@@ -193,6 +210,7 @@ ELEVENLABS_API_KEY=
 ✅ SessionProvider 加 refetchOnWindowFocus={false}
 ✅ 圖片生成後自動上傳 Supabase Storage 永久保存（await 確保順序正確）
 ✅ 影片 URL 寫入 user_generations.video_url 欄位
+✅ 影片永久保存至 Supabase Storage（video_url 為永久連結）
 ✅ vercel.json 設定 maxDuration 60秒
 ✅ Vercel Function Region 改為 Tokyo (hnd1)
 ✅ /api/user/clear-locked-character/route.ts 新增
@@ -210,7 +228,6 @@ ELEVENLABS_API_KEY=
 ✅ 影片警告樣式加大加粗（黃色邊框+醒目字體）
 ✅ 影片 Modal 動作指令翻譯功能（偵測中文自動顯示翻譯按鈕）
 ✅ 上傳圖片轉影片提示詞翻譯功能
-✅ 影片永久保存至 Supabase Storage（video_url 改為永久連結）
 ✅ handleSubmit checkStatus genType 修正（圖片生成正確傳 "image"）
 ✅ 影片警告訊息置中顯示修正
 ✅ 靈感畫廊 Tab 切換（靈感畫廊/我的歷史，預設顯示靈感畫廊）
@@ -238,13 +255,6 @@ ELEVENLABS_API_KEY=
 ✅ 角色詳情頁（/characters/[id]，身份卡+作品相簿+快速操作）
 ✅ 作品相簿（圖片/影片點擊大圖預覽）
 ✅ 生成時自動歸檔到鎖定角色（character_id 欄位）
-✅ GlobalHeader 新增「我的角色」按鈕
-✅ saved_characters 新增 description 欄位
-✅ user_generations 新增 character_id 欄位
-✅ 我的角色列表頁（/characters）
-✅ 角色詳情頁（/characters/[id]，身份卡+作品相簿+快速操作）
-✅ 作品相簿（圖片/影片點擊大圖預覽）
-✅ 生成時自動歸檔到鎖定角色（character_id 欄位）
 ✅ GlobalHeader 新增「我的角色」按鈕（電腦橫排/手機直排）
 ✅ saved_characters 新增 description 欄位
 ✅ user_generations 新增 character_id 欄位
@@ -257,14 +267,23 @@ ELEVENLABS_API_KEY=
 ✅ 模型名稱可點擊跳 Replicate 頁面
 ✅ 同類現用模型對比標示
 ✅ model_tracker 資料表新增
+✅ SEO 設定（metadata title/description/keywords/og/twitter/robots）
+✅ 批次生成（付費用戶，依方案限張數，必須鎖定角色，依序生成，失敗retry+退點，自動歸檔角色相簿）
+✅ 批次生成每張 prompt + 備註欄位均支援中翻英
 
 12. 待完成項目（下一步）
 
-⬜ 綠界金流串接（待審核通過）
-⬜ 角色個性描述前端介面（description 欄位已建好）
-⬜ 描述自動帶入 prompt
-⬜ 角色預設風格設定
-⬜ AI 對話功能（讓用戶跟角色對話）
+⬜ 綠界金流串接上線
+⬜ 每日簽到領點數（每天1點，連續7天額外+3點，需防多帳號濫用）
+⬜ 人設標籤第二層（角色個性/職業/背景設定，存入角色資料）
+⬜ 首頁Hero循環影片（1200×675px 16:9，無聲，展示生成流程）
+⬜ 成人站架構規劃（獨立網域、獨立服務、獨立金流）
+⬜ 成人站身份驗證系統（上傳身份證、後台審核、adult_verified欄位）
+⬜ 成人站獨立點數系統（adult_credits欄位，與主站完全分離）
+⬜ 後台成人驗證審核頁面（一鍵通過/拒絕）
+⬜ 後台手動發成人點數功能
+⬜ 主站資料移轉至成人站（角色/圖片/歷史，驗證通過後開放）
+⬜ 成人站金流串接（SubscribeStar主力 + NexaPay補充）
 
 13. 已知問題備忘
 
@@ -274,7 +293,7 @@ history 變數在所有地方強制 Array.isArray 檢查
 Stripe Webhook 本地測試用 stripe listen --forward-to localhost:3000/api/stripe/webhook
 上線後 Webhook URL 要改成 Vercel 網址
 Replicate 圖片 URL 有效期約 24 小時，鎖定角色時已改為上傳到 Supabase Storage 永久保存
-Replicate 影片 URL 有效期約數小時，目前不永久保存影片，用戶需自行下載
+影片已永久保存至 Supabase Storage（upload-image API 同時處理圖片和影片）
 // [DNA_PATCH_START] 標記不能放在 JSX return 區塊內，否則會顯示在畫面上
 從聊天介面複製含 `<a` 標籤的程式碼時，`<a` 可能被吃掉，貼上後需手動確認
 綠界申請需商家類別選「其他」→「其他」，販售網址填 Vercel 網址
@@ -302,20 +321,25 @@ Wav2Lip 使用 kwaivgi/kling-lip-sync，需要影片包含清晰正面人臉，�
 ttsSeconds / wav2lipSeconds 各自獨立計時，useEffect 監聽對應 loading state
 角色詳情頁手機版頂部 padding 需 pt-24，電腦版 pt-16
 character_id 歸檔依賴 lockedCharacterId state，需在收藏角色列表載入後才能正確對應
-角色詳情頁手機版頂部需 pt-24，電腦版 pt-16
-character_id 歸檔依賴 lockedCharacterId state，載入收藏角色後才能正確對應
 模型追蹤 route.ts 必須放在 app/api/admin/models/，不能放在 app/admin/models/
 authOptions 必須從 app/api/auth/[...nextauth]/route.ts export 才能給其他 API 使用
+成人專區按鈕已暫時隱藏（等綠界審核通過後再規劃）
+綠界不支援成人內容，主站金流與成人站金流必須完全分離
+點數不能移轉（法律風險），但主站角色和資料可移轉到成人站
+SubscribeStar 對帳單顯示「Subscribestar」，NexaPay 用戶收到穩定幣需自行換台幣
+人設標籤設計原則：點選取代輸入框（不附加），背後英文精準設計，不堆疊矛盾描述
+批次生成建議：同一套衣服+不同姿勢效果最穩，換衣服或換風格臉部可能飄移
+免費用戶每日影片限制邏輯：在點數檢查之前先攔截，有點數也只能生1支
+每日簽到實作時注意：需防多帳號濫用，建議加 IP + Google帳號雙重驗證
 
 14. 未來功能規劃（優先順序）
 
-短期：
-⬜ 批次生成（付費用戶一次生成多張不同 pose）
-
 中期：
+⬜ 成人專區正式上線
 ⬜ 自訓角色模型（用戶上傳10-20張圖訓練專屬模型）
+⬜ 公開畫廊（含匿名選項，需 public_gallery 資料表）
+⬜ 角色公開/匿名分享功能（三選項：私人/匿名公開/公開分享，預設私人）
 
 長期：
 ⬜ Live Portrait 動態呼吸效果（串接 LivePortrait API）
 ⬜ API 開放（讓第三方開發者串接）
-⬜ 成人專區正式上線

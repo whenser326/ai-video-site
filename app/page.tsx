@@ -74,6 +74,21 @@ const [wav2lipResult, setWav2lipResult] = useState<string | null>(null);
 const [wav2lipSeconds, setWav2lipSeconds] = useState(0);
 const [ttsSeconds, setTtsSeconds] = useState(0);
 // [DNA_PATCH_END]
+// [DNA_PATCH_START] 批次生成狀態
+const [showBatchModal, setShowBatchModal] = useState(false);
+const [batchCount, setBatchCount] = useState(2);
+const [batchPrompts, setBatchPrompts] = useState<{ prompt: string; note: string; isTranslating?: boolean; translated?: boolean; isNoteTranslating?: boolean; noteTranslated?: boolean }[]>([
+  { prompt: "", note: "" },
+  { prompt: "", note: "" },
+  { prompt: "", note: "" },
+  { prompt: "", note: "" },
+  { prompt: "", note: "" },
+  { prompt: "", note: "" },
+]);
+const [batchResults, setBatchResults] = useState<{ url: string; status: "waiting" | "generating" | "done" | "failed" }[]>([]);
+const [isBatchGenerating, setIsBatchGenerating] = useState(false);
+const [batchCurrentIndex, setBatchCurrentIndex] = useState(-1);
+// [DNA_PATCH_END]
 
   // 1. 初始化與點數同步
   useEffect(() => {
@@ -408,6 +423,145 @@ const handleVideoTranslate = async () => {
     setIsVideoTranslating(false);
   }
 };
+// [DNA_PATCH_START] 批次生成函式
+const getMaxBatch = () => {
+  if (plan === 'pro') return 6;
+  if (plan === 'standard') return 4;
+  if (plan === 'starter') return 2;
+  return 0;
+};
+
+const handleBatchGenerate = async () => {
+  if (!lockedCharacterUrl) { alert("⚠️ 批次生成必須先鎖定角色！"); return; }
+  const maxBatch = getMaxBatch();
+  if (maxBatch === 0) { alert("⚠️ 批次生成為付費功能，請先升級方案"); return; }
+  const validPrompts = batchPrompts.slice(0, batchCount).filter(p => p.prompt.trim());
+  if (validPrompts.length === 0) { alert("⚠️ 請至少填寫一個 Pose 描述"); return; }
+
+  setIsBatchGenerating(true);
+  setBatchCurrentIndex(-1);
+  setBatchResults(validPrompts.map(() => ({ url: "", status: "waiting" })));
+
+  const res = await fetch("/api/character", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ batchPrompts: validPrompts, userEmail: session?.user?.email }),
+  });
+  const data = await res.json();
+
+  if (!data.batch || !data.predictions) {
+    alert(data.error || "批次生成啟動失敗");
+    setIsBatchGenerating(false);
+    return;
+  }
+
+  const results: { url: string; status: "waiting" | "generating" | "done" | "failed" }[] = validPrompts.map(() => ({ url: "", status: "waiting" }));
+
+  for (let i = 0; i < data.predictions.length; i++) {
+    setBatchCurrentIndex(i);
+    results[i] = { url: "", status: "generating" };
+    setBatchResults([...results]);
+
+    const predId = data.predictions[i].id;
+    let done = false;
+    let retryCount = 0;
+    let currentPredId = predId;
+
+    while (!done) {
+      await new Promise(r => setTimeout(r, 3000));
+      try {
+        const pollRes = await fetch(`/api/character?id=${currentPredId}&email=${session?.user?.email}`);
+        const pollData = await pollRes.json();
+
+        if (pollData.status === "succeeded") {
+          const finalUrl = Array.isArray(pollData.output) ? pollData.output[0] : pollData.output;
+          let permanentUrl = finalUrl;
+          try {
+            const uploadRes = await fetch("/api/upload-image", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ imageUrl: finalUrl, email: session?.user?.email }),
+            });
+            const uploadData = await uploadRes.json();
+            if (uploadData.url) permanentUrl = uploadData.url;
+          } catch {}
+          await fetch("/api/history", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              user_email: session?.user?.email,
+              image_url: permanentUrl,
+              video_url: null,
+              prompt: validPrompts[i].prompt,
+              character_id: lockedCharacterId || null,
+            }),
+          });
+          results[i] = { url: permanentUrl, status: "done" };
+          setBatchResults([...results]);
+          done = true;
+
+        } else if (pollData.status === "failed") {
+          if (retryCount < 2) {
+            // 自動 retry
+            retryCount++;
+            results[i] = { url: "", status: "generating" };
+            setBatchResults([...results]);
+            const finalPrompt = `${validPrompts[i].prompt}${validPrompts[i].note ? ', ' + validPrompts[i].note : ''}, same person from reference image`;
+            try {
+              const retryRes = await fetch("/api/character", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  batchPrompts: [{ prompt: validPrompts[i].prompt, note: validPrompts[i].note }],
+                  userEmail: session?.user?.email,
+                  isSingleRetry: true,
+                }),
+              });
+              const retryData = await retryRes.json();
+              if (retryData.batch && retryData.predictions?.[0]?.id) {
+                currentPredId = retryData.predictions[0].id;
+              } else {
+                // retry 啟動失敗，直接退點標記失敗
+                await fetch("/api/character", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ refundCredits: 1, userEmail: session?.user?.email }),
+                });
+                fetch(`/api/user/credits?email=${session?.user?.email}`).then(r => r.json()).then(d => setCredits(d.credits));
+                results[i] = { url: "", status: "failed" };
+                setBatchResults([...results]);
+                done = true;
+              }
+            } catch {
+              results[i] = { url: "", status: "failed" };
+              setBatchResults([...results]);
+              done = true;
+            }
+          } else {
+            // retry 2次都失敗，退點
+            await fetch("/api/character", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ refundCredits: 1, userEmail: session?.user?.email }),
+            });
+            fetch(`/api/user/credits?email=${session?.user?.email}`).then(r => r.json()).then(d => setCredits(d.credits));
+            results[i] = { url: "", status: "failed" };
+            setBatchResults([...results]);
+            done = true;
+          }
+        }
+      } catch { done = true; }
+    }
+  }
+
+  if (session?.user?.email) {
+    fetch(`/api/user/credits?email=${session.user.email}`).then(r => r.json()).then(d => setCredits(d.credits));
+    fetch(`/api/history?email=${session.user.email}`).then(r => r.json()).then(d => setHistory(d));
+  }
+  setBatchCurrentIndex(-1);
+  setIsBatchGenerating(false);
+};
+// [DNA_PATCH_END]
 // [DNA_PATCH_END]
   // 5. ✨ 接通影片生成
 // [DNA_PATCH_START]
@@ -531,6 +685,43 @@ return (
     ))}
   </div>
 </div>
+{/* [DNA_PATCH_START] 人設快速標籤 */}
+<div className="mb-3">
+  <p className="text-white/40 text-xs mb-2 font-bold tracking-wider uppercase">✨ 人設快速標籤</p>
+  <div className="flex gap-2 flex-wrap">
+    {[
+      { label: "🇹🇼 台灣女孩", value: "Taiwanese girl, natural look, friendly smile, casual outfit" },
+      { label: "👠 冷豔名模", value: "high fashion model, cold expression, sharp features, editorial look" },
+      { label: "🎀 清純學生", value: "cute student girl, innocent expression, school uniform, soft lighting" },
+      { label: "💼 都市OL", value: "office lady, professional attire, confident look, city background" },
+      { label: "🔮 神秘女巫", value: "mysterious witch, dark fantasy, glowing eyes, dramatic lighting" },
+      { label: "🇰🇷 韓系男生", value: "handsome Korean man, clean look, casual fashion, soft smile" },
+      { label: "💪 硬漢型男", value: "rugged masculine man, strong jawline, serious expression, cinematic" },
+      { label: "⚔️ 帥氣騎士", value: "armored knight, heroic pose, fantasy style, epic lighting" },
+      { label: "🌆 賽博龐克", value: "cyberpunk character, neon lights, futuristic outfit, urban night" },
+      { label: "🧝 奇幻精靈", value: "fantasy elf, pointed ears, ethereal beauty, forest background" },
+    ].map((tag) => (
+      <button
+        key={tag.value}
+        type="button"
+        onClick={() => {
+          setPrompt(tag.value);
+          setTranslatedPrompt(null);
+          setUseTranslated(false);
+        }}
+        className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+          prompt === tag.value
+            ? "bg-yellow-400/30 text-yellow-300 border-yellow-400/60"
+            : "bg-white/5 text-white/50 border-white/10 hover:border-yellow-400/40 hover:text-white/70"
+        }`}
+      >
+        {tag.label}
+      </button>
+    ))}
+  </div>
+  <p className="text-white/20 text-[10px] mt-1.5">點選後自動填入輸入框，可再自行微調</p>
+</div>
+{/* [DNA_PATCH_END] */}
 
 {/* [DNA_PATCH_START] textarea + 翻譯按鈕 + 翻譯確認 + 提示文字 */}
 <div className="relative">
@@ -824,6 +1015,16 @@ return (
         >
           🎯 鎖定此角色（一致性生成）
         </button>
+        {/* [DNA_PATCH_START] 批次生成按鈕（付費專屬） */}
+        {plan !== 'free' && lockedCharacterUrl && (
+          <button
+            onClick={() => setShowBatchModal(true)}
+            className="w-full py-3 bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30 text-blue-300 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:from-blue-500/30 transition-all"
+          >
+            🎭 批次生成不同 Pose <span className="text-blue-300/50 text-xs">每張1點</span>
+          </button>
+        )}
+        {/* [DNA_PATCH_END] */}
         {/* [DNA_PATCH_START] 收藏此角色按鈕 */}
         <button
           onClick={() => { setSaveCharacterName(""); setShowSaveModal(true); }}
@@ -1633,6 +1834,192 @@ return (
           }}
           className="py-3 rounded-xl bg-gradient-to-r from-purple-500 to-blue-500 text-white text-sm font-black disabled:opacity-40 hover:opacity-90 transition-all"
         >{isTtsLoading ? "生成中..." : "🎙️ 免費試聽"}</button>
+      </div>
+    </div>
+  </div>
+)}
+{/* [DNA_PATCH_END] */}
+{/* [DNA_PATCH_START] 批次生成 Modal */}
+{showBatchModal && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+    <div className="w-full max-w-md bg-[#0d2318] border border-blue-500/20 rounded-3xl p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div className="text-center">
+        <p className="text-3xl mb-1">🎭</p>
+        <h2 className="text-white font-black text-lg">批次生成不同 Pose</h2>
+        <p className="text-white/40 text-xs mt-1">同一套衣服，不同姿勢／角度，每張 1 點</p>
+      </div>
+
+      {/* 張數選擇 */}
+      <div>
+        <p className="text-white/40 text-xs font-bold tracking-wider uppercase mb-2">生成張數</p>
+        <div className="flex gap-2">
+          {Array.from({ length: getMaxBatch() }, (_, i) => i + 1).map(n => (
+            <button
+              key={n}
+              onClick={() => setBatchCount(n)}
+              className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all ${
+                batchCount === n
+                  ? "bg-blue-500/30 text-blue-300 border-blue-500"
+                  : "bg-white/5 text-white/40 border-white/10 hover:border-white/30"
+              }`}
+            >{n} 張</button>
+          ))}
+        </div>
+        <p className="text-blue-300/50 text-xs mt-1.5 text-center">
+          {plan === 'starter' ? '入門包：最多2張' : plan === 'standard' ? '標準包：最多4張' : '專業包：最多6張'}
+        </p>
+      </div>
+
+      {/* 方案上限提示 */}
+      <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl px-4 py-2">
+        <p className="text-blue-300 text-xs font-bold">⚠️ 建議：同一套衣服 + 不同姿勢效果最穩定</p>
+        <p className="text-white/30 text-xs mt-0.5">換衣服或換風格臉部可能不一致，請注意</p>
+      </div>
+
+      {/* 每張的 Prompt 輸入 */}
+      <div className="space-y-3">
+        <p className="text-white/40 text-xs font-bold tracking-wider uppercase">每張 Pose 描述</p>
+        {Array.from({ length: batchCount }, (_, i) => (
+          <div key={i} className="bg-white/5 border border-white/10 rounded-xl p-3 space-y-2">
+            <p className="text-white/50 text-xs font-bold">第 {i + 1} 張</p>
+            <div className="relative">
+  <input
+    type="text"
+    value={batchPrompts[i]?.prompt || ""}
+    onChange={(e) => {
+      const updated = [...batchPrompts];
+      updated[i] = { ...updated[i], prompt: e.target.value, translated: false };
+      setBatchPrompts(updated);
+    }}
+    placeholder="姿勢描述（英文）例：standing sideways, arms crossed"
+    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-xs placeholder-white/20 focus:outline-none focus:border-blue-400/50 pr-20"
+  />
+  {hasChinese(batchPrompts[i]?.prompt || "") && !batchPrompts[i]?.translated && (
+    <button
+      type="button"
+      disabled={batchPrompts[i]?.isTranslating}
+      onClick={async () => {
+        const updated = [...batchPrompts];
+        updated[i] = { ...updated[i], isTranslating: true };
+        setBatchPrompts(updated);
+        try {
+          const res = await fetch("/api/translate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: batchPrompts[i].prompt }),
+          });
+          const data = await res.json();
+          if (data.translated) {
+            updated[i] = { ...updated[i], prompt: data.translated, isTranslating: false, translated: true };
+          } else {
+            updated[i] = { ...updated[i], isTranslating: false };
+          }
+        } catch {
+          updated[i] = { ...updated[i], isTranslating: false };
+        }
+        setBatchPrompts([...updated]);
+      }}
+      className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 bg-[#89f5a2]/20 border border-[#89f5a2]/40 text-[#89f5a2] text-[10px] rounded font-bold hover:bg-[#89f5a2]/30 transition-all disabled:opacity-40 whitespace-nowrap"
+    >
+      {batchPrompts[i]?.isTranslating ? "翻譯中..." : "🌐 翻譯"}
+    </button>
+  )}
+</div>
+            <p className="text-white/25 text-[10px]">📌 備註（選填）：補充角度、距離、表情等細節，例如：微笑、特寫、從後方拍</p>
+<div className="relative">
+  <input
+    type="text"
+    value={batchPrompts[i]?.note || ""}
+    onChange={(e) => {
+      const updated = [...batchPrompts];
+      updated[i] = { ...updated[i], note: e.target.value, noteTranslated: false };
+      setBatchPrompts(updated);
+    }}
+    placeholder="例：微笑表情、從側面拍、特寫臉部..."
+    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white/70 text-xs placeholder-white/20 focus:outline-none focus:border-blue-400/30 pr-20"
+  />
+  {hasChinese(batchPrompts[i]?.note || "") && !batchPrompts[i]?.noteTranslated && (
+    <button
+      type="button"
+      disabled={batchPrompts[i]?.isNoteTranslating}
+      onClick={async () => {
+        const updated = [...batchPrompts];
+        updated[i] = { ...updated[i], isNoteTranslating: true };
+        setBatchPrompts(updated);
+        try {
+          const res = await fetch("/api/translate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: batchPrompts[i].note }),
+          });
+          const data = await res.json();
+          if (data.translated) {
+            updated[i] = { ...updated[i], note: data.translated, isNoteTranslating: false, noteTranslated: true };
+          } else {
+            updated[i] = { ...updated[i], isNoteTranslating: false };
+          }
+        } catch {
+          updated[i] = { ...updated[i], isNoteTranslating: false };
+        }
+        setBatchPrompts([...updated]);
+      }}
+      className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 bg-[#89f5a2]/20 border border-[#89f5a2]/40 text-[#89f5a2] text-[10px] rounded font-bold hover:bg-[#89f5a2]/30 transition-all disabled:opacity-40 whitespace-nowrap"
+    >
+      {batchPrompts[i]?.isNoteTranslating ? "翻譯中..." : "🌐 翻譯"}
+    </button>
+  )}
+</div>
+          </div>
+        ))}
+      </div>
+
+      {/* 生成結果區 */}
+      {batchResults.length > 0 && (
+        <div>
+          <p className="text-white/40 text-xs font-bold tracking-wider uppercase mb-2">生成進度</p>
+          <div className="grid grid-cols-3 gap-2">
+            {batchResults.map((r, i) => (
+              <div key={i} className="aspect-square rounded-xl overflow-hidden border border-white/10 flex items-center justify-center bg-white/5 relative">
+                {r.status === "done" && r.url ? (
+                  <img src={r.url} className="w-full h-full object-cover" />
+                ) : r.status === "generating" ? (
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="w-5 h-5 border-2 border-blue-400/40 border-t-blue-400 rounded-full animate-spin" />
+                    <span className="text-blue-300 text-[9px]">生成中</span>
+                  </div>
+                ) : r.status === "failed" ? (
+                  <span className="text-red-400 text-[9px] text-center px-1">失敗已退點</span>
+                ) : (
+                  <span className="text-white/20 text-[10px]">等待中</span>
+                )}
+                <span className="absolute bottom-1 left-1 text-white/40 text-[8px] font-bold">#{i + 1}</span>
+              </div>
+            ))}
+          </div>
+          {isBatchGenerating && batchCurrentIndex >= 0 && (
+            <p className="text-blue-300 text-xs text-center mt-2 font-bold">
+              ⚡ 正在生成第 {batchCurrentIndex + 1} 張，完成後自動儲存到角色相簿
+            </p>
+          )}
+          {!isBatchGenerating && batchResults.every(r => r.status === "done" || r.status === "failed") && (
+            <p className="text-[#89f5a2] text-xs text-center mt-2 font-bold">✅ 批次生成完成！已自動儲存到角色相簿</p>
+          )}
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          onClick={() => { setShowBatchModal(false); setBatchResults([]); setBatchCurrentIndex(-1); }}
+          disabled={isBatchGenerating}
+          className="py-3 rounded-xl border border-white/10 text-white/50 text-sm font-bold hover:bg-white/5 transition-all disabled:opacity-30"
+        >關閉</button>
+        <button
+          onClick={handleBatchGenerate}
+          disabled={isBatchGenerating}
+          className="py-3 rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 text-white text-sm font-black disabled:opacity-40 hover:opacity-90 transition-all"
+        >
+          {isBatchGenerating ? `生成中 ${batchCurrentIndex + 1}/${batchResults.length}...` : `🎭 開始生成（${batchCount} 點）`}
+        </button>
       </div>
     </div>
   </div>
