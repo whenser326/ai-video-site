@@ -271,6 +271,14 @@ ELEVENLABS_API_KEY=
 ✅ SEO 設定（metadata title/description/keywords/og/twitter/robots）
 ✅ 批次生成（付費用戶，依方案限張數，必須鎖定角色，依序生成，失敗retry+退點，自動歸檔角色相簿）
 ✅ 批次生成每張 prompt + 備註欄位均支援中翻英
+✅ 後台會員統計頁面（/admin/members，總人數/今日新增/方案分布/生成次數，支援搜尋過濾）
+✅ 站內留言板（用戶發送+查看留言，管理員後台回覆，站內紅點通知，不透過 Email）
+✅ 後台留言管理頁面（/admin/feedback，未讀標示/篩選/即時回覆）
+✅ feedback_messages 資料表新增
+✅ /api/feedback/route.ts（用戶送出+查詢）
+✅ /api/feedback/read/route.ts（標記已讀）
+✅ /api/admin/feedback/route.ts（後台查詢+回覆）
+✅ /api/admin/members/route.ts（會員統計）
 
 12. 待完成項目（下一步）
 
@@ -285,6 +293,16 @@ ELEVENLABS_API_KEY=
 ⬜ 後台手動發成人點數功能
 ⬜ 主站資料移轉至成人站（角色/圖片/歷史，驗證通過後開放）
 ⬜ 成人站金流串接（SubscribeStar主力 + NexaPay補充）
+⬜ 購買自訂域名（如 consistentflow.com）並綁定 Vercel
+⬜ 綁定域名後提交 Google Search Console（site:你的域名 確認收錄）
+⬜ SEO 優化（綁域名後再做，現用 Vercel 預設網址意義不大）
+⬜ 購買自訂域名（建議 consistentflow.com，在 Namecheap 或 GoDaddy 購買，約 NT$400-600/年）
+⬜ Vercel 綁定自訂域名（Vercel Dashboard → Project → Settings → Domains）
+⬜ NEXTAUTH_URL 環境變數改為正式域名
+⬜ Google OAuth 授權網址加入正式域名（Google Cloud Console → 憑證 → 授權重新導向 URI）
+⬜ 綁定後提交 Google Search Console 驗證所有權
+⬜ Search Console 提交 sitemap（Next.js 可自動產生 /sitemap.xml）
+⬜ SEO metadata 優化（og:title / og:description 改為正式內容）
 
 13. 已知問題備忘
 
@@ -333,6 +351,10 @@ SubscribeStar 對帳單顯示「Subscribestar」，NexaPay 用戶收到穩定幣
 免費用戶每日影片限制邏輯：在點數檢查之前先攔截，有點數也只能生1支
 每日簽到實作時注意：需防多帳號濫用，建議加 IP + Google帳號雙重驗證
 靈感畫廊點擊無反應：onClick 必須包含 `window.scrollTo({ top: 0, behavior: 'smooth' })`，否則用戶不知道已套用，且此 bug 已出現兩次，禁止移除此行
+SEO keywords meta tag 對 Google 無效（2009年起），真正有效的是 og:title/og:description
+Vercel 預設網址 SEO 意義不大，等綁自訂域名後再認真優化
+換域名後必須同步更新：NEXTAUTH_URL、Google OAuth 授權URI、綠界金流回調網址
+SEO keywords meta tag 對 Google 無效，真正有效的是 og:title/og:description
 
 14. 未來功能規劃（優先順序）
 

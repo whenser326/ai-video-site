@@ -78,12 +78,28 @@ export default function AdminPage() {
       <div className="max-w-3xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-2xl font-black text-[#89f5a2]">🛠 後台管理</h1>
-          <button
-            onClick={() => router.push('/admin/models')}
-            className="px-4 py-2 bg-purple-500/20 border border-purple-500/30 rounded-xl text-purple-300 text-sm font-bold hover:bg-purple-500/30 transition-all"
-          >
-            🔭 模型追蹤
-          </button>
+          {/* [DNA_PATCH_START] */}
+<div className="flex gap-2">
+  <button
+    onClick={() => router.push('/admin/members')}
+    className="px-4 py-2 bg-blue-500/20 border border-blue-500/30 rounded-xl text-blue-300 text-sm font-bold hover:bg-blue-500/30 transition-all"
+  >
+    👥 會員統計
+  </button>
+  <button
+    onClick={() => router.push('/admin/feedback')}
+    className="px-4 py-2 bg-green-500/20 border border-green-500/30 rounded-xl text-green-300 text-sm font-bold hover:bg-green-500/30 transition-all"
+  >
+    💬 留言管理
+  </button>
+  <button
+    onClick={() => router.push('/admin/models')}
+    className="px-4 py-2 bg-purple-500/20 border border-purple-500/30 rounded-xl text-purple-300 text-sm font-bold hover:bg-purple-500/30 transition-all"
+  >
+    🔭 模型追蹤
+  </button>
+</div>
+{/* [DNA_PATCH_END] */}
         </div>
 
         {/* 分潤設定 */}
