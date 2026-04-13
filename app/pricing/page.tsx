@@ -3,6 +3,7 @@ import { useSession, signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import React from "react";
 
+// [DNA_PATCH_START] 更新方案功能列表
 const plans = [
   {
     name: "入門包",
@@ -16,7 +17,7 @@ const plans = [
     badge: "",
     titleColor: "#C0DD97",
     subColor: "#639922",
-    features: ["30 點數", "圖片生成 1點/張", "影片生成 6點/支", "角色一致性功能", "歷史紀錄保存 30 天 / 5 筆"],
+    features: ["30 點數", "圖片生成 1點/張", "影片生成 6點/支", "角色一致性功能", "批次生成 2張", "角色配音 8點/次", "歷史紀錄保存 30 天 / 5 筆"],
     plan: "starter",
   },
   {
@@ -31,7 +32,7 @@ const plans = [
     badge: "最多人選",
     titleColor: "#B5D4F4",
     subColor: "#378ADD",
-    features: ["80 點數", "圖片生成 1點/張", "影片生成 5點/支", "角色一致性功能", "歷史紀錄保存 30 天 / 10 筆", "影片生成費用更優惠"],
+    features: ["80 點數", "圖片生成 1點/張", "影片生成 5點/支", "角色一致性功能", "批次生成 4張", "角色配音 7點/次", "歷史紀錄保存 30 天 / 10 筆", "影片生成費用更優惠"],
     plan: "standard",
   },
   {
@@ -46,10 +47,11 @@ const plans = [
     badge: "最划算",
     titleColor: "#FAC775",
     subColor: "#EF9F27",
-    features: ["200 點數", "圖片生成 1點/張", "影片生成 4點/支", "角色一致性功能", "歷史紀錄保存 90 天 / 30 筆", "影片生成費用最優惠"],
+    features: ["200 點數", "圖片生成 1點/張", "影片生成 4點/支", "角色一致性功能", "批次生成 6張", "角色配音 6點/次", "歷史紀錄保存 90 天 / 30 筆", "影片生成費用最優惠"],
     plan: "pro",
   },
 ];
+// [DNA_PATCH_END]
 
 export default function PricingPage() {
   const { data: session } = useSession();
