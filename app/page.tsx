@@ -365,7 +365,9 @@ if (session?.user?.email) fetch(`/api/history?email=${session.user.email}`).then
     setGenType("image");
 
     try {
-      const lockedCharacter = session?.user?.email ? await fetch(`/api/user/credits?email=${session.user.email}`).then(r => r.json()).then(d => d.locked_character || null) : null;
+      // [DNA_PATCH_START] 直接用 state 而非重新從 API 抓
+const lockedCharacter = lockedCharacterUrl || null;
+// [DNA_PATCH_END]
       const res = await fetch("/api/character", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1531,7 +1533,14 @@ return (
               <div
                 key={idx}
                 className="group flex-shrink-0 w-32 cursor-pointer"
-                onClick={() => { setPrompt(item.prompt); setTranslatedPrompt(null); setUseTranslated(false); }}
+                // [DNA_PATCH_START] 靈感畫廊點擊：填入prompt並捲動到輸入框
+onClick={() => {
+  setPrompt(item.prompt);
+  setTranslatedPrompt(null);
+  setUseTranslated(false);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}}
+// [DNA_PATCH_END]
               >
                 <div className="w-32 h-32 rounded-2xl border border-white/10 overflow-hidden shadow-lg transition-all duration-200 hover:scale-105 hover:border-[#89f5a2]/50 hover:shadow-[0_0_20px_rgba(137,245,162,0.15)] relative">
                   <img src={item.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />

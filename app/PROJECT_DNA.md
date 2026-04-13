@@ -15,6 +15,7 @@
 禁止簡化：嚴格禁止刪除任何 useEffect、localStorage、Polling 或點數同步邏輯。
 防呆檢查：處理 history.map 前必須使用 Array.isArray(history) 進行強制檢查。
 貼上程式碼注意：從聊天介面複製含有 `<a` 標籤的程式碼時，`<a` 可能會被吃掉，貼上後需手動確認。
+靈感畫廊防呆：`galleryItems.map` 的 onClick 必須永遠包含 `setPrompt`、`setTranslatedPrompt(null)`、`setUseTranslated(false)`、`window.scrollTo({ top: 0, behavior: 'smooth' })` 四行，缺一不可
 
 3. 專案核心
 
@@ -331,6 +332,7 @@ SubscribeStar 對帳單顯示「Subscribestar」，NexaPay 用戶收到穩定幣
 批次生成建議：同一套衣服+不同姿勢效果最穩，換衣服或換風格臉部可能飄移
 免費用戶每日影片限制邏輯：在點數檢查之前先攔截，有點數也只能生1支
 每日簽到實作時注意：需防多帳號濫用，建議加 IP + Google帳號雙重驗證
+靈感畫廊點擊無反應：onClick 必須包含 `window.scrollTo({ top: 0, behavior: 'smooth' })`，否則用戶不知道已套用，且此 bug 已出現兩次，禁止移除此行
 
 14. 未來功能規劃（優先順序）
 
