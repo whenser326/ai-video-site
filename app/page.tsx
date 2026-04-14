@@ -67,7 +67,12 @@ const [ttsText, setTtsText] = useState("");
 const [ttsVoice, setTtsVoice] = useState("gentle-female");
 const [ttsAudio, setTtsAudio] = useState<string | null>(null);
 const [isTtsLoading, setIsTtsLoading] = useState(false);
+// [DNA_PATCH_START] TTS 試聽限制
 const [ttsTrimmed, setTtsTrimmed] = useState(false);
+const [ttsCache, setTtsCache] = useState<Record<string, string>>({});
+const [ttsPreviewCount, setTtsPreviewCount] = useState(0);
+const TTS_MAX_PREVIEW = 3;
+// [DNA_PATCH_END]
 // [DNA_PATCH_START] Wav2Lip 狀態
 const [isWav2lipLoading, setIsWav2lipLoading] = useState(false);
 const [wav2lipResult, setWav2lipResult] = useState<string | null>(null);
@@ -1624,7 +1629,17 @@ onClick={() => {
           ].map((v) => (
             <button
               key={v.id}
-              onClick={() => { setTtsVoice(v.id); setTtsAudio(null); setTtsTrimmed(false); }}
+              // [DNA_PATCH_START] 切換聲音時先查暫存
+onClick={() => {
+  setTtsVoice(v.id);
+  setTtsTrimmed(false);
+  if (ttsCache[v.id]) {
+    setTtsAudio(ttsCache[v.id]);
+  } else {
+    setTtsAudio(null);
+  }
+}}
+// [DNA_PATCH_END]
               className={`py-2 rounded-lg text-xs font-bold border transition-all ${
                 ttsVoice === v.id
                   ? "bg-purple-500/30 text-purple-200 border-purple-500"
@@ -1816,34 +1831,50 @@ onClick={() => {
   </div>
 )}
 {/* [DNA_PATCH_END] */}
-      <div className="grid grid-cols-2 gap-3">
-        <button
-          onClick={() => { setShowTtsModal(false); setTtsAudio(null); }}
-          className="py-3 rounded-xl border border-white/10 text-white/50 text-sm font-bold hover:bg-white/5 transition-all"
-        >取消</button>
-        <button
-          disabled={isTtsLoading || !ttsText.trim()}
-          onClick={async () => {
-            setIsTtsLoading(true);
-            setTtsAudio(null);
-            setTtsTrimmed(false);
-            const res = await fetch("/api/tts", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ text: ttsText, voiceId: ttsVoice }),
-            });
-            const data = await res.json();
-            if (data.audio) {
-              setTtsAudio(data.audio);
-              setTtsTrimmed(data.trimmed);
-            } else {
-              alert(data.error || "語音生成失敗");
-            }
-            setIsTtsLoading(false);
-          }}
-          className="py-3 rounded-xl bg-gradient-to-r from-purple-500 to-blue-500 text-white text-sm font-black disabled:opacity-40 hover:opacity-90 transition-all"
-        >{isTtsLoading ? "生成中..." : "🎙️ 免費試聽"}</button>
-      </div>
+{/* [DNA_PATCH_START] 試聽次數提示+按鈕 */}
+<p className="text-center text-xs font-black text-yellow-300">
+  ⚠️ 每日免費試聽 {TTS_MAX_PREVIEW} 次（剩餘 {Math.max(TTS_MAX_PREVIEW - ttsPreviewCount, 0)} 次）
+</p>
+<div className="grid grid-cols-2 gap-3">
+  <button
+    onClick={() => { setShowTtsModal(false); setTtsAudio(null); }}
+    className="py-3 rounded-xl border border-white/10 text-white/50 text-sm font-bold hover:bg-white/5 transition-all"
+  >取消</button>
+  <button
+    disabled={isTtsLoading || !ttsText.trim() || ttsPreviewCount >= TTS_MAX_PREVIEW}
+    onClick={async () => {
+      if (ttsCache[ttsVoice]) {
+        setTtsAudio(ttsCache[ttsVoice]);
+        return;
+      }
+      if (ttsPreviewCount >= TTS_MAX_PREVIEW) {
+        alert("今日試聽次數已用完，明天再試！");
+        return;
+      }
+      setIsTtsLoading(true);
+      setTtsAudio(null);
+      setTtsTrimmed(false);
+      const res = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: ttsText, voiceId: ttsVoice }),
+      });
+      const data = await res.json();
+      if (data.audio) {
+        setTtsAudio(data.audio);
+        setTtsTrimmed(data.trimmed);
+        setTtsCache(prev => ({ ...prev, [ttsVoice]: data.audio }));
+        setTtsPreviewCount(prev => prev + 1);
+      } else {
+        alert(data.error || "語音生成失敗");
+      }
+      setIsTtsLoading(false);
+    }}
+    className="py-3 rounded-xl bg-gradient-to-r from-purple-500 to-blue-500 text-white text-sm font-black disabled:opacity-40 hover:opacity-90 transition-all"
+  >
+    {isTtsLoading ? "生成中..." : ttsCache[ttsVoice] ? "🔄 重新播放" : ttsPreviewCount >= TTS_MAX_PREVIEW ? "🚫 試聽次數已用完" : "🎙️ 免費試聽"}
+</button>
+</div>
     </div>
   </div>
 )}
