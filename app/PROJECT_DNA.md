@@ -16,6 +16,7 @@
 防呆檢查：處理 history.map 前必須使用 Array.isArray(history) 進行強制檢查。
 貼上程式碼注意：從聊天介面複製含有 `<a` 標籤的程式碼時，`<a` 可能會被吃掉，貼上後需手動確認。
 靈感畫廊防呆：`galleryItems.map` 的 onClick 必須永遠包含 `setPrompt`、`setTranslatedPrompt(null)`、`setUseTranslated(false)`、`window.scrollTo({ top: 0, behavior: 'smooth' })` 四行，缺一不可
+TTS 試聽防呆：ttsCache、ttsPreviewCount、TTS_MAX_PREVIEW 三個變數禁止移除，切換聲音的 onClick 必須先查 ttsCache 再決定是否呼叫 API
 
 3. 專案核心
 
@@ -89,6 +90,13 @@ Flux Kontext Pro 失敗（E006）自動 retry 最多 2 次，顯示黃色提示�
 分享按鈕：手機跳系統選單（Web Share API，支援 FB/IG/Threads/LINE 等），電腦版下載圖片+開 FB
 靈感畫廊：優先顯示用戶歷史圖片（最多4張），不足補固定圖，合計8張
 手機版 RWD：右上角點數/登出直排顯示，標題字體縮小，padding 優化
+語音合成（角色配音）規則：
+- 免費用戶：不開放（按鈕不顯示）
+- 付費用戶：每日免費試聽 3 次，已試聽的聲音暫存於 ttsCache，重複播放不消耗次數
+- 下載語音才扣點：入門 8點、標準 7點、專業 6點
+- 合成到影片（Wav2Lip）才扣點：入門 10點、標準 9點、專業 8點
+- 對用戶顯示合計：入門 18點/次、標準 16點/次、專業 14點/次
+- ttsCache 結構：Record<voiceId, base64音檔>，切換聲音時先查暫存
 
 8. 金流
 

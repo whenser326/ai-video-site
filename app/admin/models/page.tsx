@@ -51,7 +51,32 @@ export default function ModelTrackerPage() {
   const [models, setModels] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [trackerData, setTrackerData] = useState<Record<string, any>>({});
-  const [savingId, setSavingId] = useState<string | null>(null);
+   
+const [savingId, setSavingId] = useState<string | null>(null);
+ 
+  const [compareList, setCompareList] = useState<string[]>(() => {
+    if (typeof window === "undefined") return [];
+    const saved = sessionStorage.getItem("compare_models");
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const toggleCompare = (modelId: string) => {
+    setCompareList(prev => {
+      const next = prev.includes(modelId)
+        ? prev.filter(m => m !== modelId)
+        : prev.length < 3 ? [...prev, modelId] : prev;
+      sessionStorage.setItem("compare_models", JSON.stringify(next));
+      return next;
+    });
+  };
+ 
+const [searchText, setSearchText] = useState("");
+const filteredModels = models.filter((model: any) => {
+  const modelId = (model.owner + "/" + model.name).toLowerCase();
+  const desc = (model.description || "").toLowerCase();
+  return modelId.includes(searchText.toLowerCase()) || desc.includes(searchText.toLowerCase());
+});
+ 
 
   useEffect(() => {
     if (status === "unauthenticated") { signIn("google"); return; }
@@ -59,11 +84,14 @@ export default function ModelTrackerPage() {
     if (session) loadTrackerData();
   }, [session, status]);
 
-  useEffect(() => {
-    if (session?.user?.email === ADMIN_EMAIL) {
-      fetchModels(SEARCH_CATEGORIES[activeCategory].query);
-    }
-  }, [activeCategory, session]);
+   
+useEffect(() => {
+  if (session?.user?.email === ADMIN_EMAIL) {
+    setSearchText("");
+    fetchModels(SEARCH_CATEGORIES[activeCategory].query);
+  }
+}, [activeCategory, session]);
+ 
 
   const loadTrackerData = async () => {
     const res = await fetch("/api/admin/models");
@@ -116,6 +144,7 @@ export default function ModelTrackerPage() {
     <main className="min-h-screen bg-[#0d2318] p-6 text-white">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center gap-4 mb-8">
+           
           <button
             onClick={() => router.push('/admin')}
             className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-full text-white/50 text-xs font-bold hover:bg-white/10 transition-all"
@@ -123,6 +152,13 @@ export default function ModelTrackerPage() {
             ← 返回後台
           </button>
           <h1 className="text-2xl font-black text-[#89f5a2]">模型追蹤</h1>
+          <button
+            onClick={() => router.push('/admin/models/compare')}
+            className="px-3 py-1.5 bg-[#89f5a2]/10 border border-[#89f5a2]/30 rounded-full text-[#89f5a2] text-xs font-bold hover:bg-[#89f5a2]/20 transition-all"
+          >
+            模型比對測試 →
+          </button>
+ 
         </div>
         <div className="bg-white/5 border border-[#89f5a2]/20 rounded-2xl p-5 mb-6">
           <p className="text-[#89f5a2] font-black text-sm mb-3">目前使用中的模型</p>
@@ -143,11 +179,24 @@ export default function ModelTrackerPage() {
             </button>
           ))}
         </div>
-        {loading && <div className="text-center py-16"><p className="text-white/30 text-sm">抓取模型中...</p></div>}
-        {!loading && models.length === 0 && <div className="text-center py-16"><p className="text-white/30 text-sm">沒有找到模型</p></div>}
-        {!loading && models.length > 0 && (
+        <input
+          type="text"
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          placeholder="在結果中搜尋模型名稱或描述..."
+          className="w-full px-4 py-2 mb-5 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder-white/20 outline-none focus:border-[#89f5a2]/50"
+        />
+
+        {!loading && models.length === 0 && (
+          <div className="text-center py-16"><p className="text-white/30 text-sm">沒有找到模型</p></div>
+        )}
+        {!loading && models.length > 0 && filteredModels.length === 0 && (
+          <div className="text-center py-16"><p className="text-white/30 text-sm">搜尋無結果</p></div>
+        )}
+        {!loading && filteredModels.length > 0 && (
           <div className="space-y-3">
-            {models.map((model: any) => {
+            {filteredModels.map((model: any) => {
+ 
               const modelId = model.owner + "/" + model.name;
               const isCurrentlyUsed = CURRENT_MODELS.includes(modelId);
               const tracker = trackerData[modelId];
@@ -184,9 +233,19 @@ export default function ModelTrackerPage() {
                       {STATUS_OPTIONS.map(s => (
                         <option key={s.value} value={s.value} className="bg-[#0d2318] text-white">{s.label}</option>
                       ))}
-                    </select>
-                  </div>
-                  {currentStatus !== "none" && (
+                     
+                </select>
+                 
+                    <button
+                      onClick={() => toggleCompare(modelId)}
+                      className={`flex-shrink-0 px-3 py-2 rounded-xl text-xs font-bold border transition-all ${compareList.includes(modelId) ? "bg-[#89f5a2]/20 border-[#89f5a2]/50 text-[#89f5a2]" : "bg-white/5 border-white/10 text-white/30 hover:border-[#89f5a2]/30 hover:text-[#89f5a2]"}`}
+                    >
+                      {compareList.includes(modelId) ? "已加入" : "加入比對"}
+                    </button>
+ 
+              </div>
+              {currentStatus !== "none" && (
+ 
                     <input
                       type="text"
                       placeholder="備註"
