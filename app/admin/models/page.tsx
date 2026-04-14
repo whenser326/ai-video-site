@@ -164,7 +164,15 @@ useEffect(() => {
           <p className="text-[#89f5a2] font-black text-sm mb-3">目前使用中的模型</p>
           <div className="flex flex-wrap gap-2">
             {CURRENT_MODELS.map(m => (
-              <span key={m} className="px-3 py-1.5 bg-[#89f5a2]/10 border border-[#89f5a2]/30 rounded-full text-[#89f5a2] text-xs font-mono">{m}</span>
+              <div key={m} className="flex items-center gap-1">
+                <span className="px-3 py-1.5 bg-[#89f5a2]/10 border border-[#89f5a2]/30 rounded-full text-[#89f5a2] text-xs font-mono">{m}</span>
+                <button
+                  onClick={() => toggleCompare(m)}
+                  className={`px-2 py-1 rounded-full text-[10px] font-bold border transition-all ${compareList.includes(m) ? "bg-[#89f5a2]/20 border-[#89f5a2]/50 text-[#89f5a2]" : "bg-white/5 border-white/10 text-white/30 hover:border-[#89f5a2]/30 hover:text-[#89f5a2]"}`}
+                >
+                  {compareList.includes(m) ? "已加入" : "+比對"}
+                </button>
+              </div>
             ))}
           </div>
         </div>

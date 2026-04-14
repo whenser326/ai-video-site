@@ -101,13 +101,14 @@ Flux Kontext Pro 失敗（E006）自動 retry 最多 2 次，顯示黃色提示�
 8. 金流
 
 目前：Stripe 已確認不支援台灣商家收款，放棄使用
-金流主力：改走綠界 ECPay（申請中，待審核通過後串接）
-綠界審核需要：大門門牌照片、營業場所照片、產品展示截圖、身分證正反面
-Checkout API：app/api/stripe/checkout/route.ts（待換成綠界）
+目前：綠界 ECPay 申請未通過，放棄使用
+金流主力：改走藍新金流（NewebPay）（申請中，待審核通過後串接）
+藍新審核需要：商店名稱、商店網址、販售類別選虛擬商品、真實地址
+Checkout API：app/api/stripe/checkout/route.ts（待換成藍新）
 Webhook：app/api/stripe/webhook/route.ts（付款成功自動加點數+更新plan+更新history_limit）
 圖片上傳 API：app/api/upload-image/route.ts
 退點 API：POST /api/character 帶 { refundCredits, userEmail } 即退點
-Stripe Price IDs（沙盒）：
+Stripe Price IDs（沙盒，待換藍新）：
 入門包：price_1TGH0OAhme0aGntHGmDHuxR8
 標準包：price_1TGJ1KAhme0aGntHzNOHQHfF
 專業包：price_1TGJ2KAhme0aGntH48ertjOZ
@@ -286,10 +287,17 @@ ELEVENLABS_API_KEY=
 ✅ /api/feedback/read/route.ts（標記已讀）
 ✅ /api/admin/feedback/route.ts（後台查詢+回覆）
 ✅ /api/admin/members/route.ts（會員統計）
+✅ 模型追蹤頁搜尋框（在已抓回結果中即時過濾）
+✅ 模型比對測試工具（/admin/models/compare，支援圖片/圖生影片/文字生影片）
+✅ 比對頁從追蹤清單選模型 Modal（顯示待測試/觀察中/已採用）
+✅ 比對頁 prompt 中翻英功能
+✅ 比對頁自訂參數欄位（JSON格式，對應不同模型參數）
+✅ 目前使用中模型快速加入比對（+比對按鈕）
+✅ 比對模型選擇用 sessionStorage 暫存（關分頁自動清除）
 
 12. 待完成項目（下一步）
 
-⬜ 綠界金流串接上線
+⬜ 藍新金流串接上線（審核通過後，替換 Stripe checkout/webhook）
 ⬜ 每日簽到領點數（每天1點，連續7天額外+3點，需防多帳號濫用）
 ⬜ 人設標籤第二層（角色個性/職業/背景設定，存入角色資料）
 ⬜ 首頁Hero循環影片（1200×675px 16:9，無聲，展示生成流程）
