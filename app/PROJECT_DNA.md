@@ -102,13 +102,14 @@ Flux Kontext Pro 失敗（E006）自動 retry 最多 2 次，顯示黃色提示�
 
 目前：Stripe 已確認不支援台灣商家收款，放棄使用
 目前：綠界 ECPay 申請未通過，放棄使用
-金流主力：改走藍新金流（NewebPay）（申請中，待審核通過後串接）
-藍新審核需要：商店名稱、商店網址、販售類別選虛擬商品、真實地址
+金流主力：藍新金流（NewebPay）（商店審核中，待審核通過後串接）
+藍新商店代號：MS1827821756
+藍新 HashKey/HashIV：已寫入 .env.local（變數名稱：NEWEBPAY_MERCHANT_ID / NEWEBPAY_HASH_KEY / NEWEBPAY_HASH_IV）
 Checkout API：app/api/stripe/checkout/route.ts（待換成藍新）
 Webhook：app/api/stripe/webhook/route.ts（付款成功自動加點數+更新plan+更新history_limit）
 圖片上傳 API：app/api/upload-image/route.ts
 退點 API：POST /api/character 帶 { refundCredits, userEmail } 即退點
-Stripe Price IDs（沙盒，待換藍新）：
+Stripe Price IDs（沙盒，待廢棄）：
 入門包：price_1TGH0OAhme0aGntHGmDHuxR8
 標準包：price_1TGJ1KAhme0aGntHzNOHQHfF
 專業包：price_1TGJ2KAhme0aGntH48ertjOZ
@@ -143,10 +144,13 @@ SUPABASE_SERVICE_ROLE_KEY=
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
-STRIPE_PRICE_STARTER=price_1TGH0OAhme0aGntHGmDHuxR8
-STRIPE_PRICE_STANDARD=price_1TGJ1KAhme0aGntHzNOHQHfF
-STRIPE_PRICE_PRO=price_1TGJ2KAhme0aGntH48ertjOZ
-ELEVENLABS_API_KEY=
+STRIPE_PRICE_STARTER=price_1TGH0...
+STRIPE_PRICE_STANDARD=price_1TGJ1...
+STRIPE_PRICE_PRO=price_1TGJ2...
+ELEVENLABS_API_KEY=sk_529a4...
+NEWEBPAY_MERCHANT_ID=MS1...
+NEWEBPAY_HASH_KEY=YW7pY...
+NEWEBPAY_HASH_IV=PCf...
 
 11. 已完成功能清單
 
@@ -382,3 +386,4 @@ SEO keywords meta tag 對 Google 無效，真正有效的是 og:title/og:descrip
 長期：
 ⬜ Live Portrait 動態呼吸效果（串接 LivePortrait API）
 ⬜ API 開放（讓第三方開發者串接）
+⬜ LPM 1.0（Anuttacon）— 即時雙向對話角色，一張圖生成即時會說話/聆聽/有表情的AI角色，支援無限長度，待API開放後評估串接，目前僅學術用途，無API
