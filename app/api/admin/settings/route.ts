@@ -19,11 +19,15 @@ export async function GET(req: NextRequest) {
   const { data: settingsRows } = await supabase
     .from("admin_settings")
     .select("key, value")
+    // [DNA_PATCH_START]
     .in("key", [
       "referral_credits_starter", "referral_credits_standard", "referral_credits_pro",
       "plan_credits_starter", "plan_credits_standard", "plan_credits_pro",
       "plan_price_starter", "plan_price_standard", "plan_price_pro",
+      "tts_credits_starter", "tts_credits_standard", "tts_credits_pro",
+      "wav2lip_credits_starter", "wav2lip_credits_standard", "wav2lip_credits_pro",
     ]);
+    // [DNA_PATCH_END]
 
   const settings: Record<string, string> = {};
   (settingsRows || []).forEach((row) => { settings[row.key] = row.value; });
@@ -45,11 +49,15 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json();
 
+  // [DNA_PATCH_START]
   const keys = [
     "referral_credits_starter", "referral_credits_standard", "referral_credits_pro",
     "plan_credits_starter", "plan_credits_standard", "plan_credits_pro",
     "plan_price_starter", "plan_price_standard", "plan_price_pro",
+    "tts_credits_starter", "tts_credits_standard", "tts_credits_pro",
+    "wav2lip_credits_starter", "wav2lip_credits_standard", "wav2lip_credits_pro",
   ];
+  // [DNA_PATCH_END]
 
   for (const key of keys) {
     if (body[key] !== undefined) {

@@ -33,6 +33,13 @@ export default function AdminMembersPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [filterPlan, setFilterPlan] = useState('all')
+  // [DNA_PATCH_START] 補點功能
+  const [adjustModal, setAdjustModal] = useState<{ email: string } | null>(null)
+  const [adjustAmount, setAdjustAmount] = useState('')
+  const [adjustReason, setAdjustReason] = useState('')
+  const [adjusting, setAdjusting] = useState(false)
+  const [adjustMsg, setAdjustMsg] = useState('')
+  // [DNA_PATCH_END]
 
   useEffect(() => {
     if (status === 'unauthenticated') { router.push('/'); return }
@@ -48,6 +55,43 @@ export default function AdminMembersPage() {
   }
 
   useEffect(() => { loadStats() }, [])
+
+  // [DNA_PATCH_START] 補點函數
+  const handleAdjustCredits = async () => {
+    if (!adjustModal || !adjustAmount) return
+    const amount = parseInt(adjustAmount)
+    if (isNaN(amount) || amount === 0) return
+    setAdjusting(true)
+    try {
+      const res = await fetch('/api/admin/adjust-credits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          adminEmail: session?.user?.email,
+          userEmail: adjustModal.email,
+          amount,
+          reason: adjustReason || '',
+        }),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        setAdjustMsg(`✅ 已補 ${amount} 點給 ${adjustModal.email}`)
+        await loadStats()
+        setTimeout(() => {
+          setAdjustModal(null)
+          setAdjustAmount('')
+          setAdjustReason('')
+          setAdjustMsg('')
+        }, 1500)
+      } else {
+        setAdjustMsg('❌ 操作失敗：' + data.error)
+      }
+    } catch {
+      setAdjustMsg('❌ 連線失敗')
+    }
+    setAdjusting(false)
+  }
+  // [DNA_PATCH_END]
 
   const filtered = stats?.profiles.filter(p => {
     const matchSearch = p.email.toLowerCase().includes(search.toLowerCase())
@@ -132,6 +176,7 @@ export default function AdminMembersPage() {
                 <th className="text-center text-[#89f5a2] px-4 py-3">點數</th>
                 <th className="text-center text-[#89f5a2] px-4 py-3">生成次數</th>
                 <th className="text-center text-[#89f5a2] px-4 py-3">註冊日期</th>
+                <th className="text-center text-[#89f5a2] px-4 py-3">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -142,14 +187,70 @@ export default function AdminMembersPage() {
                   <td className="px-4 py-3 text-center text-yellow-300">{p.credits}</td>
                   <td className="px-4 py-3 text-center text-purple-300">{p.generations}</td>
                   <td className="px-4 py-3 text-center text-gray-400">{new Date(p.created_at).toLocaleDateString('zh-TW')}</td>
+                  {/* [DNA_PATCH_START] 補點按鈕 */}
+                  <td className="px-4 py-3 text-center">
+                    <button
+                      onClick={() => { setAdjustModal({ email: p.email }); setAdjustAmount(''); setAdjustReason(''); setAdjustMsg('') }}
+                      className="px-3 py-1 bg-yellow-500/20 border border-yellow-500/30 rounded-lg text-yellow-300 text-xs font-bold hover:bg-yellow-500/30 transition"
+                    >
+                      💰 補點
+                    </button>
+                  </td>
+                  {/* [DNA_PATCH_END] */}
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={5} className="text-center text-gray-400 py-8">沒有符合的會員</td></tr>
+                <tr><td colSpan={6} className="text-center text-gray-400 py-8">沒有符合的會員</td></tr>
               )}
             </tbody>
           </table>
         </div>
+
+        {/* [DNA_PATCH_START] 補點 Modal */}
+        {adjustModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+            <div className="bg-[#1a3a28] border border-[#2d5a3d] rounded-2xl p-6 w-full max-w-sm mx-4">
+              <h2 className="text-[#89f5a2] font-bold text-lg mb-1">💰 補點數</h2>
+              <p className="text-white/50 text-xs mb-4">{adjustModal.email}</p>
+              <div className="mb-3">
+                <label className="text-white/60 text-xs mb-1 block">點數（正數補點、負數扣點）</label>
+                <input
+                  type="number"
+                  value={adjustAmount}
+                  onChange={e => setAdjustAmount(e.target.value)}
+                  placeholder="例如：10 或 -5"
+                  className="w-full bg-[#0d2318] border border-[#2d5a3d] rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-[#89f5a2]"
+                />
+              </div>
+              <div className="mb-4">
+                <label className="text-white/60 text-xs mb-1 block">備註原因（選填）</label>
+                <input
+                  type="text"
+                  value={adjustReason}
+                  onChange={e => setAdjustReason(e.target.value)}
+                  placeholder="例如：BUG補償、活動獎勵..."
+                  className="w-full bg-[#0d2318] border border-[#2d5a3d] rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-[#89f5a2]"
+                />
+              </div>
+              {adjustMsg && <p className="text-sm mb-3">{adjustMsg}</p>}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setAdjustModal(null)}
+                  className="flex-1 py-2 rounded-xl border border-white/20 text-white/50 text-sm hover:bg-white/5 transition"
+                >取消</button>
+                <button
+                  onClick={handleAdjustCredits}
+                  disabled={adjusting || !adjustAmount}
+                  className="flex-1 py-2 rounded-xl bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 font-bold text-sm hover:bg-yellow-500/30 transition disabled:opacity-40"
+                >
+                  {adjusting ? '處理中...' : '確認補點'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* [DNA_PATCH_END] */}
+
       </div>
     </div>
   )

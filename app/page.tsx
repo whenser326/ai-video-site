@@ -70,7 +70,10 @@ const [isTtsLoading, setIsTtsLoading] = useState(false);
 // [DNA_PATCH_START] TTS 試聽限制
 const [ttsTrimmed, setTtsTrimmed] = useState(false);
 const [ttsCache, setTtsCache] = useState<Record<string, string>>({});
+// [DNA_PATCH_START]
 const [ttsPreviewCount, setTtsPreviewCount] = useState(0);
+const [ttsPreviewVideoUrl, setTtsPreviewVideoUrl] = useState<string | null>(null);
+// [DNA_PATCH_END]
 const TTS_MAX_PREVIEW = 3;
 // [DNA_PATCH_END]
 // [DNA_PATCH_START] Wav2Lip 狀態
@@ -259,6 +262,14 @@ console.log("finalUrl:", finalUrl, "resolvedGenType:", resolvedGenType, "output:
         const formattedData = { ...data, output: finalUrl };
         
         setPrediction(formattedData);
+        // [DNA_PATCH_START]
+// 新影片生成完成：歸零試聽計數，保留 ttsCache（用戶可重聽舊聲音）
+const resolvedIsVideo = resolvedGenType === "video";
+if (resolvedIsVideo && finalUrl) {
+  setTtsPreviewCount(0);
+  setTtsPreviewVideoUrl(finalUrl);
+}
+// [DNA_PATCH_END]
         
         // 更新點數與歷史
         if (session?.user?.email) {
@@ -1656,14 +1667,17 @@ onClick={() => {
       <div>
         <div className="flex justify-between items-center mb-2">
           <p className="text-white/40 text-xs font-bold">輸入台詞</p>
-          <p className="text-white/30 text-xs">{ttsText.length}/150字</p>
+          <p className={`text-xs ${ttsText.length > (videoDuration === 5 ? 30 : 55) ? "text-red-400 font-bold" : "text-white/30"}`}>
+  {ttsText.length}/{videoDuration === 5 ? 30 : 55}字
+  {ttsText.length > (videoDuration === 5 ? 30 : 55) ? "　⚠ 已超過上限，請刪減後再試聽" : ""}
+</p>
         </div>
         <textarea
           value={ttsText}
           onChange={(e) => { setTtsText(e.target.value); setTtsAudio(null); }}
           placeholder="中英文皆可，例如：大家好，我是AI生成的角色！"
           rows={3}
-          maxLength={300}
+          maxLength={videoDuration === 5 ? 30 : 55}
           className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 text-sm resize-none focus:outline-none focus:border-purple-500/50"
         />
         {ttsTrimmed && (
@@ -1833,7 +1847,7 @@ onClick={() => {
 {/* [DNA_PATCH_END] */}
 {/* [DNA_PATCH_START] 試聽次數提示+按鈕 */}
 <p className="text-center text-xs font-black text-yellow-300">
-  ⚠️ 每日免費試聽 {TTS_MAX_PREVIEW} 次（剩餘 {Math.max(TTS_MAX_PREVIEW - ttsPreviewCount, 0)} 次）
+  ⚠️ 本影片免費試聽 {TTS_MAX_PREVIEW} 次（剩餘 {Math.max(TTS_MAX_PREVIEW - ttsPreviewCount, 0)} 次）
 </p>
 <div className="grid grid-cols-2 gap-3">
   <button
@@ -1841,23 +1855,23 @@ onClick={() => {
     className="py-3 rounded-xl border border-white/10 text-white/50 text-sm font-bold hover:bg-white/5 transition-all"
   >取消</button>
   <button
-    disabled={isTtsLoading || !ttsText.trim() || ttsPreviewCount >= TTS_MAX_PREVIEW}
+    disabled={isTtsLoading || !ttsText.trim() || ttsText.length > (videoDuration === 5 ? 30 : 55)}
     onClick={async () => {
       if (ttsCache[ttsVoice]) {
         setTtsAudio(ttsCache[ttsVoice]);
         return;
       }
-      if (ttsPreviewCount >= TTS_MAX_PREVIEW) {
-        alert("今日試聽次數已用完，明天再試！");
-        return;
-      }
+      if (!ttsCache[ttsVoice] && ttsPreviewCount >= TTS_MAX_PREVIEW) {
+  alert("本影片試聽次數已用完");
+  return;
+}
       setIsTtsLoading(true);
       setTtsAudio(null);
       setTtsTrimmed(false);
       const res = await fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: ttsText, voiceId: ttsVoice }),
+        body: JSON.stringify({ text: ttsText, voiceId: ttsVoice, videoDuration }),
       });
       const data = await res.json();
       if (data.audio) {

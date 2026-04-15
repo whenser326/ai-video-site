@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 const ADMIN_EMAIL = "whenser@gmail.com";
 
+// [DNA_PATCH_START]
 type Settings = {
   referral_credits_starter: string;
   referral_credits_standard: string;
@@ -15,7 +16,14 @@ type Settings = {
   plan_price_starter: string;
   plan_price_standard: string;
   plan_price_pro: string;
+  tts_credits_starter: string;
+  tts_credits_standard: string;
+  tts_credits_pro: string;
+  wav2lip_credits_starter: string;
+  wav2lip_credits_standard: string;
+  wav2lip_credits_pro: string;
 };
+// [DNA_PATCH_END]
 
 type Log = {
   id: string;
@@ -39,6 +47,12 @@ export default function AdminPage() {
     plan_price_starter: "250",
     plan_price_standard: "450",
     plan_price_pro: "799",
+    tts_credits_starter: "8",
+    tts_credits_standard: "7",
+    tts_credits_pro: "6",
+    wav2lip_credits_starter: "10",
+    wav2lip_credits_standard: "9",
+    wav2lip_credits_pro: "8",
   });
   const [logs, setLogs] = useState<Log[]>([]);
   const [saving, setSaving] = useState(false);
@@ -181,6 +195,67 @@ export default function AdminPage() {
           {msg && <p className="mt-2 text-sm">{msg}</p>}
         </div>
 
+        {/* [DNA_PATCH_START] TTS 點數設定 */}
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
+          <h2 className="text-lg font-bold mb-1">🎙️ 語音合成點數設定（下載才扣點）</h2>
+          <p className="text-white/40 text-xs mb-4">用戶下載 TTS 語音時扣除的點數</p>
+          {[
+            { key: "tts_credits_starter", label: "🌱 入門包" },
+            { key: "tts_credits_standard", label: "⭐ 標準包" },
+            { key: "tts_credits_pro", label: "🚀 專業包" },
+          ].map((item) => (
+            <div key={item.key} className="flex items-center gap-4 mb-3">
+              <span className="text-sm w-36">{item.label}</span>
+              <input
+                type="number"
+                min="0"
+                value={settings[item.key as keyof Settings]}
+                onChange={(e) => setSettings({ ...settings, [item.key]: e.target.value })}
+                className="w-24 bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-[#89f5a2]/50"
+              />
+              <span className="text-white/40 text-sm">點</span>
+            </div>
+          ))}
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="mt-4 px-6 py-2 bg-[#89f5a2]/20 border border-[#89f5a2]/40 rounded-xl text-[#89f5a2] font-bold text-sm hover:bg-[#89f5a2]/30 transition-all"
+          >
+            {saving ? "儲存中..." : "儲存設定"}
+          </button>
+          {msg && <p className="mt-2 text-sm">{msg}</p>}
+        </div>
+
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
+          <h2 className="text-lg font-bold mb-1">🎬 嘴型同步點數設定（Wav2Lip）</h2>
+          <p className="text-white/40 text-xs mb-4">用戶合成語音到影片時扣除的點數</p>
+          {[
+            { key: "wav2lip_credits_starter", label: "🌱 入門包" },
+            { key: "wav2lip_credits_standard", label: "⭐ 標準包" },
+            { key: "wav2lip_credits_pro", label: "🚀 專業包" },
+          ].map((item) => (
+            <div key={item.key} className="flex items-center gap-4 mb-3">
+              <span className="text-sm w-36">{item.label}</span>
+              <input
+                type="number"
+                min="0"
+                value={settings[item.key as keyof Settings]}
+                onChange={(e) => setSettings({ ...settings, [item.key]: e.target.value })}
+                className="w-24 bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-[#89f5a2]/50"
+              />
+              <span className="text-white/40 text-sm">點</span>
+            </div>
+          ))}
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="mt-4 px-6 py-2 bg-[#89f5a2]/20 border border-[#89f5a2]/40 rounded-xl text-[#89f5a2] font-bold text-sm hover:bg-[#89f5a2]/30 transition-all"
+          >
+            {saving ? "儲存中..." : "儲存設定"}
+          </button>
+          {msg && <p className="mt-2 text-sm">{msg}</p>}
+        </div>
+        {/* [DNA_PATCH_END] */}
         {/* 分潤紀錄 */}
         {/* 分潤紀錄 */}
         <div className="bg-white/5 border border-white/10 rounded-2xl p-6">

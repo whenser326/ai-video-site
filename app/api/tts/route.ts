@@ -15,14 +15,18 @@ const VOICE_MAP: Record<string, string> = {
 };
 
 export async function POST(req: NextRequest) {
-  const { text, voiceId } = await req.json();
+  const { text, voiceId, videoDuration } = await req.json();
 
   if (!text) return NextResponse.json({ error: "缺少文字" }, { status: 400 });
 
   // 字數限制：中文150字 / 英文300字
-  const isChinese = /[\u4e00-\u9fff]/.test(text);
-  const limit = isChinese ? 150 : 300;
-  const trimmedText = text.slice(0, limit);
+  // [DNA_PATCH_START]
+const limit = videoDuration === 5 ? 30 : 55;
+if (text.length > limit) {
+  return NextResponse.json({ error: `字數超過上限（${limit}字）` }, { status: 400 });
+}
+const trimmedText = text;
+// [DNA_PATCH_END]
 
   const voice = VOICE_MAP[voiceId] || VOICE_MAP["gentle-female"];
 

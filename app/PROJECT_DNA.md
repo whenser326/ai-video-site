@@ -17,6 +17,27 @@
 貼上程式碼注意：從聊天介面複製含有 `<a` 標籤的程式碼時，`<a` 可能會被吃掉，貼上後需手動確認。
 靈感畫廊防呆：`galleryItems.map` 的 onClick 必須永遠包含 `setPrompt`、`setTranslatedPrompt(null)`、`setUseTranslated(false)`、`window.scrollTo({ top: 0, behavior: 'smooth' })` 四行，缺一不可
 TTS 試聽防呆：ttsCache、ttsPreviewCount、TTS_MAX_PREVIEW 三個變數禁止移除，切換聲音的 onClick 必須先查 ttsCache 再決定是否呼叫 API
+TTS 字數三層防護：
+- 前端 maxLength={150} 直接擋輸入
+- 前端超過150字禁用試聽按鈕（紅字提示）
+- 後端 /api/tts/route.ts 超過上限直接回 400，禁止截斷後偷偷呼叫 ElevenLabs
+TTS 試聽防呆更新：
+- ttsPreviewCount 改為「每部影片各自計數」，新影片生成完成後歸零
+- ttsCache 改為整個 session 共用，換影片不清除（用戶可重聽舊聲音）
+- 超過次數點新聲音 → alert「本影片試聽次數已用完」
+- 已 cache 的聲音永遠可重聽，不受次數限制
+
+TTS 字數三層防護：
+- 前端 maxLength 依影片秒數動態調整（5秒=30字/10秒=55字）
+- 前端超過上限禁用試聽按鈕（紅字提示）
+- 後端 /api/tts/route.ts 超過上限直接回 400，不呼叫 ElevenLabs
+- fetch TTS 時必須帶入 videoDuration 參數
+
+後台補點功能：
+- app/admin/members/page.tsx 會員列表新增「補點」按鈕
+- app/api/admin/adjust-credits/route.ts 新增補點 API
+- credit_adjustments 資料表記錄補點紀錄（admin_email, user_email, amount, reason, created_at）
+- 正數補點、負數扣點，最低不低於 0
 
 3. 專案核心
 
@@ -92,7 +113,8 @@ Flux Kontext Pro 失敗（E006）自動 retry 最多 2 次，顯示黃色提示�
 手機版 RWD：右上角點數/登出直排顯示，標題字體縮小，padding 優化
 語音合成（角色配音）規則：
 - 免費用戶：不開放（按鈕不顯示）
-- 付費用戶：每日免費試聽 3 次，已試聽的聲音暫存於 ttsCache，重複播放不消耗次數
+- 付費用戶：每部影片各自免費試聽 3 次，已試聽的聲音暫存於 ttsCache（session 共用），重複播放不消耗次數，換新影片只歸零計數不清 cache
+- TTS 字數上限依影片秒數動態調整：5秒影片30字，10秒影片55字
 - 下載語音才扣點：入門 8點、標準 7點、專業 6點
 - 合成到影片（Wav2Lip）才扣點：入門 10點、標準 9點、專業 8點
 - 對用戶顯示合計：入門 18點/次、標準 16點/次、專業 14點/次
@@ -298,6 +320,10 @@ NEWEBPAY_HASH_IV=PCf...
 ✅ 比對頁自訂參數欄位（JSON格式，對應不同模型參數）
 ✅ 目前使用中模型快速加入比對（+比對按鈕）
 ✅ 比對模型選擇用 sessionStorage 暫存（關分頁自動清除）
+✅ TTS 試聽改為每部影片各自3次，cache session 共用
+✅ TTS 字數上限依影片秒數動態調整（5秒=30字/10秒=55字），三層防護
+✅ 後台會員管理新增補點功能（正負數、選填備註、紀錄寫入 credit_adjustments）
+✅ 後台點數設定新增 TTS 下載點數、Wav2Lip 合成點數（入門/標準/專業可調）
 
 12. 待完成項目（下一步）
 
