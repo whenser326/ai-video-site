@@ -31,6 +31,7 @@ export default function AdminMembersPage() {
   const router = useRouter()
   const [stats, setStats] = useState<MemberStats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [adjustments, setAdjustments] = useState<{id:string; user_email:string; amount:number; reason:string|null; created_at:string}[]>([])
   const [search, setSearch] = useState('')
   const [filterPlan, setFilterPlan] = useState('all')
   // [DNA_PATCH_START] 補點功能
@@ -51,6 +52,7 @@ export default function AdminMembersPage() {
     const res = await fetch('/api/admin/members')
     const data = await res.json()
     setStats(data)
+    setAdjustments(data.adjustments || [])
     setLoading(false)
   }
 
@@ -246,6 +248,30 @@ export default function AdminMembersPage() {
                   {adjusting ? '處理中...' : '確認補點'}
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+        {/* [DNA_PATCH_END] */}
+
+        {/* [DNA_PATCH_START] 補點紀錄 */}
+        {adjustments.length > 0 && (
+          <div className="bg-[#1a3a28] border border-[#2d5a3d] rounded-2xl p-6 mt-6">
+            <h2 className="text-[#89f5a2] font-bold text-lg mb-4">📋 補點紀錄</h2>
+            <div className="space-y-2">
+              {adjustments.map(a => (
+                <div key={a.id} className="flex items-center justify-between bg-[#0d2318]/40 rounded-xl px-4 py-3 text-sm">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-white">{a.user_email}</span>
+                    {a.reason && <span className="text-white/40 text-xs">{a.reason}</span>}
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className={`font-bold ${a.amount > 0 ? 'text-yellow-300' : 'text-red-400'}`}>
+                      {a.amount > 0 ? '+' : ''}{a.amount} 點
+                    </span>
+                    <span className="text-white/30 text-xs">{new Date(a.created_at).toLocaleDateString('zh-TW')}</span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}

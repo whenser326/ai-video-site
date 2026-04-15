@@ -47,6 +47,12 @@ export async function GET() {
   today.setHours(0, 0, 0, 0)
   const newToday = profiles?.filter(p => new Date(p.created_at) >= today).length || 0
 
+  const { data: adjustments } = await supabase
+    .from('credit_adjustments')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(50)
+
   return NextResponse.json({
     totalMembers,
     planCount,
@@ -59,6 +65,7 @@ export async function GET() {
       generations: genMap[p.email] || 0,
       created_at: p.created_at,
     })),
+    adjustments: adjustments || [],
   })
 }
 // [DNA_PATCH_END]
