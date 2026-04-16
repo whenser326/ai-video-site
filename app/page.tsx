@@ -891,7 +891,7 @@ return (
               );
             })()}
 
-            {/* Step 4：選場景 */}
+            {/* Step 4：場景選擇 */}
             {(() => {
               const isOpen = activeStep === 4;
               const sceneLabels: Record<string,string> = {
@@ -909,7 +909,7 @@ return (
                   <button type="button" onClick={() => setActiveStep(isOpen ? 0 : 4)}
                     className="w-full flex items-center gap-3 px-4 py-3 bg-white/4 hover:bg-white/7 transition-all">
                     <span className="text-[10px] font-black text-white/30 w-12 flex-shrink-0">STEP 4</span>
-                    <span className="text-sm font-bold text-white/80 flex-1 text-left">選場景</span>
+                    <span className="text-sm font-bold text-white/80 flex-1 text-left">場景選擇</span>
                     {selectedScene && !isOpen && (
                       <span className="text-[10px] text-blue-300/70">{sceneLabels[selectedScene] || selectedScene}</span>
                     )}
@@ -993,7 +993,7 @@ return (
                   <button type="button" onClick={() => setActiveStep(isOpen ? 0 : 6)}
                     className="w-full flex items-center gap-3 px-4 py-3 bg-white/4 hover:bg-white/7 transition-all">
                     <span className="text-[10px] font-black text-white/30 w-12 flex-shrink-0">STEP 6</span>
-                    <span className="text-sm font-bold text-white/80 flex-1 text-left">補充細節（中文也可以！輸入後點「翻譯成英文」按鈕，我們幫你自動翻譯 🌐）</span>
+                    <span className="text-sm font-bold text-white/80 flex-1 text-left">補充細節</span>
                     <span className="text-white/20 text-[10px] mr-1">選填</span>
                     <span className="text-white/30 text-xs">{isOpen ? "▲" : "▼"}</span>
                   </button>
