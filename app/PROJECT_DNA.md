@@ -9,7 +9,9 @@
 
 2. 代碼維護防禦機制 (Anti-Corruption Rules)
 
-禁止全檔案覆蓋：除非使用者要求，否則禁止回傳整個檔案。
+禁止全檔案覆蓋：除非符合以下任一條件，否則禁止回傳整個檔案：
+- 使用者明確要求
+- 修改範圍超過原檔案 50%（此情況應整個覆蓋，不強制拆錨點）
 錨點定位法：修改時必須註明 // [DNA_PATCH_START] 與 // [DNA_PATCH_END]，僅回傳變更部分。
 注意：// [DNA_PATCH_START] 標記只能放在 TypeScript 邏輯區，不能放在 JSX return 區塊內，否則會顯示在畫面上。
 禁止簡化：嚴格禁止刪除任何 useEffect、localStorage、Polling 或點數同步邏輯。
@@ -18,26 +20,26 @@
 靈感畫廊防呆：`galleryItems.map` 的 onClick 必須永遠包含 `setPrompt`、`setTranslatedPrompt(null)`、`setUseTranslated(false)`、`window.scrollTo({ top: 0, behavior: 'smooth' })` 四行，缺一不可
 TTS 試聽防呆：ttsCache、ttsPreviewCount、TTS_MAX_PREVIEW 三個變數禁止移除，切換聲音的 onClick 必須先查 ttsCache 再決定是否呼叫 API
 TTS 字數三層防護：
-- 前端 maxLength={150} 直接擋輸入
-- 前端超過150字禁用試聽按鈕（紅字提示）
-- 後端 /api/tts/route.ts 超過上限直接回 400，禁止截斷後偷偷呼叫 ElevenLabs
+- 前端 maxLength 依影片秒數動態調整（5秒=30字/10秒=55字）
+- 前端超過上限禁用試聽按鈕（紅字提示）
+- 後端 /api/tts/route.ts 超過上限直接回 400，不呼叫 ElevenLabs
+- fetch TTS 時必須帶入 videoDuration 參數
 TTS 試聽防呆更新：
 - ttsPreviewCount 改為「每部影片各自計數」，新影片生成完成後歸零
 - ttsCache 改為整個 session 共用，換影片不清除（用戶可重聽舊聲音）
 - 超過次數點新聲音 → alert「本影片試聽次數已用完」
 - 已 cache 的聲音永遠可重聽，不受次數限制
-
-TTS 字數三層防護：
-- 前端 maxLength 依影片秒數動態調整（5秒=30字/10秒=55字）
-- 前端超過上限禁用試聽按鈕（紅字提示）
-- 後端 /api/tts/route.ts 超過上限直接回 400，不呼叫 ElevenLabs
-- fetch TTS 時必須帶入 videoDuration 參數
-
 後台補點功能：
 - app/admin/members/page.tsx 會員列表新增「補點」按鈕
 - app/api/admin/adjust-credits/route.ts 新增補點 API
 - credit_adjustments 資料表記錄補點紀錄（admin_email, user_email, amount, reason, created_at）
 - 正數補點、負數扣點，最低不低於 0
+主頁互動流程防呆：
+- generationMode state 控制四種模式（image/video/upload/text2video）
+- prompt 組合順序：[selectedStyle, selectedPersona, selectedScene, selectedShot, prompt].filter(Boolean).join(", ")
+- Step 5 鏡頭選擇只在 generationMode !== "image" 時顯示
+- selectedPersonality + selectedJob 只存入角色資料（description 欄位），不拼入 prompt
+- 收藏角色時必須帶入 description: [selectedPersonality, selectedJob].filter(Boolean).join("・")
 
 3. 專案核心
 
@@ -48,7 +50,8 @@ TTS 字數三層防護：
 成人專區：app/adult/page.tsx（Coming Soon）
 後端 API：app/api/character/route.ts
 視覺配色：深綠 (#0d2318 → #2d5a3d)，亮綠 (#89f5a2)，圓角現代 UI
-全域 Header 元件：app/components/GlobalHeader.tsx（含儲值點數、推薦賺點、意見回饋按鈕）
+全域 Header 元件：app/components/GlobalHeader.tsx（LOGO左側、點數徽章、漢堡選單含我的角色/儲值點數/推薦賺點/意見回饋/登出）
+Header RWD：手機版漢堡選單展開 Drawer，電腦版（sm以上）直接橫排顯示，點數徽章永遠可見
 成人站規劃：獨立網域、獨立服務、獨立金流，通過身份驗證後才能購買成人點數及移轉主站資料
 
 4. 資料庫 (Supabase)
@@ -89,28 +92,23 @@ TTS 語音合成：ElevenLabs Multilingual v2（已串接，Starter 方案）
 Gallery 依方案等級顯示：免費5筆、付費方案50筆（同時受天數限制）
 localStorage (key: last_prediction_${userEmail}) 保持最後一次生成狀態（依帳號分開）
 localStorage (key: locked_character) 儲存鎖定角色的 Supabase 永久 URL
-角色風格選擇：動漫/寫實/油畫/遊戲/素描，點選後自動拼入 prompt
-人設快速標籤：風格選擇下方，點選後取代輸入框內容（不附加），背後對應精準英文 prompt
-人設標籤第一層（已完成）：外型描述標籤（台灣女孩/冷豔名模/清純學生/都市OL/神秘女巫/韓系男生/硬漢型男/帥氣騎士/賽博龐克/奇幻精靈）
-人設標籤第二層（待做）：角色個性/職業/背景設定，存入角色資料，不額外增加 prompt 出錯率
 免費用戶：每天最多生成 2 張圖片 + 1 支影片（分別有獨立計數，明天00:00台灣時間重置）
-鎖定角色狀態列：輸入框上方顯示縮圖 + 鎖定中文字，解除鎖定後即時消失
+鎖定角色狀態列：Steps 上方顯示縮圖 + 鎖定中文字，解除鎖定後即時消失
 批次生成：付費用戶專屬，必須鎖定角色，依方案限制張數，每張獨立 prompt + 備註，依序生成即時顯示，失敗自動 retry 最多2次，全部失敗退點，完成後自動儲存到角色相簿
-付費用戶：
-「🎯 鎖定此角色」→ 上傳圖片到 Supabase Storage → 儲存永久 URL → localStorage 同步
+付費用戶結果區操作（一排三顆按鈕）：
+「🎯 鎖定角色」→ 上傳圖片到 Supabase Storage → 儲存永久 URL → localStorage 同步
+「⭐ 收藏角色」→ 輸入名稱 → 存入 saved_characters 表（含 description 個性職業）
+「🎭 批次生成」→ 必須已鎖定角色，付費專屬，點擊開啟 Modal
+第二排按鈕：解除鎖定（有鎖定才顯示）+ 上傳照片轉影片
 「🎬 轉成影片」→ 彈出比例/秒數/模型選項 Modal → 生成影片
-「📁 上傳圖片轉影片」→ 法律聲明 → 上傳圖片 → 選比例/秒數 → 生成影片
-「⭐ 收藏此角色」→ 輸入名稱 → 存入 saved_characters 表
-「🎭 批次生成不同Pose」→ 填寫每張 prompt + 備註 → 依序生成 → 自動歸檔角色相簿
 「🎙️ 語音合成」→ 選聲音 → 輸入台詞 → 免費試聽 → 滿意後下載扣點（僅影片生成後顯示，付費專屬）
 影片生成後顯示警告：「⚠️ 影片保存僅3天(付費7天)，請立即下載保存」
 鎖定按鈕點擊後顯示「🔄 鎖定中...」提示，避免用戶誤以為當機
 Flux Kontext Pro 失敗（E006）自動 retry 最多 2 次，顯示黃色提示訊息，全部失敗退還點數
-推薦賺點橫幅：顯示在成人專區按鈕下方，點擊開啟推薦賺點 Modal
+推薦賺點橫幅：顯示在結果區操作按鈕下方，點擊開啟推薦賺點 Modal
 推薦賺點 Modal：顯示專屬介紹碼、一鍵複製介紹碼/連結、三方案獎勵對照（從 admin_settings 動態抓取）
 分享按鈕：手機跳系統選單（Web Share API，支援 FB/IG/Threads/LINE 等），電腦版下載圖片+開 FB
 靈感畫廊：優先顯示用戶歷史圖片（最多4張），不足補固定圖，合計8張
-手機版 RWD：右上角點數/登出直排顯示，標題字體縮小，padding 優化
 語音合成（角色配音）規則：
 - 免費用戶：不開放（按鈕不顯示）
 - 付費用戶：每部影片各自免費試聽 3 次，已試聽的聲音暫存於 ttsCache（session 共用），重複播放不消耗次數，換新影片只歸零計數不清 cache
@@ -119,6 +117,22 @@ Flux Kontext Pro 失敗（E006）自動 retry 最多 2 次，顯示黃色提示�
 - 合成到影片（Wav2Lip）才扣點：入門 10點、標準 9點、專業 8點
 - 對用戶顯示合計：入門 18點/次、標準 16點/次、專業 14點/次
 - ttsCache 結構：Record<voiceId, base64音檔>，切換聲音時先查暫存
+主頁互動流程（已完成）：
+Hero 影片區：頁面最頂端，16:9 佔位符，影片就緒後換 /hero.mp4（1200×675px，無聲循環）
+Step 1：模式選擇（生成角色圖片 / 圖片轉影片 / 上傳照片轉影片 / 文字生成影片 Coming Soon）
+Step 2：角色人設（風格選擇 + 人設第一層標籤，手風琴展開）
+Step 3：個性職業（個性7個 + 職業10個標籤，存入角色資料不拼入 prompt，手風琴展開）
+Step 4：選場景（8個場景標籤，拼入 prompt，手風琴展開）
+Step 5：鏡頭角度（5個鏡頭標籤，影片模式限定才顯示，手風琴展開）
+Step 6：補充細節（自由輸入框，選填，顯示已選標籤摘要，支援中翻英）
+設計原則：標籤最多4-5個同時生效，圖片轉影片模式隱藏角色標籤層，已選標籤折疊後顯示縮略在標頭
+GlobalHeader RWD 設計：
+- LOGO 左側（/logo.png），點數徽章永遠顯示在右側
+- 手機版：漢堡選單（三條線），點擊展開 Drawer 收納所有功能按鈕
+- 電腦版（sm以上）：功能按鈕直接橫排顯示，不需漢堡
+- 漢堡動畫：展開時三條線變 X，關閉時還原
+- 點外部自動關閉 Drawer（useRef + mousedown 事件）
+- 點數從 GlobalHeader 自己抓 API，不依賴 page.tsx 傳遞
 
 8. 金流
 
@@ -185,34 +199,14 @@ NEWEBPAY_HASH_IV=PCf...
 ✅ 進度條倒數（影片塞車時顯示排隊提示）
 ✅ 付費方案頁面（/pricing）
 ✅ profiles 表加 plan/daily_image_count/daily_image_date/history_limit 欄位
-✅ LOGO（pricing 頁與首頁均有漸隱效果）
-✅ Stripe 金流串接（沙盒測試通過，待換綠界）
+✅ Stripe 金流串接（沙盒測試通過，待換藍新）
 ✅ 角色一致性功能（Flux Kontext Pro，免費付費均可用）
 ✅ 鎖定角色圖片永久存到 Supabase Storage
 ✅ 上傳圖片轉影片（付費用戶專屬，含法律聲明視窗）
 ✅ 影片比例選擇（1:1, 16:9, 9:16, 4:3, 3:4）
 ✅ 影片秒數選擇（5秒/10秒）
-✅ suppressHydrationWarning 修正
-✅ 免費用戶每日圖片限制（每天最多2張）
-✅ 免費用戶每日影片限制（每天最多1支，有點數也不能超過）
-✅ IP Rate Limiting 防濫用
-✅ 全域 Header（儲值點數按鈕 + 推薦賺點按鈕 + 意見回饋按鈕）
-✅ 角色風格選擇（動漫/寫實/油畫/遊戲/素描）
-✅ 人設快速標籤第一層（10個標籤，點選取代輸入框，含中翻英）
-✅ 成人專區 Coming Soon 頁面（/adult）
-✅ Kling 3.0 標示改為粉亮橘色
-✅ .gitignore 安全確認（.env.local 不會上傳）
-✅ 分潤機制（介紹碼自動產生、結帳時輸入介紹碼、付款後自動給介紹人點數）
-✅ 分潤紀錄表（referral_logs）
-✅ 後台 /admin（分潤點數設定、方案售價設定、分潤紀錄查看）
-✅ 後台保護（只有 whenser@gmail.com 可進入）
-✅ GlobalHeader 在 /admin 隱藏（ConditionalHeader 元件）
-✅ Kling 3.0 + Seedance 1.5 Pro 雙模型選擇（影片 Modal 下拉切換）
-✅ TypeScript CSS import 錯誤修復（custom.d.ts）
-✅ 推薦賺點 Modal（介紹碼顯示、一鍵複製、三方案獎勵對照，動態抓取 admin_settings）
-✅ GlobalHeader 加「推薦賺點」按鈕
-✅ 主頁推薦賺點橫幅（位於成人專區按鈕下方）
-✅ /api/referral/settings/route.ts（公開分潤點數查詢 API）
+✅ 推薦賺點系統（referral_code、referral_logs 表、介紹碼獎勵）
+✅ 推薦賺點 Modal（專屬介紹碼+連結一鍵複製，獎勵從後台動態抓取）
 ✅ /api/referral/settings-public/route.ts（公開方案價格查詢 API）
 ✅ /api/user/credits 補回傳 referral_code 欄位
 ✅ pricing 頁面價格改為台幣（NT$250/NT$450/NT$799）
@@ -223,7 +217,6 @@ NEWEBPAY_HASH_IV=PCf...
 ✅ 歷史紀錄自動清理超過期限的資料（每次查詢時觸發）
 ✅ pricing 頁面介紹碼自動讀取 URL ref 參數
 ✅ 介紹碼存入 localStorage（關頁面後仍記住，付款後自動清除）
-✅ pricing 頁面介紹碼說明文字更新
 ✅ Vercel 部署上線（網址：https://ai-video-site-psi.vercel.app）
 ✅ GitHub 程式碼同步（whenser326/ai-video-site）
 ✅ Google OAuth 設定 Vercel 網址授權
@@ -234,9 +227,8 @@ NEWEBPAY_HASH_IV=PCf...
 ✅ profiles 表新增 daily_video_count + daily_video_date 欄位
 ✅ 免費用戶開放鎖定角色（每日限額內可用）
 ✅ 免費用戶開放上傳照片轉影片
-✅ 解除角色鎖定按鈕
+✅ 解除角色鎖定按鈕（結果區第二排）
 ✅ 中文自動翻譯英文（輸入框偵測中文，旁邊出現翻譯按鈕，確認後採用）
-✅ 鎖定角色提示文字（格式建議 + 英文建議）
 ✅ 影片依秒數正確扣點（Kling 5秒=4點/10秒=6點，Seedance 5秒=4點/10秒=8點）
 ✅ 點數不足時依生成類型顯示對應錯誤訊息（影片需至少4點）
 ✅ 免費用戶每日限制提示改為「明天00:00（台灣時間）重置」
@@ -250,7 +242,7 @@ NEWEBPAY_HASH_IV=PCf...
 ✅ Vercel Function Region 改為 Tokyo (hnd1)
 ✅ /api/user/clear-locked-character/route.ts 新增
 ✅ /api/translate/route.ts 新增（Google 免費翻譯 API）
-✅ 鎖定角色狀態列（輸入框上方顯示縮圖+文字，鎖定/解除即時更新不需F5）
+✅ 鎖定角色狀態列（Steps 上方顯示縮圖+文字，鎖定/解除即時更新不需F5）
 ✅ 歷史作品區即時更新（生成完成後自動刷新，不需F5）
 ✅ 歷史作品區付費方案顯示50筆
 ✅ 歷史作品支援影片（🎬圖示顯示）
@@ -260,21 +252,16 @@ NEWEBPAY_HASH_IV=PCf...
 ✅ 退點 API（POST /api/character 帶 refundCredits 參數）
 ✅ 鎖定角色圖片失效時自動退點
 ✅ checkStatus 加入 genType 參數（解決影片/圖片 state race condition）
-✅ 影片警告樣式加大加粗（黃色邊框+醒目字體）
 ✅ 影片 Modal 動作指令翻譯功能（偵測中文自動顯示翻譯按鈕）
 ✅ 上傳圖片轉影片提示詞翻譯功能
-✅ handleSubmit checkStatus genType 修正（圖片生成正確傳 "image"）
-✅ 影片警告訊息置中顯示修正
 ✅ 靈感畫廊 Tab 切換（靈感畫廊/我的歷史，預設顯示靈感畫廊）
 ✅ 靈感畫廊動態內容（優先顯示用戶歷史圖片最多4張，不足補固定圖合計8張）
-✅ 影片生成超時提示文字優化
-✅ 輸入框提示文字更新（說明支援中文+翻譯按鈕引導）
-✅ 手機版 RWD 優化（右上角直排、標題縮小、padding 調整）
+✅ 手機版 RWD 優化（GlobalHeader 漢堡選單，LOGO左側，點數徽章常駐）
 ✅ 角色命名收藏功能（saved_characters 表、/api/saved-characters/route.ts、免費1個/入門標準3個/專業無限）
 ✅ 一鍵分享（手機 Web Share API 系統選單，電腦下載+開FB）
 ✅ TTS 語音合成（ElevenLabs Multilingual v2，付費專屬，免費試聽後下載扣點）
 ✅ TTS 10種聲音（5男5女，全部支援中文普通話/台灣腔）
-✅ TTS 字數限制（中文150字/英文300字自動截斷）
+✅ TTS 字數限制依影片秒數動態調整（5秒=30字/10秒=55字），三層防護
 ✅ /api/tts/route.ts 新增
 ✅ admin_settings 新增 TTS 點數設定（tts_credits_starter/standard/pro）
 ✅ admin_settings 新增角色收藏上限設定（saved_characters_limit_starter/standard/pro）
@@ -290,7 +277,7 @@ NEWEBPAY_HASH_IV=PCf...
 ✅ 角色詳情頁（/characters/[id]，身份卡+作品相簿+快速操作）
 ✅ 作品相簿（圖片/影片點擊大圖預覽）
 ✅ 生成時自動歸檔到鎖定角色（character_id 欄位）
-✅ GlobalHeader 新增「我的角色」按鈕（電腦橫排/手機直排）
+✅ GlobalHeader 改版（LOGO左側 + 點數徽章常駐 + 漢堡選單 RWD，電腦版橫排）
 ✅ saved_characters 新增 description 欄位
 ✅ user_generations 新增 character_id 欄位
 ✅ 後台 session 驗證加強（改用 getServerSession，不再用 URL email 參數）
@@ -321,16 +308,22 @@ NEWEBPAY_HASH_IV=PCf...
 ✅ 目前使用中模型快速加入比對（+比對按鈕）
 ✅ 比對模型選擇用 sessionStorage 暫存（關分頁自動清除）
 ✅ TTS 試聽改為每部影片各自3次，cache session 共用
-✅ TTS 字數上限依影片秒數動態調整（5秒=30字/10秒=55字），三層防護
 ✅ 後台會員管理新增補點功能（正負數、選填備註、紀錄寫入 credit_adjustments）
+✅ 後台會員頁底部新增補點紀錄區塊（最近50筆，正數黃色/負數紅色，有紀錄才顯示）
 ✅ 後台點數設定新增 TTS 下載點數、Wav2Lip 合成點數（入門/標準/專業可調）
+✅ 主頁 Hero 佔位符（16:9 深綠佔位，預留 /hero.mp4 位置）
+✅ 主頁 Step 1 模式選擇（4個模式 2×2 格線，文字生成影片 Coming Soon）
+✅ 主頁 Steps 2–6 手風琴流程（角色人設/個性職業/選場景/鏡頭角度/補充細節）
+✅ 主頁 prompt 組合邏輯（風格+人設+場景+鏡頭+自由輸入自動拼接）
+✅ 收藏角色時帶入個性職業寫入 description 欄位
+✅ 結果區按鈕整合（鎖定/收藏/批次一排，解除鎖定+上傳轉影片第二排）
 
 12. 待完成項目（下一步）
 
 ⬜ 藍新金流串接上線（審核通過後，替換 Stripe checkout/webhook）
 ⬜ 每日簽到領點數（每天1點，連續7天額外+3點，需防多帳號濫用）
-⬜ 人設標籤第二層（角色個性/職業/背景設定，存入角色資料）
-⬜ 首頁Hero循環影片（1200×675px 16:9，無聲，展示生成流程）
+⬜ 首頁 Hero 循環影片製作完成後替換（/public/hero.mp4，1200×675px 16:9 無聲）
+⬜ 文字生成影片功能串接（Step 1 第四選項，目前 Coming Soon）
 ⬜ 成人站架構規劃（獨立網域、獨立服務、獨立金流）
 ⬜ 成人站身份驗證系統（上傳身份證、後台審核、adult_verified欄位）
 ⬜ 成人站獨立點數系統（adult_credits欄位，與主站完全分離）
@@ -338,9 +331,6 @@ NEWEBPAY_HASH_IV=PCf...
 ⬜ 後台手動發成人點數功能
 ⬜ 主站資料移轉至成人站（角色/圖片/歷史，驗證通過後開放）
 ⬜ 成人站金流串接（SubscribeStar主力 + NexaPay補充）
-⬜ 購買自訂域名（如 consistentflow.com）並綁定 Vercel
-⬜ 綁定域名後提交 Google Search Console（site:你的域名 確認收錄）
-⬜ SEO 優化（綁域名後再做，現用 Vercel 預設網址意義不大）
 ⬜ 購買自訂域名（建議 consistentflow.com，在 Namecheap 或 GoDaddy 購買，約 NT$400-600/年）
 ⬜ Vercel 綁定自訂域名（Vercel Dashboard → Project → Settings → Domains）
 ⬜ NEXTAUTH_URL 環境變數改為正式域名
@@ -391,7 +381,6 @@ authOptions 必須從 app/api/auth/[...nextauth]/route.ts export 才能給其他
 綠界不支援成人內容，主站金流與成人站金流必須完全分離
 點數不能移轉（法律風險），但主站角色和資料可移轉到成人站
 SubscribeStar 對帳單顯示「Subscribestar」，NexaPay 用戶收到穩定幣需自行換台幣
-人設標籤設計原則：點選取代輸入框（不附加），背後英文精準設計，不堆疊矛盾描述
 批次生成建議：同一套衣服+不同姿勢效果最穩，換衣服或換風格臉部可能飄移
 免費用戶每日影片限制邏輯：在點數檢查之前先攔截，有點數也只能生1支
 每日簽到實作時注意：需防多帳號濫用，建議加 IP + Google帳號雙重驗證
@@ -399,7 +388,9 @@ SubscribeStar 對帳單顯示「Subscribestar」，NexaPay 用戶收到穩定幣
 SEO keywords meta tag 對 Google 無效（2009年起），真正有效的是 og:title/og:description
 Vercel 預設網址 SEO 意義不大，等綁自訂域名後再認真優化
 換域名後必須同步更新：NEXTAUTH_URL、Google OAuth 授權URI、綠界金流回調網址
-SEO keywords meta tag 對 Google 無效，真正有效的是 og:title/og:description
+主頁 page.tsx 的 <main> 必須保留 bg-gradient-to-br from-[#0d2318] via-[#1a3a25] to-[#2d5a3d]，否則背景漸層消失
+GlobalHeader 的 <div className="h-12" /> 佔位符不可移除，否則頁面內容會被 fixed header 蓋住
+state 宣告必須放在 return() 之前的邏輯區，不能插入 JSX 區塊內（曾發生 activeStep 等 state 被誤插入 JSX 導致大量 TS 錯誤）
 
 14. 未來功能規劃（優先順序）
 

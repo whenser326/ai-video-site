@@ -18,6 +18,17 @@ export default function Home() {
   const VIDEO_COUNTDOWN = 120; // 影片預估 120 秒
 const IMAGE_COUNTDOWN = 60; // 圖片預估 60 秒
   const [genType, setGenType] = useState<"image" | "video">("image");
+  // [DNA_PATCH_START] Step 1 模式選擇狀態
+const [generationMode, setGenerationMode] = useState<"image" | "video" | "upload" | "text2video">("image");
+// [DNA_PATCH_START] Steps 2-6 手風琴狀態
+const [activeStep, setActiveStep] = useState<number>(2);
+const [selectedPersona, setSelectedPersona] = useState("");
+const [selectedPersonality, setSelectedPersonality] = useState("");
+const [selectedJob, setSelectedJob] = useState("");
+const [selectedScene, setSelectedScene] = useState("");
+const [selectedShot, setSelectedShot] = useState("");
+// [DNA_PATCH_END]
+// [DNA_PATCH_END]
   const [credits, setCredits] = useState<number | null>(null); // ✨ 點數狀態
   const [plan, setPlan] = useState<string>('free');
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -388,7 +399,7 @@ const lockedCharacter = lockedCharacterUrl || null;
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-  prompt: selectedStyle ? `${selectedStyle}, ${prompt}` : prompt,
+  prompt: [selectedStyle, selectedPersona, selectedScene, selectedShot, prompt].filter(Boolean).join(", "),
   userEmail: session?.user?.email,
   lockedCharacter: lockedCharacter || null,
 }),
@@ -611,7 +622,7 @@ const handleBatchGenerate = async () => {
   };
 
 return (
-    <main className="flex min-h-screen flex-col items-center px-3 sm:px-4 pt-4 pb-4 bg-gradient-to-br from-[#0d2318] via-[#1a3a25] to-[#2d5a3d] relative overflow-y-auto">
+    <main className="flex min-h-screen flex-col items-center px-3 sm:px-4 pt-2 pb-4 bg-gradient-to-br from-[#0d2318] via-[#1a3a25] to-[#2d5a3d] relative overflow-y-auto">
       
       {/* 背景裝飾光暈 */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
@@ -619,186 +630,425 @@ return (
         <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-[#4ade80]/8 rounded-full blur-[100px]" />
       </div>
 
-      {/* 登入與點數顯示區 */}
-      <div className="absolute top-3 right-3 sm:top-5 sm:right-5 z-50 flex flex-col items-end gap-1.5">
-        {session ? (
-          <>
-            {/* 手機版：直排 / 電腦版：橫排 */}
-            <div className="flex flex-col sm:flex-row items-end sm:items-center gap-1.5 sm:gap-2">
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-black/30 backdrop-blur-md rounded-full border border-[#89f5a2]/30 text-white text-xs font-bold">
-                <span className="w-2 h-2 bg-[#89f5a2] rounded-full animate-pulse inline-block" />
-                {credits !== null ? credits : "..."} 點
-              </div>
-              <button onClick={() => signOut()} className="px-3 py-1.5 bg-black/30 backdrop-blur-md text-white/70 rounded-full border border-white/10 text-xs hover:bg-white/10 transition-colors">登出</button>
-            </div>
-            <span className="text-white/30 text-[10px] pr-1">{session.user?.email}</span>
-          </>
-        ) : (
-          <button onClick={() => signIn("google")} className="flex items-center gap-2 px-5 py-2 bg-[#89f5a2] text-[#0d2318] rounded-full font-bold shadow-lg shadow-[#89f5a2]/20 text-sm hover:bg-[#72e88d] transition-colors">
-            <span>🔑</span> Google 登入 <span className="text-[#1a3a25]/60 text-xs font-normal">送 3 點</span>
-          </button>
-        )}
-      </div>
-
-      {/* 主卡片 */}
+            {/* 主卡片 */}
       <div className="w-full max-w-lg mt-14 sm:mt-16 mb-8 relative z-10">
         
-{/* [DNA_PATCH_START] 標題區加入 LOGO */}
-<div className="text-center mb-8">
-  <div
-    className="relative w-full max-w-xs mx-auto mb-2"
-    style={{
-      height: '180px',
-      WebkitMaskImage: 'radial-gradient(ellipse 80% 100% at 50% 50%, black 30%, transparent 80%)',
-      maskImage: 'radial-gradient(ellipse 75% 100% at 50% 50%, black 30%, transparent 80%)',
-    }}
-  >
-    <img src="/logo.png" alt="Consistent Flow" className="w-full h-full object-contain" />
+{/* [DNA_PATCH_START] 標題區（LOGO 已移至 GlobalHeader，這裡只保留文字） */}
+<div className="text-center mb-6">
+  <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight drop-shadow-lg">
+    AI Character Studio
+  </h1>
+  <p className="text-white/40 text-xs mt-1.5 font-medium tracking-widest uppercase">
+    高精度角色生成平台
+  </p>
+</div>
+{/* [DNA_PATCH_END] */}
+{/* [DNA_PATCH_START] Hero 佔位符 */}
+<div className="w-full mb-6 rounded-2xl overflow-hidden border border-white/10 relative"
+     style={{ aspectRatio: '16/9' }}>
+  <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#091c10] gap-3">
+    <div className="w-12 h-12 rounded-full border border-[#89f5a2]/30 flex items-center justify-center">
+      <div style={{
+        borderLeft: '14px solid #89f5a2',
+        borderTop: '9px solid transparent',
+        borderBottom: '9px solid transparent',
+        marginLeft: '3px',
+        opacity: 0.7,
+      }} />
+    </div>
+    <p className="text-white/20 text-xs tracking-widest uppercase">展示影片製作中</p>
   </div>
-  <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight drop-shadow-lg">AI Character Studio</h1>
-  <p className="text-white/40 text-sm mt-2 font-medium tracking-widest uppercase">高精度角色生成平台</p>
+  {/* <video src="/hero.mp4" autoPlay loop muted playsInline className="w-full h-full object-cover" /> */}
 </div>
 {/* [DNA_PATCH_END] */}
 
-        {/* 輸入卡片 */}
-        <div className="bg-black/25 backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden">
-          <form onSubmit={handleSubmit} className="p-6 space-y-4">
-           {/* [DNA_PATCH_START] 鎖定角色狀態列 */}
+{/* [DNA_PATCH_START] Step 1 模式選擇 */}
 {(() => {
-  const lockedUrl = lockedCharacterUrl;
-  return lockedUrl ? (
-    <div className="mb-4 flex items-center gap-3 px-4 py-3 bg-[#89f5a2]/10 border border-[#89f5a2]/30 rounded-2xl">
-      <img src={lockedUrl} className="w-12 h-12 rounded-xl object-cover border border-[#89f5a2]/40 flex-shrink-0" />
-      <div className="flex-1 min-w-0">
-        <p className="text-[#89f5a2] text-xs font-black">🔒 角色鎖定中</p>
-        <p className="text-white/40 text-xs mt-0.5">生成將套用此角色（-1點）</p>
+  const modes = [
+    { key: "image",        label: "🎨 生成角色圖片",   desc: "1點" },
+    { key: "video",        label: "🎬 圖片轉影片",     desc: "4-6點" },
+    { key: "upload",       label: "📁 上傳照片轉影片", desc: "4-6點" },
+    { key: "text2video",   label: "✨ 文字生成影片",   desc: "Coming Soon" },
+  ] as const;
+  return (
+    <div className="mb-4">
+      <p className="text-white/30 text-[10px] font-bold tracking-widest uppercase mb-2 px-1">
+        選擇模式
+      </p>
+      <div className="grid grid-cols-2 gap-2">
+        {modes.map((m) => {
+          const isDisabled = m.key === "text2video";
+          const isActive   = generationMode === m.key;
+          return (
+            <button
+              key={m.key}
+              type="button"
+              disabled={isDisabled}
+              onClick={() => {
+                if (isDisabled) return;
+                setGenerationMode(m.key);
+                if (m.key === "video")  { setShowVideoModal(true);  }
+                if (m.key === "upload") { setShowUploadModal(true); }
+              }}
+              className={`relative flex flex-col items-start px-4 py-3 rounded-2xl border text-left
+                transition-all active:scale-95
+                ${isDisabled
+                  ? "opacity-30 cursor-not-allowed border-white/8 bg-white/3"
+                  : isActive
+                    ? "border-[#89f5a2]/60 bg-[#89f5a2]/10 shadow-sm shadow-[#89f5a2]/10"
+                    : "border-white/10 bg-white/4 hover:border-[#89f5a2]/30 hover:bg-white/8"
+                }`}
+            >
+              <span className={`text-sm font-bold leading-tight
+                ${isDisabled ? "text-white/30" : isActive ? "text-[#89f5a2]" : "text-white/70"}`}>
+                {m.label}
+              </span>
+              <span className={`text-[10px] mt-0.5
+                ${isDisabled ? "text-white/20" : isActive ? "text-[#89f5a2]/60" : "text-white/30"}`}>
+                {m.desc}
+              </span>
+              {isActive && !isDisabled && (
+                <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#89f5a2]" />
+              )}
+            </button>
+          );
+        })}
       </div>
     </div>
-  ) : null;
+  );
 })()}
 {/* [DNA_PATCH_END] */}
-            {/* 風格選擇 */}
-<div className="mb-3">
-  <p className="text-white/40 text-xs mb-2 font-bold tracking-wider uppercase">角色風格</p>
-  <div className="flex gap-2 flex-wrap">
-    {[
-      { label: "🎨 動漫", value: "anime style, cel shading, vibrant colors" },
-      { label: "📸 寫實", value: "photorealistic, hyperdetailed, cinematic lighting" },
-      { label: "🖼️ 油畫", value: "oil painting, classical art style, textured brushstrokes" },
-      { label: "🎮 遊戲", value: "game character, 3D render, Unreal Engine style" },
-      { label: "✏️ 素描", value: "pencil sketch, black and white illustration, detailed lineart" },
-    ].map((style) => (
-      <button
-        key={style.value}
-        type="button"
-        onClick={() => setSelectedStyle(selectedStyle === style.value ? "" : style.value)}
-        className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
-          selectedStyle === style.value
-            ? "bg-[#89f5a2] text-[#0d2318] border-[#89f5a2]"
-            : "bg-white/5 text-white/50 border-white/10 hover:border-[#89f5a2]/40 hover:text-white/70"
-        }`}
-      >
-        {style.label}
-      </button>
-    ))}
-  </div>
-</div>
-{/* [DNA_PATCH_START] 人設快速標籤 */}
-<div className="mb-3">
-  <p className="text-white/40 text-xs mb-2 font-bold tracking-wider uppercase">✨ 人設快速標籤</p>
-  <div className="flex gap-2 flex-wrap">
-    {[
-      { label: "🇹🇼 台灣女孩", value: "Taiwanese girl, natural look, friendly smile, casual outfit" },
-      { label: "👠 冷豔名模", value: "high fashion model, cold expression, sharp features, editorial look" },
-      { label: "🎀 清純學生", value: "cute student girl, innocent expression, school uniform, soft lighting" },
-      { label: "💼 都市OL", value: "office lady, professional attire, confident look, city background" },
-      { label: "🔮 神秘女巫", value: "mysterious witch, dark fantasy, glowing eyes, dramatic lighting" },
-      { label: "🇰🇷 韓系男生", value: "handsome Korean man, clean look, casual fashion, soft smile" },
-      { label: "💪 硬漢型男", value: "rugged masculine man, strong jawline, serious expression, cinematic" },
-      { label: "⚔️ 帥氣騎士", value: "armored knight, heroic pose, fantasy style, epic lighting" },
-      { label: "🌆 賽博龐克", value: "cyberpunk character, neon lights, futuristic outfit, urban night" },
-      { label: "🧝 奇幻精靈", value: "fantasy elf, pointed ears, ethereal beauty, forest background" },
-    ].map((tag) => (
-      <button
-        key={tag.value}
-        type="button"
-        onClick={() => {
-          setPrompt(tag.value);
-          setTranslatedPrompt(null);
-          setUseTranslated(false);
-        }}
-        className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
-          prompt === tag.value
-            ? "bg-yellow-400/30 text-yellow-300 border-yellow-400/60"
-            : "bg-white/5 text-white/50 border-white/10 hover:border-yellow-400/40 hover:text-white/70"
-        }`}
-      >
-        {tag.label}
-      </button>
-    ))}
-  </div>
-  <p className="text-white/20 text-[10px] mt-1.5">點選後自動填入輸入框，可再自行微調</p>
-</div>
-{/* [DNA_PATCH_END] */}
 
-{/* [DNA_PATCH_START] textarea + 翻譯按鈕 + 翻譯確認 + 提示文字 */}
-<div className="relative">
-  <textarea
-    value={prompt}
-    onChange={(e) => {
-      setPrompt(e.target.value);
-      setTranslatedPrompt(null);
-      setUseTranslated(false);
-    }}
-    placeholder="描述你想生成的角色（中文也可以！輸入後點「翻譯成英文」按鈕，我們幫你自動翻譯 🌐）&#10;格式：場景 + 角色關鍵字&#10;例：a fierce warrior elf girl with silver hair, standing in a forest"
-    className="w-full p-4 rounded-2xl bg-white/8 border border-white/10 text-white placeholder-white/25 focus:outline-none focus:ring-2 focus:ring-[#89f5a2]/40 focus:border-[#89f5a2]/40 text-sm resize-none transition-all"
-    rows={4}
-  />
-  <div className="absolute bottom-3 right-3 flex items-center gap-2">
-    {hasChinese(prompt) && !translatedPrompt && (
-      <button
-        type="button"
-        onClick={handleTranslate}
-        disabled={isTranslating}
-        className="px-2 py-1 bg-[#89f5a2]/20 border border-[#89f5a2]/40 text-[#89f5a2] text-xs rounded-lg font-bold hover:bg-[#89f5a2]/30 transition-all disabled:opacity-40"
-      >
-        {isTranslating ? "翻譯中..." : "🌐 翻譯成英文"}
-      </button>
-    )}
-    <span className="text-white/20 text-xs">{prompt.length}/500</span>
-  </div>
-</div>
+{/* [DNA_PATCH_START] 輸入卡片 Steps 2-6 手風琴 */}
+        <div className="bg-black/25 backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden">
+          <form onSubmit={handleSubmit} className="p-4 space-y-2">
 
-{/* 翻譯結果確認 */}
-{translatedPrompt && (
-  <div className="bg-[#89f5a2]/10 border border-[#89f5a2]/30 rounded-xl p-3 space-y-2">
-    <p className="text-white/40 text-xs font-bold tracking-wider uppercase">🌐 翻譯結果</p>
-    <p className="text-[#89f5a2] text-sm font-medium">{translatedPrompt}</p>
-    <div className="flex gap-2">
-      <button
-        type="button"
-        onClick={() => { setPrompt(translatedPrompt); setTranslatedPrompt(null); setUseTranslated(true); }}
-        className="flex-1 py-1.5 bg-[#89f5a2] text-[#0d2318] rounded-lg text-xs font-black hover:opacity-90 transition-all"
-      >
-        ✅ 採用翻譯
-      </button>
-      <button
-        type="button"
-        onClick={() => { setTranslatedPrompt(null); setUseTranslated(false); }}
-        className="px-3 py-1.5 bg-white/5 border border-white/10 text-white/40 rounded-lg text-xs font-bold hover:bg-white/10 transition-all"
-      >
-        略過
-      </button>
-    </div>
-  </div>
-)}
+            {/* 鎖定角色狀態列 */}
+            {lockedCharacterUrl && (
+              <div className="flex items-center gap-3 px-4 py-3 bg-[#89f5a2]/10 border border-[#89f5a2]/30 rounded-2xl mb-2">
+                <img src={lockedCharacterUrl} className="w-10 h-10 rounded-xl object-cover border border-[#89f5a2]/40 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[#89f5a2] text-xs font-black">🔒 角色鎖定中</p>
+                  <p className="text-white/40 text-xs mt-0.5">生成將套用此角色（-1點）</p>
+                </div>
+              </div>
+            )}
 
-{/* 提示文字 */}
-<div className="px-1 space-y-0.5">
-  <p className="text-white/30 text-xs">💡 格式建議：<span className="text-white/50">場景描述 + 角色關鍵字</span></p>
-  <p className="text-white/25 text-xs">偵測到中文時可點「翻譯成英文」自動轉換</p>
-</div>
-{/* [DNA_PATCH_END] */}
+            {/* Step 2：角色人設 */}
+            {(() => {
+              const isOpen = activeStep === 2;
+              const summary = [selectedStyle, selectedPersona].filter(Boolean);
+              return (
+                <div className="border border-white/8 rounded-2xl overflow-hidden">
+                  <button type="button" onClick={() => setActiveStep(isOpen ? 0 : 2)}
+                    className="w-full flex items-center gap-3 px-4 py-3 bg-white/4 hover:bg-white/7 transition-all">
+                    <span className="text-[10px] font-black text-white/30 w-12 flex-shrink-0">STEP 2</span>
+                    <span className="text-sm font-bold text-white/80 flex-1 text-left">角色人設</span>
+                    {summary.length > 0 && !isOpen && (
+                      <span className="text-[10px] text-[#89f5a2]/70 truncate max-w-[120px]">
+                        {summary.map(v => {
+                          const styleMap: Record<string,string> = {
+                            "anime style, cel shading, vibrant colors": "動漫",
+                            "photorealistic, hyperdetailed, cinematic lighting": "寫實",
+                            "oil painting, classical art style, textured brushstrokes": "油畫",
+                            "game character, 3D render, Unreal Engine style": "遊戲",
+                            "pencil sketch, black and white illustration, detailed lineart": "素描",
+                          };
+                          const personaMap: Record<string,string> = {
+                            "Taiwanese girl, natural look, friendly smile, casual outfit": "台灣女孩",
+                            "high fashion model, cold expression, sharp features, editorial look": "冷豔名模",
+                            "cute student girl, innocent expression, school uniform, soft lighting": "清純學生",
+                            "office lady, professional attire, confident look, city background": "都市OL",
+                            "mysterious witch, dark fantasy, glowing eyes, dramatic lighting": "神秘女巫",
+                            "handsome Korean man, clean look, casual fashion, soft smile": "韓系男生",
+                            "rugged masculine man, strong jawline, serious expression, cinematic": "硬漢型男",
+                            "armored knight, heroic pose, fantasy style, epic lighting": "帥氣騎士",
+                            "cyberpunk character, neon lights, futuristic outfit, urban night": "賽博龐克",
+                            "fantasy elf, pointed ears, ethereal beauty, forest background": "奇幻精靈",
+                          };
+                          return styleMap[v] || personaMap[v] || v;
+                        }).join(" · ")}
+                      </span>
+                    )}
+                    <span className="text-white/30 text-xs ml-1">{isOpen ? "▲" : "▼"}</span>
+                  </button>
+                  {isOpen && (
+                    <div className="px-4 pb-4 pt-2 space-y-3 bg-black/20">
+                      {/* 風格 */}
+                      <div>
+                        <p className="text-white/30 text-[10px] font-bold tracking-wider uppercase mb-2">角色風格</p>
+                        <div className="flex gap-2 flex-wrap">
+                          {[
+                            { label: "🎨 動漫", value: "anime style, cel shading, vibrant colors" },
+                            { label: "📸 寫實", value: "photorealistic, hyperdetailed, cinematic lighting" },
+                            { label: "🖼️ 油畫", value: "oil painting, classical art style, textured brushstrokes" },
+                            { label: "🎮 遊戲", value: "game character, 3D render, Unreal Engine style" },
+                            { label: "✏️ 素描", value: "pencil sketch, black and white illustration, detailed lineart" },
+                          ].map((s) => (
+                            <button key={s.value} type="button"
+                              onClick={() => setSelectedStyle(selectedStyle === s.value ? "" : s.value)}
+                              className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                                selectedStyle === s.value
+                                  ? "bg-[#89f5a2] text-[#0d2318] border-[#89f5a2]"
+                                  : "bg-white/5 text-white/50 border-white/10 hover:border-[#89f5a2]/40"
+                              }`}>{s.label}</button>
+                          ))}
+                        </div>
+                      </div>
+                      {/* 人設 */}
+                      <div>
+                        <p className="text-white/30 text-[10px] font-bold tracking-wider uppercase mb-2">✨ 人設快速標籤</p>
+                        <div className="flex gap-2 flex-wrap">
+                          {[
+                            { label: "🇹🇼 台灣女孩", value: "Taiwanese girl, natural look, friendly smile, casual outfit" },
+                            { label: "👠 冷豔名模", value: "high fashion model, cold expression, sharp features, editorial look" },
+                            { label: "🎀 清純學生", value: "cute student girl, innocent expression, school uniform, soft lighting" },
+                            { label: "💼 都市OL", value: "office lady, professional attire, confident look, city background" },
+                            { label: "🔮 神秘女巫", value: "mysterious witch, dark fantasy, glowing eyes, dramatic lighting" },
+                            { label: "🇰🇷 韓系男生", value: "handsome Korean man, clean look, casual fashion, soft smile" },
+                            { label: "💪 硬漢型男", value: "rugged masculine man, strong jawline, serious expression, cinematic" },
+                            { label: "⚔️ 帥氣騎士", value: "armored knight, heroic pose, fantasy style, epic lighting" },
+                            { label: "🌆 賽博龐克", value: "cyberpunk character, neon lights, futuristic outfit, urban night" },
+                            { label: "🧝 奇幻精靈", value: "fantasy elf, pointed ears, ethereal beauty, forest background" },
+                          ].map((tag) => (
+                            <button key={tag.value} type="button"
+                              onClick={() => {
+                                setSelectedPersona(selectedPersona === tag.value ? "" : tag.value);
+                                setPrompt(selectedPersona === tag.value ? "" : tag.value);
+                                setTranslatedPrompt(null); setUseTranslated(false);
+                              }}
+                              className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                                selectedPersona === tag.value
+                                  ? "bg-yellow-400/30 text-yellow-300 border-yellow-400/60"
+                                  : "bg-white/5 text-white/50 border-white/10 hover:border-yellow-400/40"
+                              }`}>{tag.label}</button>
+                          ))}
+                        </div>
+                      </div>
+                      <button type="button" onClick={() => setActiveStep(3)}
+                        className="w-full py-2 text-xs text-white/40 hover:text-white/60 transition-all">
+                        下一步 →
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Step 3：個性職業 */}
+            {(() => {
+              const isOpen = activeStep === 3;
+              const summary = [selectedPersonality, selectedJob].filter(Boolean);
+              return (
+                <div className="border border-white/8 rounded-2xl overflow-hidden">
+                  <button type="button" onClick={() => setActiveStep(isOpen ? 0 : 3)}
+                    className="w-full flex items-center gap-3 px-4 py-3 bg-white/4 hover:bg-white/7 transition-all">
+                    <span className="text-[10px] font-black text-white/30 w-12 flex-shrink-0">STEP 3</span>
+                    <span className="text-sm font-bold text-white/80 flex-1 text-left">個性職業</span>
+                    {summary.length > 0 && !isOpen && (
+                      <span className="text-[10px] text-purple-300/70 truncate max-w-[120px]">{summary.join(" · ")}</span>
+                    )}
+                    <span className="text-white/30 text-xs ml-1">{isOpen ? "▲" : "▼"}</span>
+                  </button>
+                  {isOpen && (
+                    <div className="px-4 pb-4 pt-2 space-y-3 bg-black/20">
+                      <div>
+                        <p className="text-white/30 text-[10px] font-bold tracking-wider uppercase mb-2">個性</p>
+                        <div className="flex gap-2 flex-wrap">
+                          {["開朗活潑","冷靜理智","神秘感","溫柔體貼","霸道強勢","天真爛漫","毒舌傲嬌"].map((p) => (
+                            <button key={p} type="button"
+                              onClick={() => setSelectedPersonality(selectedPersonality === p ? "" : p)}
+                              className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                                selectedPersonality === p
+                                  ? "bg-purple-400/30 text-purple-300 border-purple-400/60"
+                                  : "bg-white/5 text-white/50 border-white/10 hover:border-purple-400/40"
+                              }`}>{p}</button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-white/30 text-[10px] font-bold tracking-wider uppercase mb-2">職業</p>
+                        <div className="flex gap-2 flex-wrap">
+                          {["醫生","教師","偵探","魔法師","運動員","護士","學生","商人","武士","歌手"].map((j) => (
+                            <button key={j} type="button"
+                              onClick={() => setSelectedJob(selectedJob === j ? "" : j)}
+                              className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                                selectedJob === j
+                                  ? "bg-purple-400/30 text-purple-300 border-purple-400/60"
+                                  : "bg-white/5 text-white/50 border-white/10 hover:border-purple-400/40"
+                              }`}>{j}</button>
+                          ))}
+                        </div>
+                      </div>
+                      <p className="text-white/20 text-[10px]">此設定存入角色資料，不影響生成 prompt</p>
+                      <button type="button" onClick={() => setActiveStep(4)}
+                        className="w-full py-2 text-xs text-white/40 hover:text-white/60 transition-all">
+                        下一步 →
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Step 4：選場景 */}
+            {(() => {
+              const isOpen = activeStep === 4;
+              const sceneLabels: Record<string,string> = {
+                "urban night cityscape, neon lights, busy street": "城市夜景",
+                "dense jungle, tropical forest, sunlight through leaves": "叢林",
+                "abandoned ruins, overgrown, dramatic lighting": "廢墟",
+                "snowy landscape, winter, soft light": "雪地",
+                "cozy cafe interior, warm lighting, bokeh": "咖啡廳",
+                "ancient temple, mystical atmosphere, fog": "神殿",
+                "beach, ocean, golden hour sunlight": "海邊",
+                "cyberpunk city, rain, holographic signs": "賽博城市",
+              };
+              return (
+                <div className="border border-white/8 rounded-2xl overflow-hidden">
+                  <button type="button" onClick={() => setActiveStep(isOpen ? 0 : 4)}
+                    className="w-full flex items-center gap-3 px-4 py-3 bg-white/4 hover:bg-white/7 transition-all">
+                    <span className="text-[10px] font-black text-white/30 w-12 flex-shrink-0">STEP 4</span>
+                    <span className="text-sm font-bold text-white/80 flex-1 text-left">選場景</span>
+                    {selectedScene && !isOpen && (
+                      <span className="text-[10px] text-blue-300/70">{sceneLabels[selectedScene] || selectedScene}</span>
+                    )}
+                    <span className="text-white/30 text-xs ml-1">{isOpen ? "▲" : "▼"}</span>
+                  </button>
+                  {isOpen && (
+                    <div className="px-4 pb-4 pt-2 bg-black/20">
+                      <div className="flex gap-2 flex-wrap">
+                        {Object.entries(sceneLabels).map(([value, label]) => (
+                          <button key={value} type="button"
+                            onClick={() => setSelectedScene(selectedScene === value ? "" : value)}
+                            className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                              selectedScene === value
+                                ? "bg-blue-400/30 text-blue-300 border-blue-400/60"
+                                : "bg-white/5 text-white/50 border-white/10 hover:border-blue-400/40"
+                            }`}>{label}</button>
+                        ))}
+                      </div>
+                      <button type="button" onClick={() => setActiveStep(generationMode === "image" ? 6 : 5)}
+                        className="w-full py-2 mt-3 text-xs text-white/40 hover:text-white/60 transition-all">
+                        下一步 →
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Step 5：鏡頭角度（影片模式限定） */}
+            {generationMode !== "image" && (
+              (() => {
+                const isOpen = activeStep === 5;
+                const shotLabels: Record<string,string> = {
+                  "close-up shot, detailed face": "特寫",
+                  "full body shot": "全身鏡",
+                  "low angle shot, looking up": "從下往上",
+                  "orbiting camera, 360 around subject": "環繞鏡頭",
+                  "slow push in, camera moving forward": "慢速推近",
+                };
+                return (
+                  <div className="border border-white/8 rounded-2xl overflow-hidden">
+                    <button type="button" onClick={() => setActiveStep(isOpen ? 0 : 5)}
+                      className="w-full flex items-center gap-3 px-4 py-3 bg-white/4 hover:bg-white/7 transition-all">
+                      <span className="text-[10px] font-black text-white/30 w-12 flex-shrink-0">STEP 5</span>
+                      <span className="text-sm font-bold text-white/80 flex-1 text-left">鏡頭角度</span>
+                      {selectedShot && !isOpen && (
+                        <span className="text-[10px] text-amber-300/70">{shotLabels[selectedShot] || selectedShot}</span>
+                      )}
+                      <span className="text-amber-400/50 text-[10px] mr-1">影片限定</span>
+                      <span className="text-white/30 text-xs">{isOpen ? "▲" : "▼"}</span>
+                    </button>
+                    {isOpen && (
+                      <div className="px-4 pb-4 pt-2 bg-black/20">
+                        <div className="flex gap-2 flex-wrap">
+                          {Object.entries(shotLabels).map(([value, label]) => (
+                            <button key={value} type="button"
+                              onClick={() => setSelectedShot(selectedShot === value ? "" : value)}
+                              className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                                selectedShot === value
+                                  ? "bg-amber-400/30 text-amber-300 border-amber-400/60"
+                                  : "bg-white/5 text-white/50 border-white/10 hover:border-amber-400/40"
+                              }`}>{label}</button>
+                          ))}
+                        </div>
+                        <button type="button" onClick={() => setActiveStep(6)}
+                          className="w-full py-2 mt-3 text-xs text-white/40 hover:text-white/60 transition-all">
+                          下一步 →
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()
+            )}
+
+            {/* Step 6：自由輸入 */}
+            {(() => {
+              const isOpen = activeStep === 6;
+              return (
+                <div className="border border-white/8 rounded-2xl overflow-hidden">
+                  <button type="button" onClick={() => setActiveStep(isOpen ? 0 : 6)}
+                    className="w-full flex items-center gap-3 px-4 py-3 bg-white/4 hover:bg-white/7 transition-all">
+                    <span className="text-[10px] font-black text-white/30 w-12 flex-shrink-0">STEP 6</span>
+                    <span className="text-sm font-bold text-white/80 flex-1 text-left">補充細節</span>
+                    <span className="text-white/20 text-[10px] mr-1">選填</span>
+                    <span className="text-white/30 text-xs">{isOpen ? "▲" : "▼"}</span>
+                  </button>
+                  {isOpen && (
+                    <div className="px-4 pb-4 pt-2 space-y-2 bg-black/20">
+                      {/* 已選標籤摘要 */}
+                      {[selectedStyle, selectedPersona, selectedScene, selectedShot].filter(Boolean).length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 p-2 bg-white/4 rounded-xl">
+                          {[
+                            { v: selectedStyle, color: "text-[#89f5a2]/70" },
+                            { v: selectedPersona, color: "text-yellow-300/70" },
+                            { v: selectedScene, color: "text-blue-300/70" },
+                            { v: selectedShot, color: "text-amber-300/70" },
+                          ].filter(x => x.v).map((x, i) => (
+                            <span key={i} className={`text-[10px] ${x.color}`}>#{x.v.split(",")[0]}</span>
+                          ))}
+                        </div>
+                      )}
+                      <div className="relative">
+                        <textarea
+                          value={prompt}
+                          onChange={(e) => { setPrompt(e.target.value); setTranslatedPrompt(null); setUseTranslated(false); }}
+                          placeholder="補充細節（選填）：服裝顏色、表情、動作...&#10;標籤已幫你建立骨架，這裡補充細節"
+                          className="w-full p-3 rounded-xl bg-white/8 border border-white/10 text-white placeholder-white/25 focus:outline-none focus:ring-2 focus:ring-[#89f5a2]/40 text-sm resize-none transition-all"
+                          rows={3}
+                        />
+                        <div className="absolute bottom-2 right-2 flex items-center gap-2">
+                          {hasChinese(prompt) && !translatedPrompt && (
+                            <button type="button" onClick={handleTranslate} disabled={isTranslating}
+                              className="px-2 py-1 bg-[#89f5a2]/20 border border-[#89f5a2]/40 text-[#89f5a2] text-xs rounded-lg font-bold hover:bg-[#89f5a2]/30 disabled:opacity-40">
+                              {isTranslating ? "翻譯中..." : "🌐 翻譯"}
+                            </button>
+                          )}
+                          <span className="text-white/20 text-xs">{prompt.length}/500</span>
+                        </div>
+                      </div>
+                      {translatedPrompt && (
+                        <div className="bg-[#89f5a2]/10 border border-[#89f5a2]/30 rounded-xl p-3 space-y-2">
+                          <p className="text-white/40 text-xs font-bold uppercase">🌐 翻譯結果</p>
+                          <p className="text-[#89f5a2] text-sm font-medium">{translatedPrompt}</p>
+                          <div className="flex gap-2">
+                            <button type="button" onClick={() => { setPrompt(translatedPrompt); setTranslatedPrompt(null); setUseTranslated(true); }}
+                              className="flex-1 py-1.5 bg-[#89f5a2] text-[#0d2318] rounded-lg text-xs font-black hover:opacity-90">✅ 採用翻譯</button>
+                            <button type="button" onClick={() => { setTranslatedPrompt(null); setUseTranslated(false); }}
+                              className="px-3 py-1.5 bg-white/5 border border-white/10 text-white/40 rounded-lg text-xs font-bold">略過</button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* 生成按鈕 */}
             <button
               type="submit"
               disabled={loading || (credits !== null && credits <= 0)}
@@ -810,11 +1060,16 @@ return (
                   正在構思角色...
                 </span>
               ) : (
-                <span className="flex items-center justify-center gap-2">✨ 開始生成角色 <span className="text-[#0d2318]/60 text-sm font-bold">1 點</span></span>
+                <span className="flex items-center justify-center gap-2">
+                  ✨ 開始生成角色
+                  <span className="text-[#0d2318]/60 text-sm font-bold">1 點</span>
+                </span>
               )}
             </button>
+
           </form>
         </div>
+        {/* [DNA_PATCH_END] */}
 
 {/* [DNA_PATCH_START] retry 提示訊息 */}
 {retryMessage && (
@@ -955,162 +1210,115 @@ return (
           </div>
         )}
       </div>
-{/* [DNA_PATCH_START] 角色一致性按鈕 + 上傳圖片轉影片 */}
+{/* [DNA_PATCH_START] 結果區操作按鈕整合 */}
 {prediction?.output && !genType.includes('video') && (
-  <div className="mt-3 px-4 space-y-2">
-    {plan === 'free' ? (
-      <>
-        <button
-          onClick={async () => {
-  try {
-    const lockBtn = document.activeElement as HTMLButtonElement;
-    if (lockBtn) lockBtn.textContent = '🔄 鎖定中...';
-    const res = await fetch("/api/upload-image", {
+  <div className="mt-3 px-4 space-y-3">
+
+    {/* 主要操作：一排三顆 */}
+    <div className="grid grid-cols-3 gap-2">
+      {/* 鎖定此角色 */}
+      <button
+        onClick={async () => {
+          try {
+            const btn = document.activeElement as HTMLButtonElement;
+            if (btn) btn.textContent = '🔄 鎖定中...';
+            const res = await fetch("/api/upload-image", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ imageUrl: prediction.output, email: session?.user?.email }),
+            });
+            const data = await res.json();
+            if (data.url) {
+              await fetch("/api/user/save-locked-character", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ imageUrl: prediction.output, email: session?.user?.email }),
+                body: JSON.stringify({ email: session?.user?.email ?? '', url: data.url }),
               });
-              const data = await res.json();
-              if (data.url) {
-                await fetch("/api/user/save-locked-character", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ email: session?.user?.email ?? '', url: data.url }),
-                });
-                setError('');
-                localStorage.setItem('locked_character', data.url);
-                setLockedCharacterUrl(data.url);
-                alert('✅ 角色已鎖定！下次生成將保持同一角色外觀（每日限額內）');
-              } else {
-                alert('鎖定失敗，請重試');
-              }
-            } catch (err) {
+              setError('');
+              localStorage.setItem('locked_character', data.url);
+              setLockedCharacterUrl(data.url);
+              alert('✅ 角色已鎖定！');
+            } else {
               alert('鎖定失敗，請重試');
             }
-          }}
-          className="w-full py-3 bg-gradient-to-r from-[#89f5a2]/20 to-[#4ade80]/20 border border-[#89f5a2]/40 text-[#89f5a2] rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:from-[#89f5a2]/30 transition-all"
-        >
-          🎯 鎖定此角色（每日限額內可用）
-        </button>
-        <button
-          onClick={() => setShowUploadModal(true)}
-          className="w-full py-3 bg-gradient-to-r from-[#89f5a2]/20 to-[#4ade80]/20 border border-[#89f5a2]/40 text-[#89f5a2] rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:from-[#89f5a2]/30 transition-all"
-        >
-          📁 上傳照片轉影片（每日限額內可用）
-        </button>
-      </>
-    ) : (
-      <>
+          } catch { alert('鎖定失敗，請重試'); }
+        }}
+        className="flex flex-col items-center gap-1 py-3 bg-[#89f5a2]/10 border border-[#89f5a2]/30 text-[#89f5a2] rounded-xl text-xs font-bold hover:bg-[#89f5a2]/20 transition-all active:scale-95"
+      >
+        <span className="text-base">🎯</span>
+        <span>鎖定角色</span>
+      </button>
+
+      {/* 收藏此角色 */}
+      <button
+        onClick={() => { setSaveCharacterName(""); setShowSaveModal(true); }}
+        className="flex flex-col items-center gap-1 py-3 bg-yellow-400/10 border border-yellow-400/30 text-yellow-300 rounded-xl text-xs font-bold hover:bg-yellow-400/20 transition-all active:scale-95"
+      >
+        <span className="text-base">⭐</span>
+        <span>收藏角色</span>
+      </button>
+
+      {/* 批次生成（付費+已鎖定才亮） */}
+      <button
+        onClick={() => {
+          if (plan === 'free') { alert('⚠️ 批次生成為付費功能，請先升級方案'); return; }
+          if (!lockedCharacterUrl) { alert('⚠️ 批次生成必須先鎖定角色'); return; }
+          setShowBatchModal(true);
+        }}
+        className={`flex flex-col items-center gap-1 py-3 rounded-xl text-xs font-bold border transition-all active:scale-95 ${
+          plan !== 'free' && lockedCharacterUrl
+            ? 'bg-blue-500/10 border-blue-500/30 text-blue-300 hover:bg-blue-500/20'
+            : 'bg-white/4 border-white/10 text-white/25'
+        }`}
+      >
+        <span className="text-base">🎭</span>
+        <span>批次生成</span>
+      </button>
+    </div>
+
+    {/* 次要操作：解除鎖定 + 上傳轉影片 */}
+    <div className="grid grid-cols-2 gap-2">
+      {lockedCharacterUrl && (
         <button
           onClick={async () => {
-  try {
-    const lockBtn = document.activeElement as HTMLButtonElement;
-    if (lockBtn) lockBtn.textContent = '🔄 鎖定中...';
-    const res = await fetch("/api/upload-image", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ imageUrl: prediction.output, email: session?.user?.email }),
-              });
-              const data = await res.json();
-              if (data.url) {
-  await fetch("/api/user/save-locked-character", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email: session?.user?.email ?? '', url: data.url }),
-  });
-  setError('');
-  localStorage.setItem('locked_character', data.url);
-  setLockedCharacterUrl(data.url);
-  alert('✅ 角色已鎖定！下次生成將保持同一角色外觀');
-} else {
-  alert('鎖定失敗，請重試');
-}
-            } catch (err) {
-              alert('鎖定失敗，請重試');
-            }
+            if (!confirm('確定要解除鎖定角色嗎？')) return;
+            await fetch("/api/user/clear-locked-character", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email: session?.user?.email }),
+            });
+            localStorage.removeItem('locked_character');
+            setLockedCharacterUrl(null);
           }}
-          className="w-full py-3 bg-gradient-to-r from-[#89f5a2]/20 to-[#4ade80]/20 border border-[#89f5a2]/40 text-[#89f5a2] rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:from-[#89f5a2]/30 transition-all"
+          className="py-2.5 bg-white/4 border border-white/10 text-white/40 rounded-xl text-xs font-bold hover:bg-white/8 transition-all active:scale-95"
         >
-          🎯 鎖定此角色（一致性生成）
+          🔓 解除鎖定
         </button>
-        {/* [DNA_PATCH_START] 批次生成按鈕（付費專屬） */}
-        {plan !== 'free' && lockedCharacterUrl && (
-          <button
-            onClick={() => setShowBatchModal(true)}
-            className="w-full py-3 bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30 text-blue-300 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:from-blue-500/30 transition-all"
-          >
-            🎭 批次生成不同 Pose <span className="text-blue-300/50 text-xs">每張1點</span>
-          </button>
-        )}
-        {/* [DNA_PATCH_END] */}
-        {/* [DNA_PATCH_START] 收藏此角色按鈕 */}
-        <button
-          onClick={() => { setSaveCharacterName(""); setShowSaveModal(true); }}
-          className="w-full py-3 bg-gradient-to-r from-yellow-400/20 to-yellow-300/10 border border-yellow-400/30 text-yellow-300 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:from-yellow-400/30 transition-all"
-        >
-          ⭐ 收藏此角色
-        </button>
-        {/* [DNA_PATCH_END] */}
-        {/* [DNA_PATCH_START] TTS 語音合成按鈕（付費專屬，僅影片生成後顯示） */}
-        {plan !== 'free' && (prediction?.output?.includes('.mp4') || genType === 'video') && (
-          <button
-            onClick={() => { setTtsText(""); setTtsAudio(null); setShowTtsModal(true); }}
-            className="w-full py-3 bg-gradient-to-r from-purple-500/20 to-blue-500/20 border border-purple-500/30 text-purple-300 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:from-purple-500/30 transition-all"
-          >
-            🎙️ 語音合成 <span className="text-purple-300/50 text-xs">6點/次</span>
-          </button>
-        )}
-        {/* [DNA_PATCH_END] */}
-        {/* [DNA_PATCH_START] 解除鎖定按鈕 */}
-<button
-  onClick={async () => {
-    if (!confirm('確定要解除鎖定角色嗎？')) return;
-    await fetch("/api/user/clear-locked-character", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: session?.user?.email }),
-    });
-    localStorage.removeItem('locked_character');
-    setLockedCharacterUrl(null);
-    alert('✅ 已解除鎖定，下次生成將創造新角色');
-  }}
-  className="w-full py-3 bg-white/5 border border-white/10 text-white/50 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-white/10 transition-all"
->
-  🔓 解除角色鎖定
-</button>
-{/* [DNA_PATCH_END] */}
-        
-        <button
-  onClick={() => setShowUploadModal(true)}
-  className="w-full py-3 bg-gradient-to-r from-[#89f5a2]/20 to-[#4ade80]/20 border border-[#89f5a2]/40 text-[#89f5a2] rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:from-[#89f5a2]/30 transition-all"
->
-          📁 上傳圖片轉影片
-        </button>
-      </>
-    )}
-    {/* [DNA_PATCH_START] 鎖定角色提示文字 */}
-<div className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 space-y-1">
-  <p className="text-white/50 text-xs font-bold">💡 生成提示建議</p>
-  <p className="text-white/35 text-xs">格式：<span className="text-white/55">場景描述 + 角色關鍵字</span></p>
-  <p className="text-white/25 text-xs">例：standing in a neon city, wearing red armor</p>
-  <p className="text-white/25 text-xs">建議英文輸入，或用上方翻譯按鈕轉換</p>
-</div>
-{/* [DNA_PATCH_END] */}
-    <p className="text-white/70 text-xs tracking-wider text-center pt-1">✨ 想讓你的角色突破界限？</p>
-{/* 成人專區暫時隱藏，等綠界審核通過後再開放 */}
-<button
-  onClick={() => setShowReferralModal(true)}
-  className="w-full flex items-center gap-3 px-4 py-2 bg-yellow-400/8 border border-yellow-400/20 rounded-xl hover:bg-yellow-400/15 transition-all group mt-1"
->
-  <span className="text-base">✨</span>
-  <div className="text-left flex-1">
-    <p className="text-yellow-300 text-sm font-black">推薦好友賺點數</p>
-    <p className="text-white/30 text-xs">推薦升級即得獎勵</p>
-  </div>
-  <span className="text-yellow-300/40 text-xs group-hover:translate-x-0.5 transition-transform">→</span>
-</button>
+      )}
+      <button
+        onClick={() => setShowUploadModal(true)}
+        className={`py-2.5 bg-[#89f5a2]/8 border border-[#89f5a2]/20 text-[#89f5a2]/60 rounded-xl text-xs font-bold hover:bg-[#89f5a2]/15 transition-all active:scale-95 ${lockedCharacterUrl ? '' : 'col-span-2'}`}
+      >
+        📁 上傳照片轉影片
+      </button>
+    </div>
+
+    {/* 推薦賺點橫幅 */}
+    <button
+      onClick={() => setShowReferralModal(true)}
+      className="w-full flex items-center gap-3 px-4 py-2 bg-yellow-400/8 border border-yellow-400/20 rounded-xl hover:bg-yellow-400/15 transition-all group"
+    >
+      <span className="text-base">✨</span>
+      <div className="text-left flex-1">
+        <p className="text-yellow-300 text-sm font-black">推薦好友賺點數</p>
+        <p className="text-white/30 text-xs">推薦升級即得獎勵</p>
+      </div>
+      <span className="text-yellow-300/40 text-xs group-hover:translate-x-0.5 transition-transform">→</span>
+    </button>
+
   </div>
 )}
+{/* [DNA_PATCH_END] */}
 {/* [DNA_PATCH_START] 收藏角色列表 */}
 {savedCharacters.length > 0 && (
   <div className="mt-3 px-4">
@@ -2109,12 +2317,15 @@ onClick={() => {
             const res = await fetch("/api/saved-characters", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                email: session?.user?.email,
-                name: saveCharacterName || "未命名角色",
-                image_url: prediction.output,
-                plan,
-              }),
+              // [DNA_PATCH_START] 收藏時帶入個性職業描述
+body: JSON.stringify({
+  email: session?.user?.email,
+  name: saveCharacterName || "未命名角色",
+  image_url: prediction.output,
+  plan,
+  description: [selectedPersonality, selectedJob].filter(Boolean).join("・") || null,
+}),
+// [DNA_PATCH_END]
             });
             const data = await res.json();
             if (data.error) {

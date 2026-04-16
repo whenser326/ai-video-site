@@ -1,17 +1,19 @@
+// [DNA_PATCH_START] GlobalHeader 全面改版：LOGO + 點數 + 漢堡選單 RWD
 "use client";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { useRouter, usePathname } from "next/navigation";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import FeedbackModal from './FeedbackModal';
 
 export default function GlobalHeader() {
   const { data: session } = useSession();
   const router = useRouter();
   const pathname = usePathname();
-
-  // [DNA_PATCH_START]
   const [showFeedback, setShowFeedback] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [credits, setCredits] = useState<number | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const drawerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!session?.user?.email) return;
@@ -30,60 +32,167 @@ export default function GlobalHeader() {
     const interval = setInterval(checkUnread, 60000);
     return () => clearInterval(interval);
   }, [session]);
-  // [DNA_PATCH_END]
+
+  // 點數同步
+  useEffect(() => {
+    if (!session?.user?.email) return;
+    fetch(`/api/user/credits?email=${session.user.email}`)
+      .then(r => r.json())
+      .then(d => { if (d.credits !== undefined) setCredits(d.credits); });
+  }, [session]);
+
+  // 點外部關閉 Drawer
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (drawerRef.current && !drawerRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    if (menuOpen) document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [menuOpen]);
 
   if (!session) return null;
   if (pathname === '/pricing') return null;
 
-  const handleTopUp = () => router.push('/pricing#plans');
+  const handleTopUp = () => { router.push('/pricing#plans'); setMenuOpen(false); };
+  const handleReferral = () => { window.dispatchEvent(new CustomEvent("open-referral-modal")); setMenuOpen(false); };
 
-  // [DNA_PATCH_START]
-  const handleReferral = () => {
-    window.dispatchEvent(new CustomEvent("open-referral-modal"));
-  };
-  // [DNA_PATCH_END]
+  const menuItems = [
+    {
+      label: '🎭 我的角色',
+      onClick: () => { router.push('/characters'); setMenuOpen(false); },
+      className: 'text-purple-300 border-purple-400/30 bg-purple-400/10 hover:bg-purple-400/20',
+    },
+    {
+      label: '💳 儲值點數',
+      onClick: handleTopUp,
+      className: 'text-[#89f5a2] border-[#89f5a2]/30 bg-[#89f5a2]/10 hover:bg-[#89f5a2]/20',
+    },
+    {
+      label: '🎁 推薦賺點',
+      onClick: handleReferral,
+      className: 'text-yellow-300 border-yellow-400/30 bg-yellow-400/10 hover:bg-yellow-400/20',
+    },
+    {
+      label: '💬 意見回饋',
+      onClick: () => { setShowFeedback(true); setMenuOpen(false); },
+      className: 'text-white/60 border-white/15 bg-white/5 hover:bg-white/10',
+      badge: unreadCount > 0 ? unreadCount : null,
+    },
+  ];
 
   return (
     <>
-      <div className="fixed top-3 left-3 sm:top-4 sm:left-4 z-50 flex flex-col sm:flex-row gap-1.5 sm:gap-2">
+      {/* Header 主列 */}
+      <div className="fixed top-0 left-0 right-0 z-50 h-12 flex items-center px-3 sm:px-5
+                      bg-[#0d2318]/95 backdrop-blur-md border-b border-white/8">
+
+        {/* 左：LOGO */}
         <button
-          onClick={() => router.push('/characters')}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-400/15 backdrop-blur-md border border-purple-400/40 rounded-full text-purple-300 text-xs font-bold hover:bg-purple-400/25 transition-all hover:scale-105 active:scale-95"
+          onClick={() => router.push('/')}
+          className="flex items-center gap-2 hover:opacity-80 transition-opacity flex-shrink-0"
         >
-          🎭 我的角色
-        </button>
-        <button
-          onClick={handleTopUp}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#89f5a2]/15 backdrop-blur-md border border-[#89f5a2]/40 rounded-full text-[#89f5a2] text-xs font-bold hover:bg-[#89f5a2]/25 transition-all hover:scale-105 active:scale-95"
-        >
-          💳 儲值點數
+          <img src="/logo.png" alt="Consistent Flow" className="h-7 w-auto" />
+          <span className="hidden xs:inline text-[#89f5a2] text-xs font-bold tracking-wide whitespace-nowrap">
+            Consistent Flow
+          </span>
         </button>
 
-        {/* [DNA_PATCH_START] */}
-        <button
-          onClick={handleReferral}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-yellow-400/10 backdrop-blur-md border border-yellow-400/30 rounded-full text-yellow-300 text-xs font-bold hover:bg-yellow-400/20 transition-all hover:scale-105 active:scale-95"
-        >
-          🎁 推薦賺點
-        </button>
-        {/* [DNA_PATCH_END] */}
+        <div className="flex-1" />
 
-        {/* [DNA_PATCH_START] */}
-        <button
-          onClick={() => setShowFeedback(true)}
-          className="relative flex items-center gap-1.5 px-3 py-1.5 bg-white/10 backdrop-blur-md border border-white/20 rounded-full text-white/60 text-xs font-bold hover:bg-white/20 hover:text-white transition-all hover:scale-105 active:scale-95"
-        >
-          💬 意見回饋
-          {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
-              {unreadCount}
-            </span>
+        {/* 右：點數 + 電腦版按鈕 + 漢堡 */}
+        <div className="flex items-center gap-2">
+
+          {/* 點數徽章（永遠顯示） */}
+          {credits !== null && (
+            <button
+              onClick={handleTopUp}
+              className="flex items-center gap-1 px-2.5 py-1 bg-[#89f5a2]/10 border border-[#89f5a2]/30
+                         rounded-full text-[#89f5a2] text-xs font-bold hover:bg-[#89f5a2]/20 transition-all"
+            >
+              💎 {credits} 點
+            </button>
           )}
-        </button>
-        {/* [DNA_PATCH_END] */}
+
+          {/* 電腦版：直接顯示按鈕（sm 以上） */}
+          <div className="hidden sm:flex items-center gap-1.5">
+            {menuItems.map((item) => (
+              <button
+                key={item.label}
+                onClick={item.onClick}
+                className={`relative flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold
+                            border transition-all hover:scale-105 active:scale-95 ${item.className}`}
+              >
+                {item.label}
+                {item.badge && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px]
+                                   rounded-full w-4 h-4 flex items-center justify-center">
+                    {item.badge}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* 手機版：漢堡按鈕（sm 以下） */}
+          <button
+            onClick={() => setMenuOpen(v => !v)}
+            className="sm:hidden flex flex-col items-center justify-center gap-[4px]
+                       w-9 h-9 rounded-xl border border-white/20 bg-white/8
+                       hover:bg-white/15 transition-all active:scale-95"
+            aria-label="選單"
+          >
+            <span className={`block w-4 h-[1.5px] bg-white/70 rounded transition-all duration-200
+                              ${menuOpen ? 'translate-y-[5.5px] rotate-45' : ''}`} />
+            <span className={`block w-4 h-[1.5px] bg-white/70 rounded transition-all duration-200
+                              ${menuOpen ? 'opacity-0' : ''}`} />
+            <span className={`block w-4 h-[1.5px] bg-white/70 rounded transition-all duration-200
+                              ${menuOpen ? '-translate-y-[5.5px] -rotate-45' : ''}`} />
+          </button>
+
+        </div>
       </div>
 
-      {/* [DNA_PATCH_START] */}
+      {/* 手機版 Drawer（漢堡展開） */}
+      {menuOpen && (
+        <div
+          ref={drawerRef}
+          className="sm:hidden fixed top-12 left-0 right-0 z-40
+                     bg-[#0d2318]/98 backdrop-blur-md border-b border-white/10
+                     px-4 py-3 flex flex-col gap-2 animate-in slide-in-from-top-2 duration-150"
+        >
+          {menuItems.map((item) => (
+            <button
+              key={item.label}
+              onClick={item.onClick}
+              className={`relative flex items-center gap-2 w-full px-4 py-3 rounded-xl
+                          text-sm font-bold border transition-all active:scale-98 ${item.className}`}
+            >
+              {item.label}
+              {item.badge && (
+                <span className="ml-auto bg-red-500 text-white text-[10px]
+                                 rounded-full w-5 h-5 flex items-center justify-center">
+                  {item.badge}
+                </span>
+              )}
+            </button>
+          ))}
+          {/* 登出（只在 Drawer 裡顯示） */}
+          <button
+            onClick={() => signOut()}
+            className="flex items-center gap-2 w-full px-4 py-3 rounded-xl text-sm font-bold
+                       border border-white/10 text-white/30 bg-white/3 hover:bg-white/8 transition-all"
+          >
+            🚪 登出
+          </button>
+        </div>
+      )}
+
+      {/* Header 佔位高度（防止內容被蓋住） */}
+      <div className="h-12" />
+
+      {/* FeedbackModal */}
       {showFeedback && session?.user?.email && (
         <FeedbackModal
           userEmail={session.user.email}
@@ -101,7 +210,7 @@ export default function GlobalHeader() {
           }}
         />
       )}
-      {/* [DNA_PATCH_END] */}
     </>
   );
 }
+// [DNA_PATCH_END]
