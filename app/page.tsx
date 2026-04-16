@@ -993,7 +993,7 @@ return (
                   <button type="button" onClick={() => setActiveStep(isOpen ? 0 : 6)}
                     className="w-full flex items-center gap-3 px-4 py-3 bg-white/4 hover:bg-white/7 transition-all">
                     <span className="text-[10px] font-black text-white/30 w-12 flex-shrink-0">STEP 6</span>
-                    <span className="text-sm font-bold text-white/80 flex-1 text-left">補充細節</span>
+                    <span className="text-sm font-bold text-white/80 flex-1 text-left">補充細節（中文也可以！輸入後點「翻譯成英文」按鈕，我們幫你自動翻譯 🌐）</span>
                     <span className="text-white/20 text-[10px] mr-1">選填</span>
                     <span className="text-white/30 text-xs">{isOpen ? "▲" : "▼"}</span>
                   </button>
@@ -1016,7 +1016,7 @@ return (
                         <textarea
                           value={prompt}
                           onChange={(e) => { setPrompt(e.target.value); setTranslatedPrompt(null); setUseTranslated(false); }}
-                          placeholder="補充細節（選填）：服裝顏色、表情、動作...&#10;標籤已幫你建立骨架，這裡補充細節"
+                          placeholder="補充細節（選填，中文也可以！輸入後點「翻譯成英文」按鈕，我們幫你自動翻譯 🌐）：服裝顏色、表情、動作...&#10;標籤已幫你建立骨架，這裡補充細節"
                           className="w-full p-3 rounded-xl bg-white/8 border border-white/10 text-white placeholder-white/25 focus:outline-none focus:ring-2 focus:ring-[#89f5a2]/40 text-sm resize-none transition-all"
                           rows={3}
                         />
@@ -2187,7 +2187,7 @@ onClick={() => {
     </button>
   )}
 </div>
-            <p className="text-white/25 text-[10px]">📌 備註（選填）：補充角度、距離、表情等細節，例如：微笑、特寫、從後方拍</p>
+            <p className="text-white/25 text-[10px]">📌 備註（選填）：補充角度、距離、表情等細節，例如：微笑、特寫、從後方拍（中文也可以！輸入後點「翻譯成英文」按鈕，我們幫你自動翻譯 🌐）</p>
 <div className="relative">
   <input
     type="text"
