@@ -843,7 +843,7 @@ return (
                               type="text"
                               value={customPersona}
                               onChange={(e) => { setCustomPersona(e.target.value); setCustomPersonaTranslated(null); }}
-                              placeholder="或自行輸入角色描述..."
+                              placeholder="或自行輸入角色描述...可中文！輸入後點「翻譯」按鈕幫你翻譯 🌐"
                               className="w-full px-3 py-2 pr-16 rounded-xl bg-white/5 border border-white/10 text-white text-xs placeholder-white/25 focus:outline-none focus:border-yellow-400/40"
                             />
                             {hasChinese(customPersona) && !customPersonaTranslated && (
@@ -936,7 +936,7 @@ return (
                               type="text"
                               value={customPersonality}
                               onChange={(e) => { setCustomPersonality(e.target.value); setCustomPersonalityTranslated(null); }}
-                              placeholder="或自行輸入個性描述..."
+                              placeholder="或自行輸入個性描述...可中文！輸入後點「翻譯」按鈕幫你翻譯 🌐"
                               className="w-full px-3 py-2 pr-16 rounded-xl bg-white/5 border border-white/10 text-white text-xs placeholder-white/25 focus:outline-none focus:border-purple-400/40"
                             />
                             {hasChinese(customPersonality) && !customPersonalityTranslated && (
@@ -1021,7 +1021,7 @@ return (
                               type="text"
                               value={customScene}
                               onChange={(e) => { setCustomScene(e.target.value); setCustomSceneTranslated(null); }}
-                              placeholder="或自行輸入場景描述..."
+                              placeholder="或自行輸入場景描述...可中文！輸入後點「翻譯」按鈕幫你翻譯 🌐"
                               className="w-full px-3 py-2 pr-16 rounded-xl bg-white/5 border border-white/10 text-white text-xs placeholder-white/25 focus:outline-none focus:border-blue-400/40"
                             />
                             {hasChinese(customScene) && !customSceneTranslated && (
