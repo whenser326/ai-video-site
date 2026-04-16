@@ -27,7 +27,16 @@ const [selectedPersonality, setSelectedPersonality] = useState("");
 const [selectedJob, setSelectedJob] = useState("");
 const [selectedScene, setSelectedScene] = useState("");
 const [selectedShot, setSelectedShot] = useState("");
-// [DNA_PATCH_END]
+// [DNA_PATCH_START] 自訂欄位 + 翻譯狀態
+const [customPersona, setCustomPersona] = useState("");
+const [customPersonaTranslated, setCustomPersonaTranslated] = useState<string | null>(null);
+const [isCustomPersonaTranslating, setIsCustomPersonaTranslating] = useState(false);
+const [customScene, setCustomScene] = useState("");
+const [customSceneTranslated, setCustomSceneTranslated] = useState<string | null>(null);
+const [isCustomSceneTranslating, setIsCustomSceneTranslating] = useState(false);
+const [customPersonality, setCustomPersonality] = useState("");
+const [customPersonalityTranslated, setCustomPersonalityTranslated] = useState<string | null>(null);
+const [isCustomPersonalityTranslating, setIsCustomPersonalityTranslating] = useState(false);
 // [DNA_PATCH_END]
   const [credits, setCredits] = useState<number | null>(null); // ✨ 點數狀態
   const [plan, setPlan] = useState<string>('free');
@@ -398,8 +407,10 @@ const lockedCharacter = lockedCharacterUrl || null;
       const res = await fetch("/api/character", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-  prompt: [selectedStyle, selectedPersona, selectedScene, selectedShot, prompt].filter(Boolean).join(", "),
+        // [DNA_PATCH_START] prompt 組合含自訂欄位
+body: JSON.stringify({ 
+  prompt: [selectedStyle, selectedPersona || customPersona, selectedScene || customScene, selectedShot, prompt].filter(Boolean).join(", "),
+// [DNA_PATCH_END]
   userEmail: session?.user?.email,
   lockedCharacter: lockedCharacter || null,
 }),
@@ -815,6 +826,7 @@ return (
                               onClick={() => {
                                 setSelectedPersona(selectedPersona === tag.value ? "" : tag.value);
                                 setPrompt(selectedPersona === tag.value ? "" : tag.value);
+                                setCustomPersona("");
                                 setTranslatedPrompt(null); setUseTranslated(false);
                               }}
                               className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
@@ -824,6 +836,43 @@ return (
                               }`}>{tag.label}</button>
                           ))}
                         </div>
+                        {!selectedPersona && (
+                        <div className="mt-2 space-y-1">
+                          <div className="relative">
+                            <input
+                              type="text"
+                              value={customPersona}
+                              onChange={(e) => { setCustomPersona(e.target.value); setCustomPersonaTranslated(null); }}
+                              placeholder="或自行輸入角色描述..."
+                              className="w-full px-3 py-2 pr-16 rounded-xl bg-white/5 border border-white/10 text-white text-xs placeholder-white/25 focus:outline-none focus:border-yellow-400/40"
+                            />
+                            {hasChinese(customPersona) && !customPersonaTranslated && (
+                              <button type="button"
+                                onClick={async () => {
+                                  setIsCustomPersonaTranslating(true);
+                                  try {
+                                    const res = await fetch("/api/translate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: customPersona }) });
+                                    const data = await res.json();
+                                    if (data.translated) setCustomPersonaTranslated(data.translated);
+                                  } finally { setIsCustomPersonaTranslating(false); }
+                                }}
+                                disabled={isCustomPersonaTranslating}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 bg-yellow-400/20 border border-yellow-400/40 text-yellow-300 text-[10px] rounded-lg font-bold disabled:opacity-40">
+                                {isCustomPersonaTranslating ? "翻譯中..." : "🌐 翻譯"}
+                              </button>
+                            )}
+                          </div>
+                          {customPersonaTranslated && (
+                            <div className="flex gap-2 items-center px-2 py-1.5 bg-yellow-400/10 border border-yellow-400/20 rounded-xl">
+                              <p className="text-yellow-300 text-[10px] flex-1">{customPersonaTranslated}</p>
+                              <button type="button" onClick={() => { setCustomPersona(customPersonaTranslated); setCustomPersonaTranslated(null); }}
+                                className="text-[10px] px-2 py-0.5 bg-yellow-400/30 text-yellow-300 rounded-lg font-bold flex-shrink-0">採用</button>
+                              <button type="button" onClick={() => setCustomPersonaTranslated(null)}
+                                className="text-[10px] text-white/30 flex-shrink-0">略過</button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                       </div>
                       <button type="button" onClick={() => setActiveStep(3)}
                         className="w-full py-2 text-xs text-white/40 hover:text-white/60 transition-all">
@@ -857,7 +906,7 @@ return (
                         <div className="flex gap-2 flex-wrap">
                           {["開朗活潑","冷靜理智","神秘感","溫柔體貼","霸道強勢","天真爛漫","毒舌傲嬌"].map((p) => (
                             <button key={p} type="button"
-                              onClick={() => setSelectedPersonality(selectedPersonality === p ? "" : p)}
+                              onClick={() => { setSelectedPersonality(selectedPersonality === p ? "" : p); setCustomPersonality(""); }}
                               className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
                                 selectedPersonality === p
                                   ? "bg-purple-400/30 text-purple-300 border-purple-400/60"
@@ -871,7 +920,7 @@ return (
                         <div className="flex gap-2 flex-wrap">
                           {["醫生","教師","偵探","魔法師","運動員","護士","學生","商人","武士","歌手"].map((j) => (
                             <button key={j} type="button"
-                              onClick={() => setSelectedJob(selectedJob === j ? "" : j)}
+                              onClick={() => { setSelectedJob(selectedJob === j ? "" : j); setCustomPersonality(""); }}
                               className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
                                 selectedJob === j
                                   ? "bg-purple-400/30 text-purple-300 border-purple-400/60"
@@ -880,6 +929,43 @@ return (
                           ))}
                         </div>
                       </div>
+                      {!selectedPersonality && !selectedJob && (
+                        <div className="space-y-1">
+                          <div className="relative">
+                            <input
+                              type="text"
+                              value={customPersonality}
+                              onChange={(e) => { setCustomPersonality(e.target.value); setCustomPersonalityTranslated(null); }}
+                              placeholder="或自行輸入個性描述..."
+                              className="w-full px-3 py-2 pr-16 rounded-xl bg-white/5 border border-white/10 text-white text-xs placeholder-white/25 focus:outline-none focus:border-purple-400/40"
+                            />
+                            {hasChinese(customPersonality) && !customPersonalityTranslated && (
+                              <button type="button"
+                                onClick={async () => {
+                                  setIsCustomPersonalityTranslating(true);
+                                  try {
+                                    const res = await fetch("/api/translate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: customPersonality }) });
+                                    const data = await res.json();
+                                    if (data.translated) setCustomPersonalityTranslated(data.translated);
+                                  } finally { setIsCustomPersonalityTranslating(false); }
+                                }}
+                                disabled={isCustomPersonalityTranslating}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 bg-purple-400/20 border border-purple-400/40 text-purple-300 text-[10px] rounded-lg font-bold disabled:opacity-40">
+                                {isCustomPersonalityTranslating ? "翻譯中..." : "🌐 翻譯"}
+                              </button>
+                            )}
+                          </div>
+                          {customPersonalityTranslated && (
+                            <div className="flex gap-2 items-center px-2 py-1.5 bg-purple-400/10 border border-purple-400/20 rounded-xl">
+                              <p className="text-purple-300 text-[10px] flex-1">{customPersonalityTranslated}</p>
+                              <button type="button" onClick={() => { setCustomPersonality(customPersonalityTranslated); setCustomPersonalityTranslated(null); }}
+                                className="text-[10px] px-2 py-0.5 bg-purple-400/30 text-purple-300 rounded-lg font-bold flex-shrink-0">採用</button>
+                              <button type="button" onClick={() => setCustomPersonalityTranslated(null)}
+                                className="text-[10px] text-white/30 flex-shrink-0">略過</button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                       <p className="text-white/20 text-[10px]">此設定存入角色資料，不影響生成 prompt</p>
                       <button type="button" onClick={() => setActiveStep(4)}
                         className="w-full py-2 text-xs text-white/40 hover:text-white/60 transition-all">
@@ -920,7 +1006,7 @@ return (
                       <div className="flex gap-2 flex-wrap">
                         {Object.entries(sceneLabels).map(([value, label]) => (
                           <button key={value} type="button"
-                            onClick={() => setSelectedScene(selectedScene === value ? "" : value)}
+                            onClick={() => { setSelectedScene(selectedScene === value ? "" : value); setCustomScene(""); }}
                             className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
                               selectedScene === value
                                 ? "bg-blue-400/30 text-blue-300 border-blue-400/60"
@@ -928,6 +1014,43 @@ return (
                             }`}>{label}</button>
                         ))}
                       </div>
+                      {!selectedScene && (
+                        <div className="mt-2 space-y-1">
+                          <div className="relative">
+                            <input
+                              type="text"
+                              value={customScene}
+                              onChange={(e) => { setCustomScene(e.target.value); setCustomSceneTranslated(null); }}
+                              placeholder="或自行輸入場景描述..."
+                              className="w-full px-3 py-2 pr-16 rounded-xl bg-white/5 border border-white/10 text-white text-xs placeholder-white/25 focus:outline-none focus:border-blue-400/40"
+                            />
+                            {hasChinese(customScene) && !customSceneTranslated && (
+                              <button type="button"
+                                onClick={async () => {
+                                  setIsCustomSceneTranslating(true);
+                                  try {
+                                    const res = await fetch("/api/translate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: customScene }) });
+                                    const data = await res.json();
+                                    if (data.translated) setCustomSceneTranslated(data.translated);
+                                  } finally { setIsCustomSceneTranslating(false); }
+                                }}
+                                disabled={isCustomSceneTranslating}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 bg-blue-400/20 border border-blue-400/40 text-blue-300 text-[10px] rounded-lg font-bold disabled:opacity-40">
+                                {isCustomSceneTranslating ? "翻譯中..." : "🌐 翻譯"}
+                              </button>
+                            )}
+                          </div>
+                          {customSceneTranslated && (
+                            <div className="flex gap-2 items-center px-2 py-1.5 bg-blue-400/10 border border-blue-400/20 rounded-xl">
+                              <p className="text-blue-300 text-[10px] flex-1">{customSceneTranslated}</p>
+                              <button type="button" onClick={() => { setCustomScene(customSceneTranslated); setCustomSceneTranslated(null); }}
+                                className="text-[10px] px-2 py-0.5 bg-blue-400/30 text-blue-300 rounded-lg font-bold flex-shrink-0">採用</button>
+                              <button type="button" onClick={() => setCustomSceneTranslated(null)}
+                                className="text-[10px] text-white/30 flex-shrink-0">略過</button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                       <button type="button" onClick={() => setActiveStep(generationMode === "image" ? 6 : 5)}
                         className="w-full py-2 mt-3 text-xs text-white/40 hover:text-white/60 transition-all">
                         下一步 →
@@ -2323,7 +2446,7 @@ body: JSON.stringify({
   name: saveCharacterName || "未命名角色",
   image_url: prediction.output,
   plan,
-  description: [selectedPersonality, selectedJob].filter(Boolean).join("・") || null,
+  description: [selectedPersonality, selectedJob, customPersonality].filter(Boolean).join("・") || null,
 }),
 // [DNA_PATCH_END]
             });

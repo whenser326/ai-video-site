@@ -38,8 +38,11 @@ TTS 試聽防呆更新：
 - generationMode state 控制四種模式（image/video/upload/text2video）
 - prompt 組合順序：[selectedStyle, selectedPersona, selectedScene, selectedShot, prompt].filter(Boolean).join(", ")
 - Step 5 鏡頭選擇只在 generationMode !== "image" 時顯示
-- selectedPersonality + selectedJob 只存入角色資料（description 欄位），不拼入 prompt
-- 收藏角色時必須帶入 description: [selectedPersonality, selectedJob].filter(Boolean).join("・")
+- selectedPersonality + selectedJob + customPersonality 只存入角色資料（description 欄位），不拼入 prompt
+- 收藏角色時必須帶入 description: [selectedPersonality, selectedJob, customPersonality].filter(Boolean).join("・")
+- Steps 2/3/4 自訂輸入框與標籤互斥：有選標籤則隱藏輸入框，有輸入則清空對應標籤
+- 自訂輸入框偵測中文自動顯示翻譯按鈕，採用翻譯後取代原文
+- prompt 組合順序：[selectedStyle, selectedPersona || customPersona, selectedScene || customScene, selectedShot, prompt].filter(Boolean).join(", ")
 
 3. 專案核心
 
@@ -317,10 +320,13 @@ NEWEBPAY_HASH_IV=PCf...
 ✅ 主頁 prompt 組合邏輯（風格+人設+場景+鏡頭+自由輸入自動拼接）
 ✅ 收藏角色時帶入個性職業寫入 description 欄位
 ✅ 結果區按鈕整合（鎖定/收藏/批次一排，解除鎖定+上傳轉影片第二排）
+✅ Steps 2–4 自訂輸入框（與標籤互斥，支援中翻英）
+✅ GlobalHeader 漢堡選單 X 按鈕修正（hamburgerRef 排除點外部關閉衝突）
 
 12. 待完成項目（下一步）
 
 ⬜ 藍新金流串接上線（審核通過後，替換 Stripe checkout/webhook）
+⬜ 人設標籤第二層（角色個性/職業/背景設定，存入角色資料）
 ⬜ 每日簽到領點數（每天1點，連續7天額外+3點，需防多帳號濫用）
 ⬜ 首頁 Hero 循環影片製作完成後替換（/public/hero.mp4，1200×675px 16:9 無聲）
 ⬜ 文字生成影片功能串接（Step 1 第四選項，目前 Coming Soon）

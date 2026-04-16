@@ -41,16 +41,21 @@ export default function GlobalHeader() {
       .then(d => { if (d.credits !== undefined) setCredits(d.credits); });
   }, [session]);
 
-  // 點外部關閉 Drawer
+  // [DNA_PATCH_START] 點外部關閉 Drawer（排除漢堡按鈕本身）
+  const hamburgerRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (drawerRef.current && !drawerRef.current.contains(e.target as Node)) {
+      if (
+        drawerRef.current && !drawerRef.current.contains(e.target as Node) &&
+        hamburgerRef.current && !hamburgerRef.current.contains(e.target as Node)
+      ) {
         setMenuOpen(false);
       }
     };
     if (menuOpen) document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [menuOpen]);
+  // [DNA_PATCH_END]
 
   if (!session) return null;
   if (pathname === '/pricing') return null;
@@ -137,6 +142,7 @@ export default function GlobalHeader() {
 
           {/* 手機版：漢堡按鈕（sm 以下） */}
           <button
+            ref={hamburgerRef}
             onClick={() => setMenuOpen(v => !v)}
             className="sm:hidden flex flex-col items-center justify-center gap-[4px]
                        w-9 h-9 rounded-xl border border-white/20 bg-white/8
