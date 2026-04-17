@@ -83,9 +83,10 @@ Storage bucket：character-images（Public，已設定 allow all policy）
 圖片生成：black-forest-labs/flux-1.1-pro（約 $0.04/張）
 影片生成：kwaivgi/kling-v3-omni-video（約 $0.28/支，mode: "standard"）
 角色一致性：black-forest-labs/flux-kontext-pro（已串接，免費付費均可用）
-影片生成第二選擇：bytedance/seedance-1.5-pro（Replicate，含音訊同步）
+影片生成第二選擇：bytedance/seedance-2.0（Replicate，1080p，原生音訊，約 $1.26/支）
+影片生成第三選擇（快速版）：bytedance/seedance-2.0-fast（Replicate，較便宜）
 TTS 語音合成：ElevenLabs Multilingual v2（已串接，Starter 方案）
-注意：Seedance 2.0 官方 API 尚未開放（截至 2026/4），等開放後再串接
+Seedance 2.0 費用對照：5秒約$1.26 USD，10秒約$2.00 USD（比 Kling 貴約4.5倍）
 嘴型同步：kwaivgi/kling-lip-sync（$0.014/秒輸出影片）
 
 7. UI 互動邏輯
@@ -136,6 +137,8 @@ GlobalHeader RWD 設計：
 - 漢堡動畫：展開時三條線變 X，關閉時還原
 - 點外部自動關閉 Drawer（useRef + mousedown 事件）
 - 點數從 GlobalHeader 自己抓 API，不依賴 page.tsx 傳遞
+影片模型選擇卡片式 UI：Kling 3.0（推薦，綠色）vs Seedance 2.0（高畫質溢價，橘色），兩個 Modal 均已更新（轉影片 Modal + 上傳圖片 Modal）
+Seedance 2.0 點數定價（不虧本）：入門 5秒/5點・10秒/8點，標準 5秒/8點・10秒/12點，專業 5秒/11點・10秒/17點
 
 8. 金流
 
@@ -322,6 +325,12 @@ NEWEBPAY_HASH_IV=PCf...
 ✅ 結果區按鈕整合（鎖定/收藏/批次一排，解除鎖定+上傳轉影片第二排）
 ✅ Steps 2–4 自訂輸入框（與標籤互斥，支援中翻英）
 ✅ GlobalHeader 漢堡選單 X 按鈕修正（hamburgerRef 排除點外部關閉衝突）
+✅ Seedance 2.0 串接（bytedance/seedance-2.0，1080p，generate_audio: true）
+✅ 影片模型選擇升級為卡片式 UI（含差異說明與點數提示）
+✅ Seedance 2.0 溢價點數計算（依 userPlan 動態計算）
+✅ 聯絡我們表單（姓名/Email/訊息三欄位）
+✅ Cloudflare Turnstile 無感驗證（app/api/contact/route.ts，後端驗證 token）
+✅ global.d.ts 新增 Window.turnstile 型別宣告
 
 12. 待完成項目（下一步）
 

@@ -1778,30 +1778,44 @@ return (
           {/* [DNA_PATCH_START] 模型選擇 */}
           <div>
             <p className="text-white/40 text-xs mb-2">影片模型</p>
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2">
               <button
                 onClick={() => setVideoModel("kling")}
-                className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all ${
+                className={`w-full px-4 py-3 rounded-xl text-left border transition-all ${
                   videoModel === "kling"
-                    ? "bg-[#89f5a2] text-[#0d2318] border-[#89f5a2]"
-                    : "bg-white/5 text-white/50 border-white/10 hover:border-white/30"
+                    ? "bg-[#89f5a2]/15 border-[#89f5a2]"
+                    : "bg-white/5 border-white/10 hover:border-white/30"
                 }`}
               >
-                🎬 Kling 3.0
+                <div className="flex items-center justify-between">
+                  <span className="text-white font-black text-sm">⚡ Kling 3.0</span>
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-[#89f5a2] text-[#0d2318]">推薦</span>
+                </div>
+                <p className="text-white/50 text-xs mt-1">4K畫質・角色一致性強・生成速度快</p>
+                <p className="text-[#89f5a2] text-xs font-bold mt-0.5">5秒 4–6點 ／ 10秒 8–12點</p>
               </button>
               <button
                 onClick={() => setVideoModel("seedance")}
-                className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all ${
+                className={`w-full px-4 py-3 rounded-xl text-left border transition-all ${
                   videoModel === "seedance"
-                    ? "bg-[#fb923c]/20 text-[#fb923c] border-[#fb923c]"
-                    : "bg-white/5 text-white/50 border-white/10 hover:border-white/30"
+                    ? "bg-[#fb923c]/15 border-[#fb923c]"
+                    : "bg-white/5 border-white/10 hover:border-white/30"
                 }`}
               >
-                ✨ Seedance 1.5
+                <div className="flex items-center justify-between">
+                  <span className="text-white font-black text-sm">✨ Seedance 2.0</span>
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-[#fb923c] text-white">高畫質溢價</span>
+                </div>
+                <p className="text-white/50 text-xs mt-1">物理動態超真實・原生音訊・場景特效強</p>
+                <p className="text-[#fb923c] text-xs font-bold mt-0.5">
+                  5秒 {plan === 'starter' ? '5點' : plan === 'standard' ? '8點' : plan === 'pro' ? '11點' : '—'} ／
+                  10秒 {plan === 'starter' ? '8點' : plan === 'standard' ? '12點' : plan === 'pro' ? '17點' : '—'}
+                  　⚠️ 點數較高
+                </p>
               </button>
             </div>
           </div>
-          {/* [DNA_PATCH_END] */}
+{/* [DNA_PATCH_END] */}
           {/* 比例選擇 */}
           <div>
             <p className="text-white/40 text-xs mb-2">影片比例</p>
