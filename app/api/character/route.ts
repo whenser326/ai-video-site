@@ -140,9 +140,19 @@ export async function POST(req: Request) {
         .eq('email', userEmail);
     }
 
-    const creditCost = mode === 'video' 
-      ? (videoModel === 'seedance' ? (duration === 10 ? 8 : 4) : (duration === 10 ? 6 : 4))
-      : 1;
+    // [DNA_PATCH_START] 影片費用計算（含 Seedance 2.0 溢價）
+const seedance2Cost = userPlan === 'starter'
+  ? (duration === 10 ? 8 : 5)
+  : userPlan === 'standard'
+  ? (duration === 10 ? 12 : 8)
+  : userPlan === 'pro'
+  ? (duration === 10 ? 17 : 11)
+  : (duration === 10 ? 17 : 11);
+
+const creditCost = mode === 'video'
+  ? (videoModel === 'seedance' ? seedance2Cost : (duration === 10 ? 6 : 4))
+  : 1;
+// [DNA_PATCH_END]
 
     await supabase
       .from('profiles')
@@ -154,14 +164,14 @@ export async function POST(req: Request) {
     if (mode === "video") {
       if (videoModel === "seedance") {
         prediction = await replicate.predictions.create({
-          model: "bytedance/seedance-1.5-pro",
+          model: "bytedance/seedance-2.0",
           input: {
             image: image,
             prompt: videoPrompt || "animate this character with smooth natural motion, cinematic quality",
             duration: duration || 5,
             aspect_ratio: aspectRatio || "1:1",
-            resolution: "720p",
-            generate_audio: false,
+            resolution: "1080p",
+generate_audio: true,
           }
         });
       } else {

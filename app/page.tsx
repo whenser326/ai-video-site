@@ -1492,33 +1492,55 @@ return (
             {videoModel === "seedance" ? "✨ Powered by Seedance 1.5 Pro" : "⚡ Powered by Kling 3.0"}
           </p>
 
-      {/* [DNA_PATCH_START] 模型選擇 */}
-          <div>
-            <p className="text-white/40 text-xs mb-2">影片模型</p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setVideoModel("kling")}
-                className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all ${
-                  videoModel === "kling"
-                    ? "bg-[#89f5a2] text-[#0d2318] border-[#89f5a2]"
-                    : "bg-white/5 text-white/50 border-white/10 hover:border-white/30"
-                }`}
-              >
-                🎬 Kling 3.0
-              </button>
-              <button
-                onClick={() => setVideoModel("seedance")}
-                className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all ${
-                  videoModel === "seedance"
-                    ? "bg-[#fb923c]/20 text-[#fb923c] border-[#fb923c]"
-                    : "bg-white/5 text-white/50 border-white/10 hover:border-white/30"
-                }`}
-              >
-                ✨ Seedance 1.5
-              </button>
-            </div>
-          </div>
-          {/* [DNA_PATCH_END] */}
+// [DNA_PATCH_START] 模型選擇
+<div>
+  <p className="text-white/40 text-xs mb-2">影片模型</p>
+  <div className="flex flex-col gap-2">
+
+    {/* Kling 3.0 */}
+    <button
+      onClick={() => setVideoModel("kling")}
+      className={`w-full px-4 py-3 rounded-xl text-left border transition-all ${
+        videoModel === "kling"
+          ? "bg-[#89f5a2]/15 border-[#89f5a2] text-white"
+          : "bg-white/5 text-white/50 border-white/10 hover:border-white/30"
+      }`}
+    >
+      <div className="flex items-center justify-between">
+        <span className="font-black text-sm">⚡ Kling 3.0</span>
+        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+          videoModel === "kling" ? "bg-[#89f5a2] text-[#0d2318]" : "bg-white/10 text-white/40"
+        }`}>推薦</span>
+      </div>
+      <p className="text-xs mt-1 opacity-60">4K高解析・角色一致性強・生成快速・CP值最高</p>
+      <p className="text-xs mt-0.5 font-bold" style={{color: '#89f5a2'}}>5秒 4-6點 ／ 10秒 8-12點</p>
+    </button>
+
+    {/* Seedance 2.0 */}
+    <button
+      onClick={() => setVideoModel("seedance")}
+      className={`w-full px-4 py-3 rounded-xl text-left border transition-all ${
+        videoModel === "seedance"
+          ? "bg-[#fb923c]/15 border-[#fb923c] text-white"
+          : "bg-white/5 text-white/50 border-white/10 hover:border-white/30"
+      }`}
+    >
+      <div className="flex items-center justify-between">
+        <span className="font-black text-sm">✨ Seedance 2.0</span>
+        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+          videoModel === "seedance" ? "bg-[#fb923c] text-white" : "bg-white/10 text-white/40"
+        }`}>高畫質</span>
+      </div>
+      <p className="text-xs mt-1 opacity-60">物理動態超真實・原生音訊・適合場景特效類影片</p>
+      <p className="text-xs mt-0.5 font-bold" style={{color: '#fb923c'}}>
+        5秒 {plan === 'starter' ? '5點' : plan === 'standard' ? '8點' : plan === 'pro' ? '11點' : '—'} ／ 10秒 {plan === 'starter' ? '8點' : plan === 'standard' ? '12點' : plan === 'pro' ? '17點' : '—'}
+        　⚠️ 點數較高
+      </p>
+    </button>
+
+  </div>
+</div>
+{/* [DNA_PATCH_END] */}
       {/* 影片動作指令 */}
 {/* 影片動作指令 */}
 {/* [DNA_PATCH_START] 影片動作指令 + 翻譯 */}
