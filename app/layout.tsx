@@ -61,6 +61,7 @@ export default function RootLayout({
         <Providers>
           <ConditionalHeader />
           {children}
+          {/* Footer */}
           <footer className="w-full border-t border-white/8 bg-[#0d2318]/80 py-4 px-4 mt-auto">
             <div className="max-w-2xl mx-auto flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-white/30">
               <a href="/terms" className="hover:text-white/60 transition-colors">服務條款</a>
