@@ -1,1 +1,14 @@
 @import "tailwindcss";
+
+html {
+  font-family: var(--font-geist-sans), sans-serif;
+}
+
+h1 {
+  font-weight: 1000;
+  letter-spacing: 0.06em;
+  -webkit-text-stroke: 1px white;
+  font-size: 2rem;
+  transform: scaleY(1.4) scaleX(1.1);
+  display: inline-block;
+}
