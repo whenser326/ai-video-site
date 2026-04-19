@@ -193,6 +193,8 @@ ELEVENLABS_API_KEY=sk_529a4...
 NEWEBPAY_MERCHANT_ID=MS1...
 NEWEBPAY_HASH_KEY=YW7pY...
 NEWEBPAY_HASH_IV=PCf...
+NEXT_PUBLIC_TURNSTILE_SITE_KEY=0x4AAAAAC-_FUGtx2UlyaYF（已設定於 Vercel，備用）
+TURNSTILE_SECRET_KEY=（已設定於 Vercel Sensitive，備用，需要時去 Cloudflare Turnstile 查看）
 
 11. 已完成功能清單
 
@@ -328,9 +330,7 @@ NEWEBPAY_HASH_IV=PCf...
 ✅ Seedance 2.0 串接（bytedance/seedance-2.0，1080p，generate_audio: true）
 ✅ 影片模型選擇升級為卡片式 UI（含差異說明與點數提示）
 ✅ Seedance 2.0 溢價點數計算（依 userPlan 動態計算）
-✅ 聯絡我們表單（姓名/Email/訊息三欄位）
-✅ Cloudflare Turnstile 無感驗證（app/api/contact/route.ts，後端驗證 token）
-✅ global.d.ts 新增 Window.turnstile 型別宣告
+⚠️ 聯絡表單 + Cloudflare Turnstile 已開發但已還原（聯絡頁改回靜態版本）
 
 12. 待完成項目（下一步）
 
@@ -406,6 +406,9 @@ Vercel 預設網址 SEO 意義不大，等綁自訂域名後再認真優化
 主頁 page.tsx 的 <main> 必須保留 bg-gradient-to-br from-[#0d2318] via-[#1a3a25] to-[#2d5a3d]，否則背景漸層消失
 GlobalHeader 的 <div className="h-12" /> 佔位符不可移除，否則頁面內容會被 fixed header 蓋住
 state 宣告必須放在 return() 之前的邏輯區，不能插入 JSX 區塊內（曾發生 activeStep 等 state 被誤插入 JSX 導致大量 TS 錯誤）
+Cloudflare Turnstile Site Key：0x4AAAAAC-_FUGtx2UlyaYF（公開無妨）
+Cloudflare Turnstile Secret Key：已設定於 Vercel，換網域後需至 Cloudflare → Turnstile → AI Character Studio Contact → Add Hostnames 加入新網域
+Turnstile Sensitive 變數無法套用 Development 環境，只能 Production + Preview
 
 14. 未來功能規劃（優先順序）
 

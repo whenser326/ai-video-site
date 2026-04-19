@@ -1526,12 +1526,11 @@ return (
       }`}
     >
       <div className="flex items-center justify-between">
-        <span className="font-black text-sm">✨ Seedance 2.0</span>
-        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-          videoModel === "seedance" ? "bg-[#fb923c] text-white" : "bg-white/10 text-white/40"
-        }`}>高畫質</span>
-      </div>
-      <p className="text-xs mt-1 opacity-60">物理動態超真實・原生音訊・適合場景特效類影片</p>
+  <span className="text-white font-black text-sm">✨ Seedance 2.0</span>
+  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-[#fb923c] text-white">高畫質溢價</span>
+</div>
+<p className="text-white/50 text-xs mt-1">物理動態超真實・原生音訊・場景特效強</p>
+<p className="text-white/30 text-xs mt-0.5">🔒 Replicate 官方版・非第三方不穩定版</p>
       <p className="text-xs mt-0.5 font-bold" style={{color: '#fb923c'}}>
         5秒 {plan === 'starter' ? '5點' : plan === 'standard' ? '8點' : plan === 'pro' ? '11點' : '—'} ／ 10秒 {plan === 'starter' ? '8點' : plan === 'standard' ? '12點' : plan === 'pro' ? '17點' : '—'}
         　⚠️ 點數較高
@@ -1803,10 +1802,11 @@ return (
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-white font-black text-sm">✨ Seedance 2.0</span>
-                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-[#fb923c] text-white">高畫質溢價</span>
-                </div>
-                <p className="text-white/50 text-xs mt-1">物理動態超真實・原生音訊・場景特效強</p>
+  <span className="text-white font-black text-sm">✨ Seedance 2.0</span>
+  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-[#fb923c] text-white">高畫質溢價</span>
+</div>
+<p className="text-white/50 text-xs mt-1">物理動態超真實・原生音訊・場景特效強</p>
+<p className="text-white/30 text-xs mt-0.5">🔒 Replicate 官方版・非第三方不穩定版</p>
                 <p className="text-[#fb923c] text-xs font-bold mt-0.5">
                   5秒 {plan === 'starter' ? '5點' : plan === 'standard' ? '8點' : plan === 'pro' ? '11點' : '—'} ／
                   10秒 {plan === 'starter' ? '8點' : plan === 'standard' ? '12點' : plan === 'pro' ? '17點' : '—'}
