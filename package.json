@@ -11,6 +11,7 @@
   "dependencies": {
     "@stripe/stripe-js": "^9.0.0",
     "@supabase/supabase-js": "^2.100.0",
+    "geist": "^1.7.0",
     "next": "16.1.6",
     "next-auth": "^4.24.13",
     "openai": "^6.29.0",

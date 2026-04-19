@@ -1,19 +1,13 @@
 // [DNA_PATCH_START] 完整替換 layout.tsx
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
 import "./globals.css";
 import Providers from "./providers";
 import ConditionalHeader from "./components/ConditionalHeader";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const geistSans = GeistSans;
+const geistMono = GeistMono;
 
 export const metadata: Metadata = {
   title: "AI Character Studio｜AI 角色生成平台",
@@ -61,7 +55,6 @@ export default function RootLayout({
         <Providers>
           <ConditionalHeader />
           {children}
-          {/* Footer */}
           <footer className="w-full border-t border-white/8 bg-[#0d2318]/80 py-4 px-4 mt-auto">
             <div className="max-w-2xl mx-auto flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-white/30">
               <a href="/terms" className="hover:text-white/60 transition-colors">服務條款</a>
