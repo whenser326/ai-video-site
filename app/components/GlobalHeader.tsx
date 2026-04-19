@@ -57,11 +57,20 @@ export default function GlobalHeader() {
   }, [menuOpen]);
   // [DNA_PATCH_END]
 
-  // [DNA_PATCH_START]
+// [DNA_PATCH_START] 未登入補 LOGO
 if (!session) return (
   <>
-    <div className="fixed top-0 left-0 right-0 z-50 h-12 flex items-center justify-end px-3 sm:px-5
+    <div className="fixed top-0 left-0 right-0 z-50 h-12 flex items-center justify-between px-3 sm:px-5
                     bg-[#0d2318]/95 backdrop-blur-md border-b border-white/8">
+      <button
+        onClick={() => router.push('/')}
+        className="flex items-center gap-2 hover:opacity-80 transition-opacity flex-shrink-0"
+      >
+        <img src="/logo.png" alt="Consistent Flow" className="h-7 w-auto" />
+        <span className="hidden xs:inline text-[#89f5a2] text-xs font-bold tracking-wide whitespace-nowrap">
+          Consistent Flow
+        </span>
+      </button>
       <button
         onClick={() => signIn("google")}
         className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold
