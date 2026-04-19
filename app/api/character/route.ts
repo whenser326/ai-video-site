@@ -170,7 +170,7 @@ const creditCost = mode === 'video'
             prompt: videoPrompt || "animate this character with smooth natural motion, cinematic quality",
             duration: duration || 5,
             aspect_ratio: aspectRatio || "1:1",
-            resolution: "1080p",
+            resolution: "720p",
 generate_audio: true,
           }
         });
