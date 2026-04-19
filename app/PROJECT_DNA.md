@@ -1,6 +1,13 @@
 🧬 Project DNA: AI Character Studio (STRICT - DO NOT MODIFY)
 1. 溝通與開發準則 (Absolute Rules)
 
+緊急排查順序（出現任何錯誤必須先做）：
+1. 先讀錯誤訊息，找根本原因，禁止猜測
+2. Turbopack FATAL error → 先執行 type C:\Users\123\AppData\Local\Temp\next-panic-*.log 讀 panic log
+3. 確認根本原因後，只改一個檔案，改完確認，再改下一個
+4. 禁止在沒確認根本原因前執行任何 git push 部署
+5. 禁止用 PowerShell > 重導向寫入任何檔案，會產生 UTF-16 LE 編碼
+
 禁止美化：不准修飾語氣、不准加客套話、不准過度包裝。
 精確執行：嚴格遵守細節。
 格式要求：所有解決方案必須以「代碼塊」呈現，支援一鍵複製。
@@ -43,6 +50,10 @@ TTS 試聽防呆更新：
 - Steps 2/3/4 自訂輸入框與標籤互斥：有選標籤則隱藏輸入框，有輸入則清空對應標籤
 - 自訂輸入框偵測中文自動顯示翻譯按鈕，採用翻譯後取代原文
 - prompt 組合順序：[selectedStyle, selectedPersona || customPersona, selectedScene || customScene, selectedShot, prompt].filter(Boolean).join(", ")
+未被 git 追蹤的重要檔案清單（損壞無法還原，需特別保護）：
+- app/globals.css → 內容見第 13 節備忘，損壞會導致全站樣式異常
+- 加入 git 追蹤指令：git add -f app/globals.css
+- 修改此類檔案前必須先備份內容到 PROJECT_DNA.md
 
 3. 專案核心
 
@@ -409,6 +420,37 @@ state 宣告必須放在 return() 之前的邏輯區，不能插入 JSX 區塊�
 Cloudflare Turnstile Site Key：0x4AAAAAC-_FUGtx2UlyaYF（公開無妨）
 Cloudflare Turnstile Secret Key：已設定於 Vercel，換網域後需至 Cloudflare → Turnstile → AI Character Studio Contact → Add Hostnames 加入新網域
 Turnstile Sensitive 變數無法套用 Development 環境，只能 Production + Preview
+globals.css 編碼問題：
+- globals.css 不在 git 追蹤中（never committed）
+- 絕對不能用 PowerShell 的 > 重導向來寫 CSS 檔案，會產生 UTF-16 LE 編碼，Turbopack 讀不了
+- 正確做法：直接在 VSCode 手動編輯，存檔時確認右下角是 UTF-8
+- globals.css 正確內容只需一行：@import "tailwindcss";
+- 若出現 FATAL Turbopack error，先用 type 指令讀 panic log 找根本原因，不要亂改其他檔案
+
+字型問題（2026/04/19 血淚教訓）：
+- layout.tsx 字型必須用 next/font/google 的 Geist + Geist_Mono，禁止換成 geist 套件
+- 禁止安裝 geist 套件，裝了會跟 next/font/google 衝突導致全站字型異常
+- globals.css 從未被 git 追蹤，內容如下，缺一不可：
+
+@import "tailwindcss";
+
+html {
+  font-family: var(--font-geist-sans), sans-serif;
+}
+
+h1 {
+  font-weight: 1000;
+  letter-spacing: 0.06em;
+  -webkit-text-stroke: 1px white;
+  font-size: 2rem;
+  transform: scaleY(1.2) scaleX(1.1);
+  display: inline-block;
+}
+
+- 禁止用 PowerShell > 重導向寫入 globals.css，會產生 UTF-16 LE 編碼導致 Turbopack FATAL error
+- 若出現 Turbopack FATAL error，先讀 panic log：type C:\Users\123\AppData\Local\Temp\next-panic-*.log
+globals.css 不在 git 追蹤中，需要用 git add -f app/globals.css 才能強制加入
+GlobalHeader 未登入狀態：if (!session) 不能直接 return null，必須顯示登入按鈕，否則登出後無法重新登入。已修正為未登入時顯示「使用 Google 登入」按鈕。
 
 14. 未來功能規劃（優先順序）
 

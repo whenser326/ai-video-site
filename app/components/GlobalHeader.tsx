@@ -1,6 +1,6 @@
 // [DNA_PATCH_START] GlobalHeader 全面改版：LOGO + 點數 + 漢堡選單 RWD
 "use client";
-import { useSession, signOut } from "next-auth/react";
+import { useSession, signOut, signIn } from "next-auth/react";
 import { useRouter, usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from 'react';
 import FeedbackModal from './FeedbackModal';
@@ -57,7 +57,23 @@ export default function GlobalHeader() {
   }, [menuOpen]);
   // [DNA_PATCH_END]
 
-  if (!session) return null;
+  // [DNA_PATCH_START]
+if (!session) return (
+  <>
+    <div className="fixed top-0 left-0 right-0 z-50 h-12 flex items-center justify-end px-3 sm:px-5
+                    bg-[#0d2318]/95 backdrop-blur-md border-b border-white/8">
+      <button
+        onClick={() => signIn("google")}
+        className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold
+                   border border-[#89f5a2]/30 text-[#89f5a2] bg-[#89f5a2]/10 hover:bg-[#89f5a2]/20 transition-all"
+      >
+        使用 Google 登入
+      </button>
+    </div>
+    <div className="h-12" />
+  </>
+);
+// [DNA_PATCH_END]
   if (pathname === '/pricing') return null;
 
   const handleTopUp = () => { router.push('/pricing#plans'); setMenuOpen(false); };
@@ -138,6 +154,13 @@ export default function GlobalHeader() {
                 )}
               </button>
             ))}
+            <button
+  onClick={() => signOut()}
+  className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold
+             border border-white/10 text-white/30 bg-white/5 hover:bg-white/15 transition-all"
+>
+  🚪 登出
+</button>
           </div>
 
           {/* 手機版：漢堡按鈕（sm 以下） */}
