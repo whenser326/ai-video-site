@@ -72,9 +72,16 @@ const [referralCredits, setReferralCredits] = useState<{ starter: string; standa
 const [copiedCode, setCopiedCode] = useState(false);
 const [copiedLink, setCopiedLink] = useState(false);
 const [activeTab, setActiveTab] = useState<"gallery" | "history">("gallery");
-// [DNA_PATCH_START] 靈感畫廊熱門圖片狀態
-const [galleryItems, setGalleryItems] = useState<{ title: string; prompt: string; image: string }[]>([]);
-// [DNA_PATCH_END]
+const [galleryItems, setGalleryItems] = useState<{ title: string; prompt: string; image: string }[]>([
+  { title: "迷人貓咪", prompt: "Breathtakingly beautiful cat", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719479381.png" },
+  { title: "韓系男生", prompt: "A handsome Korean man looks at the camera with a smile ~ the background is a men's clothing store", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719447992.png" },
+  { title: "城市女孩", prompt: "Beautiful woman walking on city street", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719327300.png" },
+  { title: "走向鏡頭", prompt: "Slowly walk into the camera ~ getting closer and closer", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775716736592.png" },
+  { title: "貓狗好友", prompt: "Beautiful cat playing with dog", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775658563619.png" },
+  { title: "校園奔跑", prompt: "Running on campus", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775657672714.png" },
+  { title: "健壯男士", prompt: "Handsome man showing off his strong muscles and wiping sweat", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719396914.png" },
+  { title: "沙灘活力", prompt: "A fit woman playing beach volleyball on a tropical beach, action shot, dynamic movement, cinematic lighting", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719296354.png" },
+]);
 // [DNA_PATCH_START] 角色收藏狀態
 const [savedCharacters, setSavedCharacters] = useState<any[]>([]);
 const [showSaveModal, setShowSaveModal] = useState(false);
@@ -187,22 +194,6 @@ fetch(`/api/saved-characters?email=${session.user.email}`)
       // [DNA_PATCH_END]
     }
   });
-// [DNA_PATCH_END]
-// [DNA_PATCH_START] 未登入時也顯示靈感畫廊固定圖
-useEffect(() => {
-  if (galleryItems.length === 0) {
-    setGalleryItems([
-      { title: "迷人貓咪", prompt: "Breathtakingly beautiful cat", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719479381.png" },
-      { title: "韓系男生", prompt: "A handsome Korean man looks at the camera with a smile ~ the background is a men's clothing store", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719447992.png" },
-      { title: "城市女孩", prompt: "Beautiful woman walking on city street", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719327300.png" },
-      { title: "走向鏡頭", prompt: "Slowly walk into the camera ~ getting closer and closer", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775716736592.png" },
-      { title: "貓狗好友", prompt: "Beautiful cat playing with dog", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775658563619.png" },
-      { title: "校園奔跑", prompt: "Running on campus", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775657672714.png" },
-      { title: "健壯男士", prompt: "Handsome man showing off his strong muscles and wiping sweat", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719396914.png" },
-      { title: "沙灘活力", prompt: "A fit woman playing beach volleyball on a tropical beach, action shot, dynamic movement, cinematic lighting", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719296354.png" },
-    ]);
-  }
-}, []);
 // [DNA_PATCH_END]
     }
   }, [session]);
