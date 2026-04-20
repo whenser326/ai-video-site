@@ -22,6 +22,21 @@ type Settings = {
   wav2lip_credits_starter: string;
   wav2lip_credits_standard: string;
   wav2lip_credits_pro: string;
+  kling_5s_starter: string;
+  kling_5s_standard: string;
+  kling_5s_pro: string;
+  kling_10s_starter: string;
+  kling_10s_standard: string;
+  kling_10s_pro: string;
+  seedance_5s_starter: string;
+  seedance_5s_standard: string;
+  seedance_5s_pro: string;
+  seedance_10s_starter: string;
+  seedance_10s_standard: string;
+  seedance_10s_pro: string;
+  omni_extra_starter: string;
+  omni_extra_standard: string;
+  omni_extra_pro: string;
 };
 // [DNA_PATCH_END]
 
@@ -53,6 +68,21 @@ export default function AdminPage() {
     wav2lip_credits_starter: "10",
     wav2lip_credits_standard: "9",
     wav2lip_credits_pro: "8",
+    kling_5s_starter: "6",
+    kling_5s_standard: "5",
+    kling_5s_pro: "4",
+    kling_10s_starter: "8",
+    kling_10s_standard: "7",
+    kling_10s_pro: "6",
+    seedance_5s_starter: "17",
+    seedance_5s_standard: "15",
+    seedance_5s_pro: "13",
+    seedance_10s_starter: "27",
+    seedance_10s_standard: "25",
+    seedance_10s_pro: "21",
+    omni_extra_starter: "6",
+    omni_extra_standard: "5",
+    omni_extra_pro: "4",
   });
   const [logs, setLogs] = useState<Log[]>([]);
   const [saving, setSaving] = useState(false);
@@ -67,7 +97,7 @@ export default function AdminPage() {
   const fetchData = async () => {
     const res = await fetch(`/api/admin/settings`);
     const data = await res.json();
-    if (data.settings) setSettings(data.settings);
+    if (data.settings) setSettings(prev => ({ ...prev, ...data.settings }));
     if (data.logs) setLogs(data.logs);
   };
 
@@ -91,7 +121,7 @@ export default function AdminPage() {
     <main className="min-h-screen bg-[#0d2318] p-6 text-white">
       <div className="max-w-3xl mx-auto">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-2xl font-black text-[#89f5a2]">🛠 後台管理</h1>
+          <p className="text-2xl font-black text-[#89f5a2]">🛠 後台管理</p>
           {/* [DNA_PATCH_START] */}
 <div className="flex gap-2">
   <button
@@ -255,6 +285,107 @@ export default function AdminPage() {
           </button>
           {msg && <p className="mt-2 text-sm">{msg}</p>}
         </div>
+        {/* [DNA_PATCH_START] 影片點數設定 */}
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
+          <h2 className="text-lg font-bold mb-1">🎬 影片生成點數設定</h2>
+          <p className="text-white/40 text-xs mb-4">圖片轉影片 & 文字生成影片共用同一套定價</p>
+
+          {/* Kling */}
+          <p className="text-[#89f5a2] text-xs font-bold tracking-widest uppercase mb-2">⚡ Kling 3.0</p>
+          <div className="grid grid-cols-4 gap-2 mb-2">
+            <span className="text-white/30 text-xs">方案</span>
+            <span className="text-white/30 text-xs text-center">5秒</span>
+            <span className="text-white/30 text-xs text-center">10秒</span>
+            <span></span>
+          </div>
+          {[
+            { label: "🌱 入門", k5: "kling_5s_starter", k10: "kling_10s_starter" },
+            { label: "⭐ 標準", k5: "kling_5s_standard", k10: "kling_10s_standard" },
+            { label: "🚀 專業", k5: "kling_5s_pro", k10: "kling_10s_pro" },
+          ].map((item) => (
+            <div key={item.k5} className="grid grid-cols-4 gap-2 mb-2 items-center">
+              <span className="text-sm">{item.label}</span>
+              <div className="flex items-center gap-1">
+                <input type="number" min="0"
+                  value={settings[item.k5 as keyof Settings]}
+                  onChange={(e) => setSettings({ ...settings, [item.k5]: e.target.value })}
+                  className="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-[#89f5a2]/50"
+                />
+                <span className="text-white/30 text-xs">點</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <input type="number" min="0"
+                  value={settings[item.k10 as keyof Settings]}
+                  onChange={(e) => setSettings({ ...settings, [item.k10]: e.target.value })}
+                  className="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-[#89f5a2]/50"
+                />
+                <span className="text-white/30 text-xs">點</span>
+              </div>
+              <span></span>
+            </div>
+          ))}
+
+          {/* Seedance */}
+          <p className="text-orange-300 text-xs font-bold tracking-widest uppercase mb-2 mt-4">✨ Seedance 2.0（無 Omni）</p>
+          <div className="grid grid-cols-4 gap-2 mb-2">
+            <span className="text-white/30 text-xs">方案</span>
+            <span className="text-white/30 text-xs text-center">5秒</span>
+            <span className="text-white/30 text-xs text-center">10秒</span>
+            <span></span>
+          </div>
+          {[
+            { label: "🌱 入門", k5: "seedance_5s_starter", k10: "seedance_10s_starter" },
+            { label: "⭐ 標準", k5: "seedance_5s_standard", k10: "seedance_10s_standard" },
+            { label: "🚀 專業", k5: "seedance_5s_pro", k10: "seedance_10s_pro" },
+          ].map((item) => (
+            <div key={item.k5} className="grid grid-cols-4 gap-2 mb-2 items-center">
+              <span className="text-sm">{item.label}</span>
+              <div className="flex items-center gap-1">
+                <input type="number" min="0"
+                  value={settings[item.k5 as keyof Settings]}
+                  onChange={(e) => setSettings({ ...settings, [item.k5]: e.target.value })}
+                  className="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-[#89f5a2]/50"
+                />
+                <span className="text-white/30 text-xs">點</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <input type="number" min="0"
+                  value={settings[item.k10 as keyof Settings]}
+                  onChange={(e) => setSettings({ ...settings, [item.k10]: e.target.value })}
+                  className="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-[#89f5a2]/50"
+                />
+                <span className="text-white/30 text-xs">點</span>
+              </div>
+              <span></span>
+            </div>
+          ))}
+
+          {/* Omni 加費 */}
+          <p className="text-purple-300 text-xs font-bold tracking-widest uppercase mb-2 mt-4">🖼️ Omni-Reference 額外加費</p>
+          <p className="text-white/30 text-[10px] mb-2">使用參考圖時在 Seedance 基本價上額外加收</p>
+          {[
+            { key: "omni_extra_starter", label: "🌱 入門" },
+            { key: "omni_extra_standard", label: "⭐ 標準" },
+            { key: "omni_extra_pro", label: "🚀 專業" },
+          ].map((item) => (
+            <div key={item.key} className="flex items-center gap-4 mb-2">
+              <span className="text-sm w-24">{item.label}</span>
+              <input type="number" min="0"
+                value={settings[item.key as keyof Settings]}
+                onChange={(e) => setSettings({ ...settings, [item.key]: e.target.value })}
+                className="w-24 bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-[#89f5a2]/50"
+              />
+              <span className="text-white/40 text-sm">點（加費）</span>
+            </div>
+          ))}
+
+          <button onClick={handleSave} disabled={saving}
+            className="mt-4 px-6 py-2 bg-[#89f5a2]/20 border border-[#89f5a2]/40 rounded-xl text-[#89f5a2] font-bold text-sm hover:bg-[#89f5a2]/30 transition-all">
+            {saving ? "儲存中..." : "儲存設定"}
+          </button>
+          {msg && <p className="mt-2 text-sm">{msg}</p>}
+        </div>
+        {/* [DNA_PATCH_END] */}
         {/* [DNA_PATCH_END] */}
         {/* 分潤紀錄 */}
         {/* 分潤紀錄 */}

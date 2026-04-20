@@ -15,7 +15,7 @@ export default function AdultPage() {
 
       <div className="relative z-10 text-center max-w-lg">
         <div className="text-8xl mb-6">🔞</div>
-        <h1 className="text-4xl font-black text-white mb-3">成人專區</h1>
+        <p className="text-4xl font-black text-white mb-3">成人專區</p>
         <p className="text-white/40 text-sm mb-8">Adult Content Studio</p>
         
         <div className="bg-white/5 border border-white/10 rounded-3xl p-8 mb-8 backdrop-blur-sm">

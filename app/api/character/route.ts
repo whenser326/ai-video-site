@@ -37,9 +37,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "請求過於頻繁，請稍後再試" }, { status: 429 });
     }
 
-    // [DNA_PATCH_START] 加入 omniRefs
-const { prompt, image, mode, userEmail, videoPrompt, aspectRatio, duration, videoModel, refundCredits, batchPrompts, omniRefs } = await req.json();
-// [DNA_PATCH_END]
+    const { prompt, image, mode, userEmail, videoPrompt, aspectRatio, duration, videoModel, refundCredits, batchPrompts, omniRefs } = await req.json();
 
     // [DNA_PATCH_START] 退點功能
     if (refundCredits && userEmail) {
@@ -75,6 +73,35 @@ const { prompt, image, mode, userEmail, videoPrompt, aspectRatio, duration, vide
     const currentCredits = userProfile.credits ?? 0;
     const userPlan = userProfile.plan || 'free';
 
+    // [DNA_PATCH_START] 從 admin_settings 動態抓取影片點數
+    const { data: videoSettingsRows } = await supabase
+      .from('admin_settings')
+      .select('key, value')
+      .in('key', [
+        'kling_5s_starter', 'kling_5s_standard', 'kling_5s_pro',
+        'kling_10s_starter', 'kling_10s_standard', 'kling_10s_pro',
+        'seedance_5s_starter', 'seedance_5s_standard', 'seedance_5s_pro',
+        'seedance_10s_starter', 'seedance_10s_standard', 'seedance_10s_pro',
+        'omni_extra_starter', 'omni_extra_standard', 'omni_extra_pro',
+      ]);
+    const vs: Record<string, number> = {};
+    (videoSettingsRows || []).forEach(r => { vs[r.key] = parseInt(r.value) || 0; });
+    const klingCost = duration === 10
+      ? (vs[`kling_10s_${userPlan}`] || (userPlan === 'pro' ? 6 : userPlan === 'standard' ? 7 : 8))
+      : (vs[`kling_5s_${userPlan}`]  || (userPlan === 'pro' ? 4 : userPlan === 'standard' ? 5 : 6));
+    const seedanceBase = duration === 10
+      ? (vs[`seedance_10s_${userPlan}`] || (userPlan === 'pro' ? 21 : userPlan === 'standard' ? 25 : 27))
+      : (vs[`seedance_5s_${userPlan}`]  || (userPlan === 'pro' ? 13 : userPlan === 'standard' ? 15 : 17));
+    const hasOmniRef = Array.isArray(omniRefs) && omniRefs.length > 0;
+    const omniExtra = hasOmniRef
+      ? (vs[`omni_extra_${userPlan}`] || (userPlan === 'pro' ? 4 : userPlan === 'standard' ? 5 : 6))
+      : 0;
+    const seedanceCost = seedanceBase + omniExtra;
+    const creditCost = (mode === 'video' || mode === 'text2video')
+      ? (videoModel === 'seedance' ? (mode === 'text2video' ? seedanceBase : seedanceCost) : klingCost)
+      : 1;
+    // [DNA_PATCH_END]
+
     // [DNA_PATCH_START] 批次生成：提前攔截，不走一般生成流程
     if (batchPrompts && Array.isArray(batchPrompts) && batchPrompts.length > 0) {
       const batchCost = batchPrompts.length;
@@ -107,11 +134,13 @@ const { prompt, image, mode, userEmail, videoPrompt, aspectRatio, duration, vide
       return NextResponse.json({ batch: true, predictions, batchCost });
     }
     // [DNA_PATCH_END]
+
     const requiredCredits = (mode === 'video' || mode === 'text2video') ? 4 : 1;
     if (currentCredits < requiredCredits) {
-      return NextResponse.json({ error: mode === 'video' ? "點數不足！影片生成需要至少 4 點" : "點數不足！請前往購買點數" }, { status: 403 });
+      return NextResponse.json({ error: (mode === 'video' || mode === 'text2video') ? "點數不足！影片生成需要至少 4 點" : "點數不足！請前往購買點數" }, { status: 403 });
     }
-// [DNA_PATCH_START] 免費用戶每日影片限制
+
+    // [DNA_PATCH_START] 免費用戶每日影片限制
     if ((mode === 'video' || mode === 'text2video') && userPlan === 'free') {
       const today = getTodayString();
       const lastVideoDate = userProfile.daily_video_date || '';
@@ -127,13 +156,14 @@ const { prompt, image, mode, userEmail, videoPrompt, aspectRatio, duration, vide
         .eq('email', userEmail);
     }
     // [DNA_PATCH_END]
+
     if (userPlan === 'free' && mode !== 'video' && mode !== 'text2video') {
       const today = getTodayString();
       const lastDate = userProfile.daily_image_date || '';
       const dailyCount = lastDate === today ? (userProfile.daily_image_count || 0) : 0;
       if (dailyCount >= 2) {
-        return NextResponse.json({ 
-          error: `免費用戶每天最多生成 2 張圖片，明天 00:00（台灣時間）重置，或升級方案繼續使用！` 
+        return NextResponse.json({
+          error: `免費用戶每天最多生成 2 張圖片，明天 00:00（台灣時間）重置，或升級方案繼續使用！`
         }, { status: 403 });
       }
       await supabase
@@ -141,35 +171,6 @@ const { prompt, image, mode, userEmail, videoPrompt, aspectRatio, duration, vide
         .update({ daily_image_count: dailyCount + 1, daily_image_date: today })
         .eq('email', userEmail);
     }
-
-    // [DNA_PATCH_START] 影片費用計算（含 Seedance 2.0 溢價）
-// [DNA_PATCH_START] Seedance 費用重新定價（越高方案越便宜）+ Omni 加費
-const hasOmniRef = Array.isArray(omniRefs) && omniRefs.length > 0;
-const omniExtra = hasOmniRef
-  ? (userPlan === 'starter' ? 6 : userPlan === 'standard' ? 5 : userPlan === 'pro' ? 4 : 4)
-  : 0;
-const seedance2Cost = (userPlan === 'starter'
-  ? (duration === 10 ? 27 : 17)
-  : userPlan === 'standard'
-  ? (duration === 10 ? 25 : 15)
-  : userPlan === 'pro'
-  ? (duration === 10 ? 21 : 13)
-  : (duration === 10 ? 21 : 13)) + omniExtra;
-// [DNA_PATCH_END]
-
-// text2video 不帶圖片，Seedance 費用不加 omniExtra（固定無 Omni）
-const seedance2TextCost = userPlan === 'starter'
-  ? (duration === 10 ? 27 : 17)
-  : userPlan === 'standard'
-  ? (duration === 10 ? 25 : 15)
-  : (duration === 10 ? 21 : 13);
-
-const creditCost = (mode === 'video' || mode === 'text2video')
-  ? (videoModel === 'seedance'
-      ? (mode === 'text2video' ? seedance2TextCost : seedance2Cost)
-      : (duration === 10 ? 6 : 4))
-  : 1;
-// [DNA_PATCH_END]
 
     await supabase
       .from('profiles')
@@ -209,25 +210,26 @@ const creditCost = (mode === 'video' || mode === 'text2video')
       return NextResponse.json(prediction);
     }
     // [DNA_PATCH_END]
+
     if (mode === "video") {
       if (videoModel === "seedance") {
         // [DNA_PATCH_START] Seedance + Omni-Reference
-const seedanceInput: any = {
-  image: image,
-  prompt: videoPrompt || "animate this character with smooth natural motion, cinematic quality",
-  duration: duration || 5,
-  aspect_ratio: aspectRatio || "1:1",
-  resolution: "720p",
-  generate_audio: true,
-};
-if (hasOmniRef && Array.isArray(omniRefs)) {
-  seedanceInput.reference_images = omniRefs.filter(Boolean);
-}
-prediction = await replicate.predictions.create({
-  model: "bytedance/seedance-2.0",
-  input: seedanceInput,
-});
-// [DNA_PATCH_END]
+        const seedanceInput: any = {
+          image: image,
+          prompt: videoPrompt || "animate this character with smooth natural motion, cinematic quality",
+          duration: duration || 5,
+          aspect_ratio: aspectRatio || "1:1",
+          resolution: "720p",
+          generate_audio: true,
+        };
+        if (hasOmniRef && Array.isArray(omniRefs)) {
+          seedanceInput.reference_images = omniRefs.filter(Boolean);
+        }
+        prediction = await replicate.predictions.create({
+          model: "bytedance/seedance-2.0",
+          input: seedanceInput,
+        });
+        // [DNA_PATCH_END]
       } else {
         prediction = await replicate.predictions.create({
           model: "kwaivgi/kling-v3-omni-video",
@@ -250,7 +252,6 @@ prediction = await replicate.predictions.create({
         } catch { imageValid = false; }
 
         if (!imageValid) {
-          // 圖片失效退點
           await supabase
             .from('profiles')
             .update({ credits: currentCredits })
@@ -274,7 +275,7 @@ prediction = await replicate.predictions.create({
       } else {
         prediction = await replicate.predictions.create({
           model: "black-forest-labs/flux-1.1-pro",
-          input: { 
+          input: {
             prompt: prompt || "AI Character",
             aspect_ratio: "1:1",
             output_format: "png"

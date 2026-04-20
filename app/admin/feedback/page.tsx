@@ -70,12 +70,12 @@ export default function AdminFeedbackPage() {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <button onClick={() => router.push('/admin')} className="text-[#89f5a2] hover:underline text-sm">← 返回後台</button>
-            <h1 className="text-[#89f5a2] font-bold text-2xl">
+            <p className="text-[#89f5a2] font-bold text-2xl">
               💬 留言管理
               {unreadCount > 0 && (
                 <span className="ml-2 bg-red-500 text-white text-sm px-2 py-0.5 rounded-full">{unreadCount} 未讀</span>
               )}
-            </h1>
+            </p>
           </div>
           <button
             onClick={loadMessages}

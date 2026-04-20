@@ -3,66 +3,81 @@ import { useSession, signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import React from "react";
 
-// [DNA_PATCH_START] 更新方案功能列表
-const plans = [
-  {
-    name: "入門包",
-    emoji: "🌱",
-    price: "$5",
-    credits: 30,
-    bg: "#1a2e1a",
-    border: "#3B6D11",
-    badgeBg: "",
-    badgeText: "",
-    badge: "",
-    titleColor: "#C0DD97",
-    subColor: "#639922",
-    features: ["30 點數", "圖片生成 1點/張", "Kling 3.0 影片 6點/支", "Seedance 2.0 17點/支（5秒）", "Seedance Omni-Reference 23點/支（5秒）", "角色一致性功能", "批次生成 2張", "角色配音 18點/次", "歷史紀錄保存 30 天 / 5 筆"],
-    plan: "starter",
-  },
-  {
-    name: "標準包",
-    emoji: "⭐",
-    price: "$12",
-    credits: 80,
-    bg: "#1a2435",
-    border: "#378ADD",
-    badgeBg: "#185FA5",
-    badgeText: "#B5D4F4",
-    badge: "最多人選",
-    titleColor: "#B5D4F4",
-    subColor: "#378ADD",
-    features: ["80 點數", "圖片生成 1點/張", "Kling 3.0 影片 5點/支", "Seedance 2.0 15點/支（5秒）", "Seedance Omni-Reference 20點/支（5秒）", "角色一致性功能", "批次生成 4張", "角色配音 16點/次", "歷史紀錄保存 30 天 / 10 筆"],
-    plan: "standard",
-  },
-  {
-    name: "專業包",
-    emoji: "🚀",
-    price: "$25",
-    credits: 200,
-    bg: "#2a1f0a",
-    border: "#BA7517",
-    badgeBg: "#854F0B",
-    badgeText: "#FAC775",
-    badge: "最划算",
-    titleColor: "#FAC775",
-    subColor: "#EF9F27",
-    features: ["200 點數", "圖片生成 1點/張", "Kling 3.0 影片 4點/支", "Seedance 2.0 13點/支（5秒）", "Seedance Omni-Reference 17點/支（5秒）", "角色一致性功能", "批次生成 6張", "角色配音 14點/次", "歷史紀錄保存 90 天 / 30 筆"],
-    plan: "pro",
-  },
-];
-// [DNA_PATCH_END]
-
 export default function PricingPage() {
   const { data: session } = useSession();
   const router = useRouter();
-  // [DNA_PATCH_START]
+
   const [referralCode, setReferralCode] = React.useState("");
+  const [prices, setPrices] = React.useState<Record<string, string>>({
+    starter: "250", standard: "450", pro: "799",
+  });
+  // [DNA_PATCH_START] 動態影片點數
+  const [videoCredits, setVideoCredits] = React.useState({
+    kling_5s_starter: "6", kling_5s_standard: "5", kling_5s_pro: "4",
+    seedance_5s_starter: "17", seedance_5s_standard: "15", seedance_5s_pro: "13",
+    omni_extra_starter: "6", omni_extra_standard: "5", omni_extra_pro: "4",
+    tts_credits_starter: "8", tts_credits_standard: "7", tts_credits_pro: "6",
+    wav2lip_credits_starter: "10", wav2lip_credits_standard: "9", wav2lip_credits_pro: "8",
+  });
+
+  const plans = React.useMemo(() => {
+    const ttsStarter = parseInt(videoCredits.tts_credits_starter) + parseInt(videoCredits.wav2lip_credits_starter);
+    const ttsStandard = parseInt(videoCredits.tts_credits_standard) + parseInt(videoCredits.wav2lip_credits_standard);
+    const ttsPro = parseInt(videoCredits.tts_credits_pro) + parseInt(videoCredits.wav2lip_credits_pro);
+    const omniStarter = parseInt(videoCredits.seedance_5s_starter) + parseInt(videoCredits.omni_extra_starter);
+    const omniStandard = parseInt(videoCredits.seedance_5s_standard) + parseInt(videoCredits.omni_extra_standard);
+    const omniPro = parseInt(videoCredits.seedance_5s_pro) + parseInt(videoCredits.omni_extra_pro);
+    return [
+      {
+        name: "入門包", emoji: "🌱", credits: 30,
+        bg: "#1a2e1a", border: "#3B6D11", badgeBg: "", badgeText: "", badge: "",
+        titleColor: "#C0DD97", subColor: "#639922",
+        features: [
+          "30 點數", "圖片生成 1點/張",
+          `Kling 3.0 影片 ${videoCredits.kling_5s_starter}點/支`,
+          `Seedance 2.0 ${videoCredits.seedance_5s_starter}點/支（5秒）`,
+          `Seedance Omni-Reference ${omniStarter}點/支（5秒）`,
+          "角色一致性功能", "批次生成 2張",
+          `角色配音 ${ttsStarter}點/次`,
+          "歷史紀錄保存 30 天 / 5 筆",
+        ],
+        plan: "starter",
+      },
+      {
+        name: "標準包", emoji: "⭐", credits: 80,
+        bg: "#1a2435", border: "#378ADD", badgeBg: "#185FA5", badgeText: "#B5D4F4", badge: "最多人選",
+        titleColor: "#B5D4F4", subColor: "#378ADD",
+        features: [
+          "80 點數", "圖片生成 1點/張",
+          `Kling 3.0 影片 ${videoCredits.kling_5s_standard}點/支`,
+          `Seedance 2.0 ${videoCredits.seedance_5s_standard}點/支（5秒）`,
+          `Seedance Omni-Reference ${omniStandard}點/支（5秒）`,
+          "角色一致性功能", "批次生成 4張",
+          `角色配音 ${ttsStandard}點/次`,
+          "歷史紀錄保存 30 天 / 10 筆",
+        ],
+        plan: "standard",
+      },
+      {
+        name: "專業包", emoji: "🚀", credits: 200,
+        bg: "#2a1f0a", border: "#BA7517", badgeBg: "#854F0B", badgeText: "#FAC775", badge: "最划算",
+        titleColor: "#FAC775", subColor: "#EF9F27",
+        features: [
+          "200 點數", "圖片生成 1點/張",
+          `Kling 3.0 影片 ${videoCredits.kling_5s_pro}點/支`,
+          `Seedance 2.0 ${videoCredits.seedance_5s_pro}點/支（5秒）`,
+          `Seedance Omni-Reference ${omniPro}點/支（5秒）`,
+          "角色一致性功能", "批次生成 6張",
+          `角色配音 ${ttsPro}點/次`,
+          "歷史紀錄保存 90 天 / 30 筆",
+        ],
+        plan: "pro",
+      },
+    ];
+  }, [videoCredits]);
   // [DNA_PATCH_END]
 
-  // [DNA_PATCH_START] 自動讀取 URL ref 參數 + localStorage 記住介紹碼
   React.useEffect(() => {
-    // 優先讀 URL 參數
     const urlParams = new URLSearchParams(window.location.search);
     const refCode = urlParams.get("ref");
     if (refCode) {
@@ -70,18 +85,10 @@ export default function PricingPage() {
       setReferralCode(code);
       localStorage.setItem("referral_code", code);
     } else {
-      // URL 沒有就讀 localStorage（之前點過連結但沒馬上買）
       const saved = localStorage.getItem("referral_code");
       if (saved) setReferralCode(saved);
     }
   }, []);
-  // [DNA_PATCH_END]
-  // [DNA_PATCH_START] 動態價格
-  const [prices, setPrices] = React.useState<Record<string, string>>({
-    starter: "5",
-    standard: "12",
-    pro: "25",
-  });
 
   React.useEffect(() => {
     fetch("/api/referral/settings-public")
@@ -89,36 +96,32 @@ export default function PricingPage() {
       .then(data => {
         if (data.settings) {
           setPrices({
-            starter: data.settings.plan_price_starter || "5",
-            standard: data.settings.plan_price_standard || "12",
-            pro: data.settings.plan_price_pro || "25",
+            starter: data.settings.plan_price_starter || "250",
+            standard: data.settings.plan_price_standard || "450",
+            pro: data.settings.plan_price_pro || "799",
           });
+          setVideoCredits(prev => ({ ...prev, ...data.settings }));
         }
       });
   }, []);
-  // [DNA_PATCH_END]
 
-// [DNA_PATCH_START] 串接 Stripe 付款
-const handleBuy = async (plan: string) => {
-  if (!session) { signIn("google"); return; }
-  
-  try {
-    const res = await fetch("/api/stripe/checkout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ plan, email: session.user?.email, referralCode: referralCode.trim().toUpperCase() }),
-    });
-    const data = await res.json();
-    if (data.url) {
-      localStorage.removeItem("referral_code");
-      window.location.href = data.url;
+  const handleBuy = async (plan: string) => {
+    if (!session) { signIn("google"); return; }
+    try {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan, email: session.user?.email, referralCode: referralCode.trim().toUpperCase() }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        localStorage.removeItem("referral_code");
+        window.location.href = data.url;
+      } else alert("付款連結建立失敗，請重試");
+    } catch (err) {
+      alert("連線失敗，請重試");
     }
-    else alert("付款連結建立失敗，請重試");
-  } catch (err) {
-    alert("連線失敗，請重試");
-  }
-};
-// [DNA_PATCH_END]
+  };
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-[#0d2318] via-[#1a3a25] to-[#2d5a3d] p-6">
@@ -132,22 +135,16 @@ const handleBuy = async (plan: string) => {
           ← 返回主頁
         </button>
 
-{/* [DNA_PATCH_START] LOGO 全寬顯示邊緣漸隱 */}
-<div
-  className="relative w-full max-w-lg mx-auto mb-2"
-  style={{
-    height: '380px',
-    WebkitMaskImage: 'radial-gradient(ellipse 75% 80% at 50% 50%, black 30%, transparent 80%)',
-    maskImage: 'radial-gradient(ellipse 60% 100% at 50% 50%, black 30%, transparent 80%)',
-  }}
->
-  <img
-    src="/logo.png"
-    alt="Consistent Flow"
-    className="w-full h-full object-contain"
-  />
-</div>
-{/* [DNA_PATCH_END] */}
+        <div
+          className="relative w-full max-w-lg mx-auto mb-2"
+          style={{
+            height: '380px',
+            WebkitMaskImage: 'radial-gradient(ellipse 75% 80% at 50% 50%, black 30%, transparent 80%)',
+            maskImage: 'radial-gradient(ellipse 60% 100% at 50% 50%, black 30%, transparent 80%)',
+          }}
+        >
+          <img src="/logo.png" alt="Consistent Flow" className="w-full h-full object-contain" />
+        </div>
 
         {/* 免費版 */}
         <div className="mb-6 p-4 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-between">
@@ -161,8 +158,7 @@ const handleBuy = async (plan: string) => {
           <span className="text-white/30 text-sm font-bold">$0</span>
         </div>
 
-        {/* 付費方案 */}
-        {/* [DNA_PATCH_START] 介紹碼輸入欄位 */}
+        {/* 介紹碼 */}
         <div className="mb-6 p-4 bg-white/5 border border-white/10 rounded-2xl">
           <p className="text-white/60 text-xs mb-2">有朋友推薦你嗎？輸入介紹碼後購買，朋友可獲得獎勵點數 🎁</p>
           <div className="flex gap-2">
@@ -174,16 +170,10 @@ const handleBuy = async (plan: string) => {
               className="flex-1 bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-white text-sm placeholder-white/30 outline-none focus:border-[#89f5a2]/50"
             />
             {referralCode && (
-              <button
-                onClick={() => setReferralCode("")}
-                className="px-3 py-2 text-white/40 hover:text-white/70 text-sm"
-              >
-                ✕
-              </button>
+              <button onClick={() => setReferralCode("")} className="px-3 py-2 text-white/40 hover:text-white/70 text-sm">✕</button>
             )}
           </div>
         </div>
-        {/* [DNA_PATCH_END] */}
 
         {/* 付費方案 */}
         <div id="plans" className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
@@ -194,10 +184,8 @@ const handleBuy = async (plan: string) => {
               style={{ background: p.bg, border: `${p.plan === 'standard' ? 2 : 1}px solid ${p.border}` }}
             >
               {p.badge && (
-                <div
-                  className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 text-xs font-black rounded-full"
-                  style={{ background: p.badgeBg, color: p.badgeText }}
-                >
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 text-xs font-black rounded-full"
+                  style={{ background: p.badgeBg, color: p.badgeText }}>
                   {p.badge}
                 </div>
               )}

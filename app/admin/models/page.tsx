@@ -151,7 +151,7 @@ useEffect(() => {
           >
             ← 返回後台
           </button>
-          <h1 className="text-2xl font-black text-[#89f5a2]">模型追蹤</h1>
+          <p className="text-2xl font-black text-[#89f5a2]">模型追蹤</p>
           <button
             onClick={() => router.push('/admin/models/compare')}
             className="px-3 py-1.5 bg-[#89f5a2]/10 border border-[#89f5a2]/30 rounded-full text-[#89f5a2] text-xs font-bold hover:bg-[#89f5a2]/20 transition-all"

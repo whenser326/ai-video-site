@@ -169,7 +169,7 @@ export default function ModelComparePage() {
           >
             ← 返回模型追蹤
           </button>
-          <h1 className="text-2xl font-black text-[#89f5a2]">模型比對測試</h1>
+          <p className="text-2xl font-black text-[#89f5a2]">模型比對測試</p>
         </div>
 
         <div className="bg-white/5 border border-white/10 rounded-2xl p-5 mb-5">

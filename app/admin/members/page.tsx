@@ -112,7 +112,7 @@ export default function AdminMembersPage() {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <button onClick={() => router.push('/admin')} className="text-[#89f5a2] hover:underline text-sm">← 返回後台</button>
-            <h1 className="text-[#89f5a2] font-bold text-2xl">👥 會員統計</h1>
+            <p className="text-[#89f5a2] font-bold text-2xl">👥 會員統計</p>
           </div>
           <button
             onClick={loadStats}
