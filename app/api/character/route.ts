@@ -37,7 +37,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "請求過於頻繁，請稍後再試" }, { status: 429 });
     }
 
-    const { prompt, image, mode, userEmail, videoPrompt, aspectRatio, duration, videoModel, refundCredits, batchPrompts } = await req.json();
+    // [DNA_PATCH_START] 加入 omniRefs
+const { prompt, image, mode, userEmail, videoPrompt, aspectRatio, duration, videoModel, refundCredits, batchPrompts, omniRefs } = await req.json();
+// [DNA_PATCH_END]
 
     // [DNA_PATCH_START] 退點功能
     if (refundCredits && userEmail) {
@@ -141,13 +143,19 @@ export async function POST(req: Request) {
     }
 
     // [DNA_PATCH_START] 影片費用計算（含 Seedance 2.0 溢價）
-const seedance2Cost = userPlan === 'starter'
-  ? (duration === 10 ? 8 : 5)
+// [DNA_PATCH_START] Seedance 費用重新定價（越高方案越便宜）+ Omni 加費
+const hasOmniRef = Array.isArray(omniRefs) && omniRefs.length > 0;
+const omniExtra = hasOmniRef
+  ? (userPlan === 'starter' ? 6 : userPlan === 'standard' ? 5 : userPlan === 'pro' ? 4 : 4)
+  : 0;
+const seedance2Cost = (userPlan === 'starter'
+  ? (duration === 10 ? 27 : 17)
   : userPlan === 'standard'
-  ? (duration === 10 ? 12 : 8)
+  ? (duration === 10 ? 25 : 15)
   : userPlan === 'pro'
-  ? (duration === 10 ? 17 : 11)
-  : (duration === 10 ? 17 : 11);
+  ? (duration === 10 ? 21 : 13)
+  : (duration === 10 ? 21 : 13)) + omniExtra;
+// [DNA_PATCH_END]
 
 const creditCost = mode === 'video'
   ? (videoModel === 'seedance' ? seedance2Cost : (duration === 10 ? 6 : 4))
@@ -163,17 +171,23 @@ const creditCost = mode === 'video'
 
     if (mode === "video") {
       if (videoModel === "seedance") {
-        prediction = await replicate.predictions.create({
-          model: "bytedance/seedance-2.0",
-          input: {
-            image: image,
-            prompt: videoPrompt || "animate this character with smooth natural motion, cinematic quality",
-            duration: duration || 5,
-            aspect_ratio: aspectRatio || "1:1",
-            resolution: "720p",
-generate_audio: true,
-          }
-        });
+        // [DNA_PATCH_START] Seedance + Omni-Reference
+const seedanceInput: any = {
+  image: image,
+  prompt: videoPrompt || "animate this character with smooth natural motion, cinematic quality",
+  duration: duration || 5,
+  aspect_ratio: aspectRatio || "1:1",
+  resolution: "720p",
+  generate_audio: true,
+};
+if (hasOmniRef && Array.isArray(omniRefs)) {
+  seedanceInput.reference_images = omniRefs.filter(Boolean);
+}
+prediction = await replicate.predictions.create({
+  model: "bytedance/seedance-2.0",
+  input: seedanceInput,
+});
+// [DNA_PATCH_END]
       } else {
         prediction = await replicate.predictions.create({
           model: "kwaivgi/kling-v3-omni-video",

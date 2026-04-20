@@ -60,6 +60,7 @@ TTS 試聽防呆更新：
 - app/globals.css → 內容見第 13 節備忘，損壞會導致全站樣式異常
 - 加入 git 追蹤指令：git add -f app/globals.css
 - 修改此類檔案前必須先備份內容到 PROJECT_DNA.md
+每次開始開發前必須先確認現有 page.tsx 包含哪些已完成功能，禁止在沒確認的情況下直接覆蓋或修改，避免已完成功能被蓋掉
 
 3. 專案核心
 
@@ -155,7 +156,9 @@ GlobalHeader RWD 設計：
 - 點外部自動關閉 Drawer（useRef + mousedown 事件）
 - 點數從 GlobalHeader 自己抓 API，不依賴 page.tsx 傳遞
 影片模型選擇卡片式 UI：Kling 3.0（推薦，綠色）vs Seedance 2.0（高畫質溢價，橘色），兩個 Modal 均已更新（轉影片 Modal + 上傳圖片 Modal）
-Seedance 2.0 點數定價（不虧本）：入門 5秒/5點・10秒/8點，標準 5秒/8點・10秒/12點，專業 5秒/11點・10秒/17點
+Seedance 2.0 點數定價（越高方案越便宜）：入門 5秒/17點・10秒/27點，標準 5秒/15點・10秒/25點，專業 5秒/13點・10秒/21點
+Seedance 2.0 + Omni-Reference 點數定價（額外加費，API成本不變純利）：入門 5秒/23點・10秒/33點，標準 5秒/20點・10秒/30點，專業 5秒/17點・10秒/25點
+Omni-Reference 定價邏輯：入門+6點、標準+5點、專業+4點（固定加費，不管上傳幾張參考圖）
 
 8. 金流
 
@@ -348,6 +351,7 @@ TURNSTILE_SECRET_KEY=（已設定於 Vercel Sensitive，備用，需要時去 Cl
 ✅ 影片模型選擇升級為卡片式 UI（含差異說明與點數提示）
 ✅ Seedance 2.0 溢價點數計算（依 userPlan 動態計算）
 ⚠️ 聯絡表單 + Cloudflare Turnstile 已開發但已還原（聯絡頁改回靜態版本）
+✅ Omni-Reference 功能已在「信件確認與測試需求」對話開發完成，但尚未合併到主線 page.tsx，下次開發前必須先從該對話取得最新 page.tsx 再開始
 
 12. 待完成項目（下一步）
 
@@ -382,7 +386,6 @@ Replicate 圖片 URL 有效期約 24 小時，鎖定角色時已改為上傳到 
 影片已永久保存至 Supabase Storage（upload-image API 同時處理圖片和影片）
 // [DNA_PATCH_START] 標記不能放在 JSX return 區塊內，否則會顯示在畫面上
 從聊天介面複製含 `<a` 標籤的程式碼時，`<a` 可能被吃掉，貼上後需手動確認
-綠界申請需商家類別選「其他」→「其他」，販售網址填 Vercel 網址
 admin_settings route.ts 需放在 app/api/admin/settings/route.ts（曾建立到錯誤位置）
 PowerShell 不支援 rm -rf，改用 Remove-Item -Recurse -Force .next
 後台驗證用 URL email 參數（GET）和 body.adminEmail（POST），非 getServerSession
@@ -456,7 +459,18 @@ h1 {
 - 禁止用 PowerShell > 重導向寫入 globals.css，會產生 UTF-16 LE 編碼導致 Turbopack FATAL error
 - 若出現 Turbopack FATAL error，先讀 panic log：type C:\Users\123\AppData\Local\Temp\next-panic-*.log
 globals.css 不在 git 追蹤中，需要用 git add -f app/globals.css 才能強制加入
-GlobalHeader 未登入狀態：if (!session) 不能直接 return null，必須顯示登入按鈕，否則登出後無法重新登入。已修正為未登入時顯示「使用 Google 登入」按鈕。
+GlobalHeader 未登入狀態：if (!session) 不能直接 return null，必須顯示登入按鈕，否則登出後無法重新登入。已修正為未登入時顯示 LOGO + 「使用 Google 登入」按鈕（justify-between 左LOGO右登入）。
+
+BUG 修正記錄（2026/04/19）：
+- 未登入畫面 LOGO 消失：GlobalHeader if (!session) 分支缺少 LOGO，改為 justify-between 左放LOGO右放登入按鈕
+- 未登入顯示鎖定角色列：localStorage 讀取必須包在 if (session?.user?.email) 內，否則未登入也會讀到舊值
+- 未登入靈感畫廊空白：galleryItems 的 useState 初始值必須放固定圖，不能依賴 useEffect 填入，否則未登入時永遠是空陣列
+- 轉成影片按鈕 disabled：disabled 條件禁止加入 genType === "video"，影片生成完後 genType 不會重置導致按鈕永遠卡死，只保留 loading 和 credits <= 0 兩個條件
+- useEffect 禁止巢狀：不能在一個 useEffect 內部再寫另一個 useEffect，會觸發 React error #321
+- PowerShell 部署固定格式（三行一起複製貼上）：
+  git add .
+  git commit -m "說明"
+  git push
 
 14. 未來功能規劃（優先順序）
 

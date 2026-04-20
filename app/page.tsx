@@ -48,8 +48,12 @@ const [videoPrompt, setVideoPrompt] = useState("");
 const [videoRatio, setVideoRatio] = useState("1:1");
 const [videoDuration, setVideoDuration] = useState(5);
 const [showVideoModal, setShowVideoModal] = useState(false);
-// [DNA_PATCH_START]
 const [videoModel, setVideoModel] = useState<"kling" | "seedance">("kling");
+// [DNA_PATCH_START] Omni-Reference 狀態
+const [omniRef1, setOmniRef1] = useState<string | null>(null); // 第二角色
+const [omniRef2, setOmniRef2] = useState<string | null>(null); // 場景風格
+const [omniRef3, setOmniRef3] = useState<string | null>(null); // 動作參考
+// [DNA_PATCH_END]
 // [DNA_PATCH_START] 影片提示詞翻譯狀態
 const [videoTranslatedPrompt, setVideoTranslatedPrompt] = useState<string | null>(null);
 const [isVideoTranslating, setIsVideoTranslating] = useState(false);
@@ -612,9 +616,9 @@ const handleBatchGenerate = async () => {
 // [DNA_PATCH_END]
 // [DNA_PATCH_END]
   // 5. ✨ 接通影片生成
-// [DNA_PATCH_START]
-  const handleGenerateVideo = async (imageUrl: string, prompt?: string, ratio?: string, duration?: number, model?: string) => {
-  // [DNA_PATCH_END]
+// [DNA_PATCH_START] handleGenerateVideo 加入 omniRefs
+const handleGenerateVideo = async (imageUrl: string, prompt?: string, ratio?: string, duration?: number, model?: string, omniRefs?: (string | null)[]) => {
+// [DNA_PATCH_END]
     setLoading(true);
     setError("");
     setSeconds(0);
@@ -625,14 +629,17 @@ const handleBatchGenerate = async () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          image: imageUrl, 
-          mode: "video", 
-          userEmail: session?.user?.email,
-          videoPrompt: prompt || "animate this character with smooth natural motion, cinematic quality",
-          videoModel: model || "kling",
-          aspectRatio: ratio || "1:1",
-          duration: duration || 5,
-       }),
+  image: imageUrl, 
+  mode: "video", 
+  userEmail: session?.user?.email,
+  videoPrompt: prompt || "animate this character with smooth natural motion, cinematic quality",
+  videoModel: model || "kling",
+  aspectRatio: ratio || "1:1",
+  duration: duration || 5,
+  // [DNA_PATCH_START] Omni-Reference
+  omniRefs: omniRefs ? omniRefs.filter(Boolean) : [],
+  // [DNA_PATCH_END]
+}),
       });
       const data = await res.json();
       if (data.id) checkStatus(data.id, "video");
@@ -1494,7 +1501,7 @@ return (
 {/* [DNA_PATCH_START] 影片設定 Modal */}
 {showVideoModal && (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-    <div className="w-full max-w-md bg-[#0d2318] border border-[#89f5a2]/20 rounded-3xl p-6 space-y-4 shadow-2xl">
+    <div className="w-full max-w-md bg-[#0d2318] border border-[#89f5a2]/20 rounded-3xl p-6 space-y-4 shadow-2xl overflow-y-auto max-h-[90vh]">
       <h2 className="text-white font-black text-lg text-center">🎬 影片設定</h2>
       <p className="text-center text-sm font-black tracking-widest -mt-2" style={{color: '#fb923c'}}>
             {videoModel === "seedance" ? "✨ Powered by Seedance 1.5 Pro" : "⚡ Powered by Kling 3.0"}
@@ -1540,7 +1547,8 @@ return (
 <p className="text-white/50 text-xs mt-1">物理動態超真實・原生音訊・場景特效強</p>
 <p className="text-white/30 text-xs mt-0.5">🔒 Replicate 官方版・非第三方不穩定版</p>
       <p className="text-xs mt-0.5 font-bold" style={{color: '#fb923c'}}>
-        5秒 {plan === 'starter' ? '5點' : plan === 'standard' ? '8點' : plan === 'pro' ? '11點' : '—'} ／ 10秒 {plan === 'starter' ? '8點' : plan === 'standard' ? '12點' : plan === 'pro' ? '17點' : '—'}
+        5秒 {plan === 'starter' ? '17點' : plan === 'standard' ? '15點' : plan === 'pro' ? '13點' : '—'} ／
+10秒 {plan === 'starter' ? '27點' : plan === 'standard' ? '25點' : plan === 'pro' ? '21點' : '—'}
         　⚠️ 點數較高
       </p>
     </button>
@@ -1598,6 +1606,66 @@ return (
   )}
 </div>
 {/* [DNA_PATCH_END] */}
+{/* [DNA_PATCH_START] Omni-Reference 區塊（Seedance 專屬） */}
+{videoModel === "seedance" && (
+  <div className="border border-[#fb923c]/20 rounded-2xl overflow-hidden">
+    <div className="px-4 py-3 bg-[#fb923c]/5 flex items-center justify-between">
+      <div>
+        <p className="text-[#fb923c] text-xs font-black">✨ Omni-Reference 多參考圖（選填）</p>
+        <p className="text-white/30 text-[10px] mt-0.5">
+          上傳後額外加費：入門+6點・標準+5點・專業+4點
+        </p>
+      </div>
+    </div>
+    <div className="px-4 pb-4 pt-2 space-y-3 bg-black/10">
+      {[
+        { label: "🎭 第二角色", hint: "加入第二個人物", state: omniRef1, setter: setOmniRef1 },
+        { label: "🌄 場景風格", hint: "指定場景或背景風格", state: omniRef2, setter: setOmniRef2 },
+        { label: "🎬 動作參考", hint: "指定動作或姿勢", state: omniRef3, setter: setOmniRef3 },
+      ].map((item, idx) => (
+        <div key={idx}>
+          <p className="text-white/40 text-[10px] font-bold mb-1">{item.label}
+            <span className="text-white/20 font-normal ml-1">（{item.hint}）</span>
+          </p>
+          <label className="block cursor-pointer">
+            <div className={`border border-dashed rounded-xl p-3 text-center transition-all ${
+              item.state
+                ? "border-[#fb923c]/50 bg-[#fb923c]/5"
+                : "border-white/10 hover:border-[#fb923c]/30"
+            }`}>
+              {item.state ? (
+                <div className="relative">
+                  <img src={item.state} className="w-full max-h-24 object-contain rounded-lg" />
+                  <button
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); item.setter(null); }}
+                    className="absolute top-1 right-1 w-5 h-5 bg-red-500/80 rounded-full text-white text-xs flex items-center justify-center font-black hover:bg-red-500"
+                  >×</button>
+                </div>
+              ) : (
+                <p className="text-white/25 text-xs">點擊上傳圖片</p>
+              )}
+            </div>
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  const reader = new FileReader();
+                  reader.onload = () => item.setter(reader.result as string);
+                  reader.readAsDataURL(file);
+                }
+              }}
+            />
+          </label>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+{/* [DNA_PATCH_END] */}
       {/* 比例選擇 */}
       <div>
         <p className="text-white/40 text-xs mb-2">影片比例</p>
@@ -1646,10 +1714,14 @@ return (
           取消
         </button>
         <button
-          onClick={() => {
-            setShowVideoModal(false);
-            handleGenerateVideo(prediction.output, "", videoRatio, videoDuration, videoModel);
-          }}
+          // [DNA_PATCH_START] 傳入 omniRefs
+onClick={() => {
+  setShowVideoModal(false);
+  const refs = videoModel === "seedance" ? [omniRef1, omniRef2, omniRef3] : [];
+  handleGenerateVideo(prediction.output, videoTranslatedPrompt || videoPrompt, videoRatio, videoDuration, videoModel, refs);
+  setOmniRef1(null); setOmniRef2(null); setOmniRef3(null);
+}}
+// [DNA_PATCH_END]
           className="py-3 rounded-xl bg-gradient-to-r from-[#89f5a2] to-[#4ade80] text-[#0d2318] text-sm font-bold hover:opacity-90 transition-all"
         >
           🎬 開始生成
@@ -1662,7 +1734,7 @@ return (
 {/* 上傳圖片轉影片 Modal */}
 {showUploadModal && (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-    <div className="w-full max-w-md bg-[#0d2318] border border-white/10 rounded-3xl p-6 space-y-4">
+    <div className="w-full max-w-md bg-[#0d2318] border border-white/10 rounded-3xl p-6 space-y-4 overflow-y-auto max-h-[90vh]">
       
       {!agreedToTerms ? (
         <>
@@ -1816,13 +1888,73 @@ return (
 <p className="text-white/50 text-xs mt-1">物理動態超真實・原生音訊・場景特效強</p>
 <p className="text-white/30 text-xs mt-0.5">🔒 Replicate 官方版・非第三方不穩定版</p>
                 <p className="text-[#fb923c] text-xs font-bold mt-0.5">
-                  5秒 {plan === 'starter' ? '5點' : plan === 'standard' ? '8點' : plan === 'pro' ? '11點' : '—'} ／
-                  10秒 {plan === 'starter' ? '8點' : plan === 'standard' ? '12點' : plan === 'pro' ? '17點' : '—'}
+                  5秒 {plan === 'starter' ? '17點' : plan === 'standard' ? '15點' : plan === 'pro' ? '13點' : '—'} ／
+10秒 {plan === 'starter' ? '27點' : plan === 'standard' ? '25點' : plan === 'pro' ? '21點' : '—'}
                   　⚠️ 點數較高
                 </p>
               </button>
             </div>
           </div>
+{/* [DNA_PATCH_END] */}
+{/* [DNA_PATCH_START] Omni-Reference 區塊（Seedance 專屬） */}
+{videoModel === "seedance" && (
+  <div className="border border-[#fb923c]/20 rounded-2xl overflow-hidden">
+    <div className="px-4 py-3 bg-[#fb923c]/5 flex items-center justify-between">
+      <div>
+        <p className="text-[#fb923c] text-xs font-black">✨ Omni-Reference 多參考圖（選填）</p>
+        <p className="text-white/30 text-[10px] mt-0.5">
+          上傳後額外加費：入門+6點・標準+5點・專業+4點
+        </p>
+      </div>
+    </div>
+    <div className="px-4 pb-4 pt-2 space-y-3 bg-black/10">
+      {[
+        { label: "🎭 第二角色", hint: "加入第二個人物", state: omniRef1, setter: setOmniRef1 },
+        { label: "🌄 場景風格", hint: "指定場景或背景風格", state: omniRef2, setter: setOmniRef2 },
+        { label: "🎬 動作參考", hint: "指定動作或姿勢", state: omniRef3, setter: setOmniRef3 },
+      ].map((item, idx) => (
+        <div key={idx}>
+          <p className="text-white/40 text-[10px] font-bold mb-1">{item.label}
+            <span className="text-white/20 font-normal ml-1">（{item.hint}）</span>
+          </p>
+          <label className="block cursor-pointer">
+            <div className={`border border-dashed rounded-xl p-3 text-center transition-all ${
+              item.state
+                ? "border-[#fb923c]/50 bg-[#fb923c]/5"
+                : "border-white/10 hover:border-[#fb923c]/30"
+            }`}>
+              {item.state ? (
+                <div className="relative">
+                  <img src={item.state} className="w-full max-h-24 object-contain rounded-lg" />
+                  <button
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); item.setter(null); }}
+                    className="absolute top-1 right-1 w-5 h-5 bg-red-500/80 rounded-full text-white text-xs flex items-center justify-center font-black hover:bg-red-500"
+                  >×</button>
+                </div>
+              ) : (
+                <p className="text-white/25 text-xs">點擊上傳圖片</p>
+              )}
+            </div>
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  const reader = new FileReader();
+                  reader.onload = () => item.setter(reader.result as string);
+                  reader.readAsDataURL(file);
+                }
+              }}
+            />
+          </label>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
 {/* [DNA_PATCH_END] */}
           {/* 比例選擇 */}
           <div>
@@ -1874,13 +2006,17 @@ return (
             <button
               onClick={() => {
                 if (uploadedImage) {
-                  setShowUploadModal(false);
-                  setAgreedToTerms(false);
-                  setTermsChecked(false);
-                  handleGenerateVideo(uploadedImage, videoPrompt, videoRatio, videoDuration, videoModel);
-                  setUploadedImage(null);
-                  setVideoPrompt("");
-                }
+  setShowUploadModal(false);
+  setAgreedToTerms(false);
+  setTermsChecked(false);
+  // [DNA_PATCH_START] 傳入 omniRefs
+  const refs = videoModel === "seedance" ? [omniRef1, omniRef2, omniRef3] : [];
+  handleGenerateVideo(uploadedImage, videoTranslatedPrompt || videoPrompt, videoRatio, videoDuration, videoModel, refs);
+  setOmniRef1(null); setOmniRef2(null); setOmniRef3(null);
+  // [DNA_PATCH_END]
+  setUploadedImage(null);
+  setVideoPrompt("");
+}
               }}
               disabled={!uploadedImage}
               className="py-3 rounded-xl bg-gradient-to-r from-[#89f5a2] to-[#4ade80] text-[#0d2318] text-sm font-bold disabled:opacity-30 hover:opacity-90 transition-all"
