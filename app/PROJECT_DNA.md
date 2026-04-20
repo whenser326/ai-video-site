@@ -358,7 +358,16 @@ TURNSTILE_SECRET_KEY=（已設定於 Vercel Sensitive，備用，需要時去 Cl
 ✅ 影片模型選擇升級為卡片式 UI（含差異說明與點數提示）
 ✅ Seedance 2.0 溢價點數計算（依 userPlan 動態計算）
 ⚠️ 聯絡表單 + Cloudflare Turnstile 已開發但已還原（聯絡頁改回靜態版本）
-✅ Omni-Reference 功能已在「信件確認與測試需求」對話開發完成，但尚未合併到主線 page.tsx，下次開發前必須先從該對話取得最新 page.tsx 再開始
+✅ Omni-Reference 功能已完整合併到主線 page.tsx（兩個 Modal 均支援）
+✅ Seedance 2.0 定價重新設計（越高方案越便宜，入門17點/標準15點/專業13點）
+✅ Seedance 2.0 Omni-Reference 多參考圖功能（三槽位：第二角色/場景風格/動作參考）
+✅ 影片生成失敗時顯示 alert 錯誤提示（不再沉默失敗）
+✅ 兩個影片 Modal 加入 overflow-y-auto max-h-[90vh] 支援捲動
+✅ 手機版 Step 2-4 自訂輸入框改為 textarea rows={2}（解決 placeholder 文字被截斷問題）
+✅ 文字生成影片功能串接（Step 1 第四選項，Kling + Seedance，付費限定）
+✅ 文字生成影片 Modal（模型選擇/比例/秒數/描述輸入/中翻英，付費限定，免費用戶點擊顯示升級提示）
+✅ handleText2Video 函式（mode: "text2video"，不需圖片，直接呼叫 Kling 或 Seedance）
+✅ route.ts 新增 text2video 分支（付費驗證、Seedance 無 Omni 定價、Kling 純文字生成）
 
 12. 待完成項目（下一步）
 
@@ -366,7 +375,6 @@ TURNSTILE_SECRET_KEY=（已設定於 Vercel Sensitive，備用，需要時去 Cl
 ⬜ 人設標籤第二層（角色個性/職業/背景設定，存入角色資料）
 ⬜ 每日簽到領點數（每天1點，連續7天額外+3點，需防多帳號濫用）
 ⬜ 首頁 Hero 循環影片製作完成後替換（/public/hero.mp4，1200×675px 16:9 無聲）
-⬜ 文字生成影片功能串接（Step 1 第四選項，目前 Coming Soon）
 ⬜ 成人站架構規劃（獨立網域、獨立服務、獨立金流）
 ⬜ 成人站身份驗證系統（上傳身份證、後台審核、adult_verified欄位）
 ⬜ 成人站獨立點數系統（adult_credits欄位，與主站完全分離）
@@ -427,6 +435,8 @@ SubscribeStar 對帳單顯示「Subscribestar」，NexaPay 用戶收到穩定幣
 免費用戶每日影片限制邏輯：在點數檢查之前先攔截，有點數也只能生1支
 每日簽到實作時注意：需防多帳號濫用，建議加 IP + Google帳號雙重驗證
 靈感畫廊點擊無反應：onClick 必須包含 `window.scrollTo({ top: 0, behavior: 'smooth' })`，否則用戶不知道已套用，且此 bug 已出現兩次，禁止移除此行
+手機版自訂輸入框（Step 2-4）禁止用 <input type="text">，必須用 <textarea rows={2} className="...resize-none leading-relaxed">，否則手機版 placeholder 長文字會被截斷
+文字生成影片不帶 omniRefs，Seedance 費用使用無 Omni 基本定價（入門5秒17點/10秒27點・標準5秒15點/10秒25點・專業5秒13點/10秒21點）
 SEO keywords meta tag 對 Google 無效（2009年起），真正有效的是 og:title/og:description
 Vercel 預設網址 SEO 意義不大，等綁自訂域名後再認真優化
 換域名後必須同步更新：NEXTAUTH_URL、Google OAuth 授權URI、綠界金流回調網址
@@ -474,10 +484,11 @@ BUG 修正記錄（2026/04/19）：
 - 未登入靈感畫廊空白：galleryItems 的 useState 初始值必須放固定圖，不能依賴 useEffect 填入，否則未登入時永遠是空陣列
 - 轉成影片按鈕 disabled：disabled 條件禁止加入 genType === "video"，影片生成完後 genType 不會重置導致按鈕永遠卡死，只保留 loading 和 credits <= 0 兩個條件
 - useEffect 禁止巢狀：不能在一個 useEffect 內部再寫另一個 useEffect，會觸發 React error #321
-- PowerShell 部署固定格式（三行一起複製貼上）：
-  git add .
-  git commit -m "說明"
-  git push
+- PowerShell 部署固定格式是四行（含 globals.css）：
+git add -f app/globals.css
+git add -A
+git commit -m "說明"
+git push
 
 14. 未來功能規劃（優先順序）
 

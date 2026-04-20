@@ -107,12 +107,12 @@ const { prompt, image, mode, userEmail, videoPrompt, aspectRatio, duration, vide
       return NextResponse.json({ batch: true, predictions, batchCost });
     }
     // [DNA_PATCH_END]
-    const requiredCredits = mode === 'video' ? 4 : 1;
+    const requiredCredits = (mode === 'video' || mode === 'text2video') ? 4 : 1;
     if (currentCredits < requiredCredits) {
       return NextResponse.json({ error: mode === 'video' ? "點數不足！影片生成需要至少 4 點" : "點數不足！請前往購買點數" }, { status: 403 });
     }
 // [DNA_PATCH_START] 免費用戶每日影片限制
-    if (mode === 'video' && userPlan === 'free') {
+    if ((mode === 'video' || mode === 'text2video') && userPlan === 'free') {
       const today = getTodayString();
       const lastVideoDate = userProfile.daily_video_date || '';
       const dailyVideoCount = lastVideoDate === today ? (userProfile.daily_video_count || 0) : 0;
@@ -127,7 +127,7 @@ const { prompt, image, mode, userEmail, videoPrompt, aspectRatio, duration, vide
         .eq('email', userEmail);
     }
     // [DNA_PATCH_END]
-    if (userPlan === 'free' && mode !== 'video') {
+    if (userPlan === 'free' && mode !== 'video' && mode !== 'text2video') {
       const today = getTodayString();
       const lastDate = userProfile.daily_image_date || '';
       const dailyCount = lastDate === today ? (userProfile.daily_image_count || 0) : 0;
@@ -157,8 +157,17 @@ const seedance2Cost = (userPlan === 'starter'
   : (duration === 10 ? 21 : 13)) + omniExtra;
 // [DNA_PATCH_END]
 
-const creditCost = mode === 'video'
-  ? (videoModel === 'seedance' ? seedance2Cost : (duration === 10 ? 6 : 4))
+// text2video 不帶圖片，Seedance 費用不加 omniExtra（固定無 Omni）
+const seedance2TextCost = userPlan === 'starter'
+  ? (duration === 10 ? 27 : 17)
+  : userPlan === 'standard'
+  ? (duration === 10 ? 25 : 15)
+  : (duration === 10 ? 21 : 13);
+
+const creditCost = (mode === 'video' || mode === 'text2video')
+  ? (videoModel === 'seedance'
+      ? (mode === 'text2video' ? seedance2TextCost : seedance2Cost)
+      : (duration === 10 ? 6 : 4))
   : 1;
 // [DNA_PATCH_END]
 
@@ -169,6 +178,37 @@ const creditCost = mode === 'video'
 
     let prediction;
 
+    // [DNA_PATCH_START] 文字生成影片（純文字，不需要圖片）
+    if (mode === "text2video") {
+      if (userPlan === 'free') {
+        await supabase.from('profiles').update({ credits: currentCredits }).eq('email', userEmail);
+        return NextResponse.json({ error: "文字生成影片為付費功能，請先升級方案" }, { status: 403 });
+      }
+      if (videoModel === "seedance") {
+        prediction = await replicate.predictions.create({
+          model: "bytedance/seedance-2.0",
+          input: {
+            prompt: videoPrompt || "cinematic scene, smooth motion, high quality",
+            duration: duration || 5,
+            aspect_ratio: aspectRatio || "16:9",
+            resolution: "720p",
+            generate_audio: true,
+          },
+        });
+      } else {
+        prediction = await replicate.predictions.create({
+          model: "kwaivgi/kling-v3-omni-video",
+          input: {
+            prompt: videoPrompt || "cinematic scene, smooth motion, high quality",
+            duration: duration || 5,
+            aspect_ratio: aspectRatio || "16:9",
+            mode: "standard",
+          },
+        });
+      }
+      return NextResponse.json(prediction);
+    }
+    // [DNA_PATCH_END]
     if (mode === "video") {
       if (videoModel === "seedance") {
         // [DNA_PATCH_START] Seedance + Omni-Reference

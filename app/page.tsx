@@ -48,6 +48,13 @@ const [videoPrompt, setVideoPrompt] = useState("");
 const [videoRatio, setVideoRatio] = useState("1:1");
 const [videoDuration, setVideoDuration] = useState(5);
 const [showVideoModal, setShowVideoModal] = useState(false);
+const [showText2VideoModal, setShowText2VideoModal] = useState(false);
+const [text2videoPrompt, setText2videoPrompt] = useState("");
+const [text2videoTranslated, setText2videoTranslated] = useState<string | null>(null);
+const [isText2videoTranslating, setIsText2videoTranslating] = useState(false);
+const [text2videoRatio, setText2videoRatio] = useState("16:9");
+const [text2videoDuration, setText2videoDuration] = useState(5);
+const [text2videoModel, setText2videoModel] = useState<"kling" | "seedance">("kling");
 const [videoModel, setVideoModel] = useState<"kling" | "seedance">("kling");
 // [DNA_PATCH_START] Omni-Reference 狀態
 const [omniRef1, setOmniRef1] = useState<string | null>(null); // 第二角色
@@ -615,6 +622,42 @@ const handleBatchGenerate = async () => {
 };
 // [DNA_PATCH_END]
 // [DNA_PATCH_END]
+// [DNA_PATCH_START] handleText2Video
+const handleText2Video = async () => {
+  const finalPrompt = text2videoTranslated || text2videoPrompt;
+  if (!finalPrompt.trim()) { alert("⚠️ 請輸入影片描述"); return; }
+  if (plan === "free") { alert("⚠️ 文字生成影片為付費功能，請先升級方案！"); return; }
+
+  setShowText2VideoModal(false);
+  setLoading(true);
+  setError("");
+  setSeconds(0);
+  setGenType("video");
+
+  try {
+    const res = await fetch("/api/character", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mode: "text2video",
+        userEmail: session?.user?.email,
+        videoPrompt: finalPrompt,
+        videoModel: text2videoModel,
+        aspectRatio: text2videoRatio,
+        duration: text2videoDuration,
+      }),
+    });
+    const data = await res.json();
+    if (data.id) checkStatus(data.id, "video");
+    else {
+      const msg = data.error || "文字生成影片啟動失敗";
+      setError(msg);
+      alert("⚠️ " + msg);
+      setLoading(false);
+    }
+  } catch (err) { setError("連線失敗"); setLoading(false); }
+};
+// [DNA_PATCH_END]
   // 5. ✨ 接通影片生成
 // [DNA_PATCH_START] handleGenerateVideo 加入 omniRefs
 const handleGenerateVideo = async (imageUrl: string, prompt?: string, ratio?: string, duration?: number, model?: string, omniRefs?: (string | null)[]) => {
@@ -699,7 +742,7 @@ return (
     { key: "image",        label: "🎨 生成角色圖片",   desc: "1點" },
     { key: "video",        label: "🎬 圖片轉影片",     desc: "4-6點" },
     { key: "upload",       label: "📁 上傳照片轉影片", desc: "4-6點" },
-    { key: "text2video",   label: "✨ 文字生成影片",   desc: "Coming Soon" },
+{ key: "text2video",   label: "✨ 文字生成影片",   desc: "Kling 4-6點 / Seedance 13-27點" },
   ] as const;
   return (
     <div className="mb-4">
@@ -708,37 +751,43 @@ return (
       </p>
       <div className="grid grid-cols-2 gap-2">
         {modes.map((m) => {
-          const isDisabled = m.key === "text2video";
+          const isPaidOnly = m.key === "text2video" && plan === "free";
           const isActive   = generationMode === m.key;
           return (
             <button
               key={m.key}
               type="button"
-              disabled={isDisabled}
               onClick={() => {
-                if (isDisabled) return;
+                if (isPaidOnly) {
+                  alert("⚠️ 文字生成影片為付費功能，請先升級方案！\n\n前往儲值頁面升級 👉 /pricing");
+                  return;
+                }
                 setGenerationMode(m.key);
                 if (m.key === "video")  { setShowVideoModal(true);  }
                 if (m.key === "upload") { setShowUploadModal(true); }
+                if (m.key === "text2video") { setShowText2VideoModal(true); }
               }}
               className={`relative flex flex-col items-start px-4 py-3 rounded-2xl border text-left
                 transition-all active:scale-95
-                ${isDisabled
-                  ? "opacity-30 cursor-not-allowed border-white/8 bg-white/3"
+                ${isPaidOnly
+                  ? "border-yellow-400/20 bg-yellow-400/5 cursor-pointer"
                   : isActive
                     ? "border-[#89f5a2]/60 bg-[#89f5a2]/10 shadow-sm shadow-[#89f5a2]/10"
                     : "border-white/10 bg-white/4 hover:border-[#89f5a2]/30 hover:bg-white/8"
                 }`}
             >
               <span className={`text-sm font-bold leading-tight
-                ${isDisabled ? "text-white/30" : isActive ? "text-[#89f5a2]" : "text-white/70"}`}>
+                ${isPaidOnly ? "text-yellow-300/70" : isActive ? "text-[#89f5a2]" : "text-white/70"}`}>
                 {m.label}
               </span>
               <span className={`text-[10px] mt-0.5
-                ${isDisabled ? "text-white/20" : isActive ? "text-[#89f5a2]/60" : "text-white/30"}`}>
-                {m.desc}
+                ${isPaidOnly ? "text-yellow-400/50" : isActive ? "text-[#89f5a2]/60" : "text-white/30"}`}>
+                {isPaidOnly ? "💎 付費方案限定" : m.desc}
               </span>
-              {isActive && !isDisabled && (
+              {isPaidOnly && (
+                <span className="absolute top-2 right-2 text-[9px] text-yellow-400/70 font-black">升級</span>
+              )}
+              {isActive && !isPaidOnly && (
                 <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#89f5a2]" />
               )}
             </button>
@@ -859,13 +908,13 @@ return (
                         {!selectedPersona && (
                         <div className="mt-2 space-y-1">
                           <div className="relative">
-                            <input
-                              type="text"
-                              value={customPersona}
-                              onChange={(e) => { setCustomPersona(e.target.value); setCustomPersonaTranslated(null); }}
-                              placeholder="或自行輸入角色描述...可中文！輸入後點「翻譯」按鈕幫你翻譯 🌐"
-                              className="w-full px-3 py-2 pr-16 rounded-xl bg-white/5 border border-white/10 text-white text-xs placeholder-white/25 focus:outline-none focus:border-yellow-400/40"
-                            />
+                            <textarea
+  rows={2}
+  value={customPersona}
+  onChange={(e) => { setCustomPersona(e.target.value); setCustomPersonaTranslated(null); }}
+  placeholder="或自行輸入角色描述...可中文輸入！輸入後點「翻譯」按鈕幫你翻譯 🌐"
+  className="w-full px-3 py-2 pr-16 rounded-xl bg-white/5 border border-white/10 text-white text-xs placeholder-white/25 focus:outline-none focus:border-yellow-400/40 resize-none leading-relaxed"
+/>
                             {hasChinese(customPersona) && !customPersonaTranslated && (
                               <button type="button"
                                 onClick={async () => {
@@ -952,13 +1001,13 @@ return (
                       {!selectedPersonality && !selectedJob && (
                         <div className="space-y-1">
                           <div className="relative">
-                            <input
-                              type="text"
-                              value={customPersonality}
-                              onChange={(e) => { setCustomPersonality(e.target.value); setCustomPersonalityTranslated(null); }}
-                              placeholder="或自行輸入個性描述...可中文！輸入後點「翻譯」按鈕幫你翻譯 🌐"
-                              className="w-full px-3 py-2 pr-16 rounded-xl bg-white/5 border border-white/10 text-white text-xs placeholder-white/25 focus:outline-none focus:border-purple-400/40"
-                            />
+                            <textarea
+  rows={2}
+  value={customPersonality}
+  onChange={(e) => { setCustomPersonality(e.target.value); setCustomPersonalityTranslated(null); }}
+  placeholder="或自行輸入個性描述...可中文輸入！輸入後點「翻譯」按鈕幫你翻譯 🌐"
+  className="w-full px-3 py-2 pr-16 rounded-xl bg-white/5 border border-white/10 text-white text-xs placeholder-white/25 focus:outline-none focus:border-purple-400/40 resize-none leading-relaxed"
+/>
                             {hasChinese(customPersonality) && !customPersonalityTranslated && (
                               <button type="button"
                                 onClick={async () => {
@@ -1037,13 +1086,13 @@ return (
                       {!selectedScene && (
                         <div className="mt-2 space-y-1">
                           <div className="relative">
-                            <input
-                              type="text"
-                              value={customScene}
-                              onChange={(e) => { setCustomScene(e.target.value); setCustomSceneTranslated(null); }}
-                              placeholder="或自行輸入場景描述...可中文！輸入後點「翻譯」按鈕幫你翻譯 🌐"
-                              className="w-full px-3 py-2 pr-16 rounded-xl bg-white/5 border border-white/10 text-white text-xs placeholder-white/25 focus:outline-none focus:border-blue-400/40"
-                            />
+                            <textarea
+  rows={2}
+  value={customScene}
+  onChange={(e) => { setCustomScene(e.target.value); setCustomSceneTranslated(null); }}
+  placeholder="或自行輸入場景描述...可中文輸入！輸入後點「翻譯」按鈕幫你翻譯 🌐"
+  className="w-full px-3 py-2 pr-16 rounded-xl bg-white/5 border border-white/10 text-white text-xs placeholder-white/25 focus:outline-none focus:border-blue-400/40 resize-none leading-relaxed"
+/>
                             {hasChinese(customScene) && !customSceneTranslated && (
                               <button type="button"
                                 onClick={async () => {
@@ -1734,6 +1783,147 @@ onClick={() => {
 // [DNA_PATCH_END]
           className="py-3 rounded-xl bg-gradient-to-r from-[#89f5a2] to-[#4ade80] text-[#0d2318] text-sm font-bold hover:opacity-90 transition-all"
         >
+          🎬 開始生成
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+{/* [DNA_PATCH_END] */}
+{/* [DNA_PATCH_START] 文字生成影片 Modal */}
+{showText2VideoModal && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+    <div className="w-full max-w-md bg-[#0d2318] border border-white/10 rounded-3xl p-6 space-y-5 shadow-2xl overflow-y-auto max-h-[90vh]">
+
+      {/* 標題 */}
+      <div className="text-center">
+        <p className="text-3xl mb-1">✨</p>
+        <h2 className="text-white font-black text-xl">文字生成影片</h2>
+        <p className="text-white/40 text-xs mt-1">用文字描述你想要的影片內容</p>
+      </div>
+
+      {/* 付費限定提醒 */}
+      <div className="flex items-center gap-2 px-3 py-2.5 bg-yellow-400/10 border border-yellow-400/20 rounded-xl">
+        <span className="text-yellow-300 text-sm">💎</span>
+        <p className="text-yellow-300 text-xs font-bold">付費方案限定功能 — 免費用戶無法使用</p>
+      </div>
+
+      {/* 模型選擇 */}
+      <div>
+        <p className="text-white/40 text-xs font-bold tracking-widest uppercase mb-2">選擇模型</p>
+        <div className="grid grid-cols-2 gap-2">
+          <button type="button"
+            onClick={() => setText2videoModel("kling")}
+            className={`flex flex-col items-start px-4 py-3 rounded-2xl border transition-all ${
+              text2videoModel === "kling"
+                ? "border-[#89f5a2]/60 bg-[#89f5a2]/10"
+                : "border-white/10 bg-white/4 hover:border-[#89f5a2]/30"
+            }`}>
+            <span className={`text-sm font-bold ${text2videoModel === "kling" ? "text-[#89f5a2]" : "text-white/70"}`}>⚡ Kling 3.0</span>
+            <span className="text-[10px] text-white/30 mt-0.5">推薦・5秒 {plan === "pro" ? "4" : plan === "standard" ? "5" : "6"}點</span>
+          </button>
+          <button type="button"
+            onClick={() => setText2videoModel("seedance")}
+            className={`flex flex-col items-start px-4 py-3 rounded-2xl border transition-all ${
+              text2videoModel === "seedance"
+                ? "border-orange-400/60 bg-orange-400/10"
+                : "border-white/10 bg-white/4 hover:border-orange-400/30"
+            }`}>
+            <span className={`text-sm font-bold ${text2videoModel === "seedance" ? "text-orange-300" : "text-white/70"}`}>✨ Seedance 2.0</span>
+            <span className="text-[10px] text-white/30 mt-0.5">高畫質・5秒 {plan === "pro" ? "13" : plan === "standard" ? "15" : "17"}點</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 比例選擇 */}
+      <div>
+        <p className="text-white/40 text-xs font-bold tracking-widest uppercase mb-2">影片比例</p>
+        <div className="flex flex-wrap gap-2">
+          {["16:9","9:16","1:1","4:3","3:4"].map(r => (
+            <button key={r} type="button"
+              onClick={() => setText2videoRatio(r)}
+              className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                text2videoRatio === r
+                  ? "bg-[#89f5a2]/20 text-[#89f5a2] border-[#89f5a2]/50"
+                  : "bg-white/5 text-white/50 border-white/10 hover:border-white/30"
+              }`}>{r}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* 秒數選擇 */}
+      <div>
+        <p className="text-white/40 text-xs font-bold tracking-widest uppercase mb-2">影片長度</p>
+        <div className="flex gap-2">
+          {[5, 10].map(d => (
+            <button key={d} type="button"
+              onClick={() => setText2videoDuration(d)}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-bold border transition-all ${
+                text2videoDuration === d
+                  ? "bg-[#89f5a2]/20 text-[#89f5a2] border-[#89f5a2]/50"
+                  : "bg-white/5 text-white/50 border-white/10 hover:border-white/30"
+              }`}>
+              {d} 秒
+              <span className="text-[10px] block opacity-60 mt-0.5">
+                {text2videoModel === "seedance"
+                  ? (d === 5 ? (plan === "pro" ? "13" : plan === "standard" ? "15" : "17") : (plan === "pro" ? "21" : plan === "standard" ? "25" : "27")) + "點"
+                  : (d === 5 ? (plan === "pro" ? "4" : plan === "standard" ? "5" : "6") : (plan === "pro" ? "6" : plan === "standard" ? "7" : "8")) + "點"
+                }
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 影片描述輸入 */}
+      <div>
+        <p className="text-white/40 text-xs font-bold tracking-widest uppercase mb-2">影片描述 <span className="text-red-400">*</span></p>
+        <div className="relative">
+          <textarea
+            rows={3}
+            value={text2videoPrompt}
+            onChange={(e) => { setText2videoPrompt(e.target.value); setText2videoTranslated(null); }}
+            placeholder="描述你想要的影片內容...可以輸入中文！&#10;例如：一個女生在海邊散步，陽光灑落，慢動作鏡頭"
+            className="w-full px-3 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder-white/25 focus:outline-none focus:border-[#89f5a2]/40 resize-none leading-relaxed"
+          />
+          {hasChinese(text2videoPrompt) && !text2videoTranslated && (
+            <button type="button"
+              onClick={async () => {
+                setIsText2videoTranslating(true);
+                try {
+                  const res = await fetch("/api/translate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: text2videoPrompt }) });
+                  const data = await res.json();
+                  if (data.translated) setText2videoTranslated(data.translated);
+                } finally { setIsText2videoTranslating(false); }
+              }}
+              disabled={isText2videoTranslating}
+              className="absolute bottom-2 right-2 px-2 py-1 bg-[#89f5a2]/20 border border-[#89f5a2]/40 text-[#89f5a2] text-xs rounded-lg font-bold disabled:opacity-40">
+              {isText2videoTranslating ? "翻譯中..." : "🌐 翻譯"}
+            </button>
+          )}
+        </div>
+        {text2videoTranslated && (
+          <div className="flex gap-2 items-center mt-1.5 px-3 py-2 bg-[#89f5a2]/10 border border-[#89f5a2]/20 rounded-xl">
+            <p className="text-[#89f5a2] text-xs flex-1">{text2videoTranslated}</p>
+            <button type="button" onClick={() => { setText2videoPrompt(text2videoTranslated); setText2videoTranslated(null); }}
+              className="text-xs px-2 py-0.5 bg-[#89f5a2]/30 text-[#89f5a2] rounded-lg font-bold flex-shrink-0">採用</button>
+            <button type="button" onClick={() => setText2videoTranslated(null)}
+              className="text-xs text-white/30 flex-shrink-0">略過</button>
+          </div>
+        )}
+      </div>
+
+      {/* 按鈕 */}
+      <div className="grid grid-cols-2 gap-3 pt-1">
+        <button type="button"
+          onClick={() => { setShowText2VideoModal(false); setGenerationMode("image"); }}
+          className="py-3 rounded-xl border border-white/10 text-white/50 text-sm font-bold hover:bg-white/5 transition-all">
+          取消
+        </button>
+        <button type="button"
+          onClick={handleText2Video}
+          disabled={!text2videoPrompt.trim()}
+          className="py-3 rounded-xl bg-gradient-to-r from-[#89f5a2] to-[#4ade80] text-[#0d2318] text-sm font-black disabled:opacity-40 hover:opacity-90 transition-all">
           🎬 開始生成
         </button>
       </div>
