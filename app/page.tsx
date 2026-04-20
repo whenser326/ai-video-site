@@ -643,7 +643,12 @@ const handleGenerateVideo = async (imageUrl: string, prompt?: string, ratio?: st
       });
       const data = await res.json();
       if (data.id) checkStatus(data.id, "video");
-      else { setError(data.error || "影片啟動失敗"); setLoading(false); }
+      else { 
+  const msg = data.error || "影片啟動失敗";
+  setError(msg);
+  alert("⚠️ " + msg);
+  setLoading(false); 
+}
     } catch (err) { setError("影片連線失敗"); setLoading(false); }
   };
 
@@ -1638,7 +1643,12 @@ return (
                   <img src={item.state} className="w-full max-h-24 object-contain rounded-lg" />
                   <button
                     type="button"
-                    onClick={(e) => { e.preventDefault(); item.setter(null); }}
+                    onClick={(e) => { 
+  e.preventDefault(); 
+  item.setter(null);
+  const input = e.currentTarget.closest('label')?.querySelector('input[type="file"]') as HTMLInputElement;
+  if (input) input.value = '';
+}}
                     className="absolute top-1 right-1 w-5 h-5 bg-red-500/80 rounded-full text-white text-xs flex items-center justify-center font-black hover:bg-red-500"
                   >×</button>
                 </div>
@@ -1928,7 +1938,12 @@ onClick={() => {
                   <img src={item.state} className="w-full max-h-24 object-contain rounded-lg" />
                   <button
                     type="button"
-                    onClick={(e) => { e.preventDefault(); item.setter(null); }}
+                    onClick={(e) => { 
+  e.preventDefault(); 
+  item.setter(null);
+  const input = e.currentTarget.closest('label')?.querySelector('input[type="file"]') as HTMLInputElement;
+  if (input) input.value = '';
+}}
                     className="absolute top-1 right-1 w-5 h-5 bg-red-500/80 rounded-full text-white text-xs flex items-center justify-center font-black hover:bg-red-500"
                   >×</button>
                 </div>
