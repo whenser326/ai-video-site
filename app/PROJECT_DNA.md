@@ -346,6 +346,11 @@ TURNSTILE_SECRET_KEY=（已設定於 Vercel Sensitive，備用，需要時去 Cl
 ✅ 後台會員管理新增補點功能（正負數、選填備註、紀錄寫入 credit_adjustments）
 ✅ 後台會員頁底部新增補點紀錄區塊（最近50筆，正數黃色/負數紅色，有紀錄才顯示）
 ✅ 後台點數設定新增 TTS 下載點數、Wav2Lip 合成點數（入門/標準/專業可調）
+✅ 後台點數設定新增影片生成點數（Kling 5秒/10秒、Seedance 5秒/10秒、Omni加費，入門/標準/專業可調）
+✅ Kling/Seedance/Omni 點數改為從 admin_settings 動態抓取（route.ts + pricing頁面同步）
+✅ pricing 頁面影片費用改為動態顯示（從 settings-public API 抓取，後台改一次前台自動同步）
+✅ settings-public API 新增影片點數 key 回傳
+✅ 後台所有頁面標題從 h1 改為 p（修正 globals.css h1 樣式導致後台標題變形問題）
 ✅ 主頁 Hero 佔位符（16:9 深綠佔位，預留 /hero.mp4 位置）
 ✅ 主頁 Step 1 模式選擇（4個模式 2×2 格線，文字生成影片 Coming Soon）
 ✅ 主頁 Steps 2–6 手風琴流程（角色人設/個性職業/選場景/鏡頭角度/補充細節）
@@ -441,6 +446,8 @@ SEO keywords meta tag 對 Google 無效（2009年起），真正有效的是 og:
 Vercel 預設網址 SEO 意義不大，等綁自訂域名後再認真優化
 換域名後必須同步更新：NEXTAUTH_URL、Google OAuth 授權URI、綠界金流回調網址
 主頁 page.tsx 的 <main> 必須保留 bg-gradient-to-br from-[#0d2318] via-[#1a3a25] to-[#2d5a3d]，否則背景漸層消失
+後台所有頁面標題禁止使用 <h1> 標籤，必須用 <p> 或 <div>，否則 globals.css 的 h1 樣式會導致標題變形（scaleY/scaleX/text-stroke）
+admin_settings 影片點數 key 清單：kling_5s/10s_starter/standard/pro、seedance_5s/10s_starter/standard/pro、omni_extra_starter/standard/pro（共15個，後台沒設定時 route.ts 有 fallback 預設值）
 GlobalHeader 的 <div className="h-12" /> 佔位符不可移除，否則頁面內容會被 fixed header 蓋住
 state 宣告必須放在 return() 之前的邏輯區，不能插入 JSX 區塊內（曾發生 activeStep 等 state 被誤插入 JSX 導致大量 TS 錯誤）
 Cloudflare Turnstile Site Key：0x4AAAAAC-_FUGtx2UlyaYF（公開無妨）
