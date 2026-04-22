@@ -94,6 +94,7 @@ Storage bucket：character-images（Public，已設定 allow all policy）
 表格：admin_settings（欄位：key, value, updated_at）
 表格：referral_logs（欄位：id, referrer_email, referred_email, plan, credits_awarded, created_at）
 表格：model_tracker（欄位：id, model_id, model_name, status, note, created_at, updated_at）
+表格：pending_orders（欄位：id, order_no, email, plan, referral_code, created_at）
 
 5. 定價方案
 
@@ -174,14 +175,11 @@ Omni-Reference 定價邏輯：入門+6點、標準+5點、專業+4點（固定�
 金流主力：藍新金流（NewebPay）（審核已通過，商店代號：MS1827821756，可開始串接）
 藍新商店代號：MS1827821756
 藍新 HashKey/HashIV：已寫入 .env.local（變數名稱：NEWEBPAY_MERCHANT_ID / NEWEBPAY_HASH_KEY / NEWEBPAY_HASH_IV）
-Checkout API：app/api/stripe/checkout/route.ts（待換成藍新）
-Webhook：app/api/stripe/webhook/route.ts（付款成功自動加點數+更新plan+更新history_limit）
+Checkout API：app/api/newebpay/checkout/route.ts（藍新，已完成）
+Notify API：app/api/newebpay/notify/route.ts（付款成功自動加點數+更新plan+更新history_limit+分潤）
+Return API：app/api/newebpay/return/route.ts（付款完成跳轉回/pricing?success=1）
 圖片上傳 API：app/api/upload-image/route.ts
 退點 API：POST /api/character 帶 { refundCredits, userEmail } 即退點
-Stripe Price IDs（沙盒，待廢棄）：
-入門包：price_1TGH0OAhme0aGntHGmDHuxR8
-標準包：price_1TGJ1KAhme0aGntHzNOHQHfF
-專業包：price_1TGJ2KAhme0aGntH48ertjOZ
 成人站金流規劃：
 - 主力：SubscribeStar（個人可申請，信用卡訂閱制，約10%手續費）
 - 補充：NexaPay（免申請，信用卡付款收穩定幣，1-3%手續費，較新平台）
@@ -375,10 +373,15 @@ TURNSTILE_SECRET_KEY=（已設定於 Vercel Sensitive，備用，需要時去 Cl
 ✅ route.ts 新增 text2video 分支（付費驗證、Seedance 無 Omni 定價、Kling 純文字生成）
 ✅ 頁面載入 API 順序優化：credits 優先載入，saved-characters 延遲 400ms 打，避免同時三支 API 競爭
 ✅ 結果區按鈕 UI 美化（鎖定/收藏/批次漸層升級，批次按鈕顯示限制原因，解除鎖定加紅色 hover，推薦橫幅加 icon 底色）
+✅ 藍新金流程式碼串接完成（checkout/notify/return三支API + pending_orders資料表）
+✅ pricing/page.tsx handleBuy 從Stripe改為藍新隱藏表單POST
+✅ 各路由加入 loading.tsx（app/、app/pricing/、app/characters/）
+✅ next.config.ts 加入圖片快取（Supabase + Replicate remotePatterns，minimumCacheTTL 30天）
 
 12. 待完成項目（下一步）
 
-⬜ 藍新金流串接上線（審核通過後，替換 Stripe checkout/webhook）
+⬜ 藍新信用卡審核通過後實測付款流程
+⬜ 審核通過後移除舊 Stripe 相關程式碼（app/api/stripe/）
 ⬜ 人設標籤第二層（角色個性/職業/背景設定，存入角色資料）
 ⬜ 每日簽到領點數（每天1點，連續7天額外+3點，需防多帳號濫用）
 ⬜ 首頁 Hero 循環影片製作完成後替換（/public/hero.mp4，1200×675px 16:9 無聲）
@@ -446,7 +449,7 @@ SubscribeStar 對帳單顯示「Subscribestar」，NexaPay 用戶收到穩定幣
 文字生成影片不帶 omniRefs，Seedance 費用使用無 Omni 基本定價（入門5秒17點/10秒27點・標準5秒15點/10秒25點・專業5秒13點/10秒21點）
 SEO keywords meta tag 對 Google 無效（2009年起），真正有效的是 og:title/og:description
 Vercel 預設網址 SEO 意義不大，等綁自訂域名後再認真優化
-換域名後必須同步更新：NEXTAUTH_URL、Google OAuth 授權URI、綠界金流回調網址
+換域名後必須同步更新：NEXTAUTH_URL、Google OAuth 授權URI、藍新金流 Notify URL / Return URL
 主頁 page.tsx 的 <main> 必須保留 bg-gradient-to-br from-[#0d2318] via-[#1a3a25] to-[#2d5a3d]，否則背景漸層消失
 後台所有頁面標題禁止使用 <h1> 標籤，必須用 <p> 或 <div>，否則 globals.css 的 h1 樣式會導致標題變形（scaleY/scaleX/text-stroke）
 admin_settings 影片點數 key 清單：kling_5s/10s_starter/standard/pro、seedance_5s/10s_starter/standard/pro、omni_extra_starter/standard/pro（共15個，後台沒設定時 route.ts 有 fallback 預設值）
@@ -500,6 +503,9 @@ git add -A
 git commit -m "說明"
 git push
 setTimeout 內的 fetch 必須用 session?.user?.email（optional chaining），不能用 session.user.email，否則 TypeScript 報 ts(18048) 錯誤
+藍新 MerchantOrderNo 長度上限 30 字元，禁止把 email 編碼塞入，改用 pending_orders 資料表暫存訂單資訊
+藍新 notify 用 POST formData 傳送，不是 JSON，必須用 req.formData() 解析
+藍新 AES 解密後需 .replace(/\x00+$/, "").trim() 去除 padding
 
 14. 未來功能規劃（優先順序）
 
