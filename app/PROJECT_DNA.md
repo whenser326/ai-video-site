@@ -2,6 +2,7 @@
 
 1. 溝通與開發準則 (Absolute Rules)
 
+新視窗收到 PROJECT_DNA.md 後，禁止總結內容，只需回覆「已讀取 PROJECT_DNA.md，遵守所有規則，請開始。」
 禁止美化：不准修飾語氣、不准加客套話、不准過度包裝。
 精確執行：嚴格遵守細節。
 格式要求：所有解決方案必須以「代碼塊」呈現，支援一鍵複製。
@@ -490,7 +491,7 @@ h1 {
 globals.css 不在 git 追蹤中，需要用 git add -f app/globals.css 才能強制加入
 GlobalHeader 未登入狀態：if (!session) 不能直接 return null，必須顯示登入按鈕，否則登出後無法重新登入。已修正為未登入時顯示 LOGO + 「使用 Google 登入」按鈕（justify-between 左LOGO右登入）。
 GlobalHeader 登入按鈕必須用 signIn("google", {}, { prompt: "select_account" })，不能用 signIn("google")，否則手機版會強制使用已登入的 Google 帳號，無法切換其他帳號
-
+GlobalHeader 登出按鈕必須用 signOut({ callbackUrl: "/" })，不能用 signOut()，否則登出後再登入不會跳選帳號畫面
 BUG 修正記錄（2026/04/19）：
 - 未登入畫面 LOGO 消失：GlobalHeader if (!session) 分支缺少 LOGO，改為 justify-between 左放LOGO右放登入按鈕
 - 未登入顯示鎖定角色列：localStorage 讀取必須包在 if (session?.user?.email) 內，否則未登入也會讀到舊值
@@ -506,6 +507,7 @@ setTimeout 內的 fetch 必須用 session?.user?.email（optional chaining），
 藍新 MerchantOrderNo 長度上限 30 字元，禁止把 email 編碼塞入，改用 pending_orders 資料表暫存訂單資訊
 藍新 notify 用 POST formData 傳送，不是 JSON，必須用 req.formData() 解析
 藍新 AES 解密後需 .replace(/\x00+$/, "").trim() 去除 padding
+
 
 14. 未來功能規劃（優先順序）
 

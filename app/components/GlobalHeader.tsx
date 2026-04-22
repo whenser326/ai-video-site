@@ -72,7 +72,7 @@ if (!session) return (
         </span>
       </button>
       <button
-        onClick={() => signIn("google")}
+        onClick={() => signIn("google", {}, { prompt: "select_account" })}
         className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold
                    border border-[#89f5a2]/30 text-[#89f5a2] bg-[#89f5a2]/10 hover:bg-[#89f5a2]/20 transition-all"
       >
@@ -164,7 +164,7 @@ if (!session) return (
               </button>
             ))}
             <button
-  onClick={() => signOut()}
+  onClick={() => signOut({ callbackUrl: "/" })}
   className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold
              border border-white/10 text-white/30 bg-white/5 hover:bg-white/15 transition-all"
 >
@@ -218,7 +218,7 @@ if (!session) return (
           ))}
           {/* 登出（只在 Drawer 裡顯示） */}
           <button
-            onClick={() => signOut()}
+            onClick={() => signOut({ callbackUrl: "/" })}
             className="flex items-center gap-2 w-full px-4 py-3 rounded-xl text-sm font-bold
                        border border-white/10 text-white/30 bg-white/3 hover:bg-white/8 transition-all"
           >
