@@ -171,7 +171,7 @@ Omni-Reference 定價邏輯：入門+6點、標準+5點、專業+4點（固定�
 
 目前：Stripe 已確認不支援台灣商家收款，放棄使用
 目前：綠界 ECPay 申請未通過，放棄使用
-金流主力：藍新金流（NewebPay）（商店審核中，待審核通過後串接）
+金流主力：藍新金流（NewebPay）（審核已通過，商店代號：MS1827821756，可開始串接）
 藍新商店代號：MS1827821756
 藍新 HashKey/HashIV：已寫入 .env.local（變數名稱：NEWEBPAY_MERCHANT_ID / NEWEBPAY_HASH_KEY / NEWEBPAY_HASH_IV）
 Checkout API：app/api/stripe/checkout/route.ts（待換成藍新）

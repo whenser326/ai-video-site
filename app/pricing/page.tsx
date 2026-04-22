@@ -108,16 +108,34 @@ export default function PricingPage() {
   const handleBuy = async (plan: string) => {
     if (!session) { signIn("google"); return; }
     try {
-      const res = await fetch("/api/stripe/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan, email: session.user?.email, referralCode: referralCode.trim().toUpperCase() }),
-      });
-      const data = await res.json();
-      if (data.url) {
-        localStorage.removeItem("referral_code");
-        window.location.href = data.url;
-      } else alert("付款連結建立失敗，請重試");
+      const res = await fetch("/api/newebpay/checkout", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ plan, email: session.user?.email, referralCode: referralCode.trim().toUpperCase() }),
+});
+const data = await res.json();
+if (data.TradeInfo) {
+  localStorage.removeItem("referral_code");
+  // 建立隱藏表單 POST 到藍新
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = data.url;
+  const fields = {
+    MerchantID: data.MerchantID,
+    TradeInfo: data.TradeInfo,
+    TradeSha: data.TradeSha,
+    Version: data.Version,
+  };
+  Object.entries(fields).forEach(([key, value]) => {
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = key;
+    input.value = value as string;
+    form.appendChild(input);
+  });
+  document.body.appendChild(form);
+  form.submit();
+} else alert("付款連結建立失敗，請重試");
     } catch (err) {
       alert("連線失敗，請重試");
     }
