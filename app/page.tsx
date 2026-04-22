@@ -183,29 +183,28 @@ if (session?.user?.email) {
           // [DNA_PATCH_END]
         });
 
-      // 抓取點數 (包含新用戶免費 3 張的邏輯應在後端 profiles 表格初始值設定為 3)
+      // [DNA_PATCH_START] 點數優先載入，收藏角色延遲 400ms
       fetch(`/api/user/credits?email=${session.user.email}`)
         .then(res => res.json())
         .then(data => {
-  setCredits(data.credits);
-  setPlan(data.plan || 'free');
-});
-// [DNA_PATCH_START] 載入收藏角色
-fetch(`/api/saved-characters?email=${session.user.email}`)
-  .then(res => res.json())
-  .then(data => {
-    if (Array.isArray(data)) {
-      setSavedCharacters(data);
-      // [DNA_PATCH_START] 找到鎖定角色對應的 id
-      const lockedUrl = localStorage.getItem('locked_character');
-      if (lockedUrl) {
-        const matched = data.find((c: any) => c.image_url === lockedUrl);
-        if (matched) setLockedCharacterId(matched.id);
-      }
+          setCredits(data.credits);
+          setPlan(data.plan || 'free');
+        });
+      setTimeout(() => {
+        fetch(`/api/saved-characters?email=${session?.user?.email}`)
+          .then(res => res.json())
+          .then(data => {
+            if (Array.isArray(data)) {
+              setSavedCharacters(data);
+              const lockedUrl = localStorage.getItem('locked_character');
+              if (lockedUrl) {
+                const matched = data.find((c: any) => c.image_url === lockedUrl);
+                if (matched) setLockedCharacterId(matched.id);
+              }
+            }
+          });
+      }, 400);
       // [DNA_PATCH_END]
-    }
-  });
-// [DNA_PATCH_END]
     }
   }, [session]);
   // [DNA_PATCH_START] Wav2Lip 倒數計時
@@ -1404,7 +1403,7 @@ return (
       </div>
 {/* [DNA_PATCH_START] 結果區操作按鈕整合 */}
 {prediction?.output && !genType.includes('video') && (
-  <div className="mt-3 px-4 space-y-3">
+  <div className="mt-4 px-4 space-y-2.5">
 
     {/* 主要操作：一排三顆 */}
     <div className="grid grid-cols-3 gap-2">
@@ -1435,18 +1434,18 @@ return (
             }
           } catch { alert('鎖定失敗，請重試'); }
         }}
-        className="flex flex-col items-center gap-1 py-3 bg-[#89f5a2]/10 border border-[#89f5a2]/30 text-[#89f5a2] rounded-xl text-xs font-bold hover:bg-[#89f5a2]/20 transition-all active:scale-95"
+        className="flex flex-col items-center gap-1.5 py-3.5 bg-gradient-to-b from-[#89f5a2]/15 to-[#89f5a2]/5 border border-[#89f5a2]/40 text-[#89f5a2] rounded-2xl text-xs font-black hover:from-[#89f5a2]/25 hover:to-[#89f5a2]/10 hover:border-[#89f5a2]/60 transition-all active:scale-95 shadow-sm shadow-[#89f5a2]/10"
       >
-        <span className="text-base">🎯</span>
+        <span className="text-lg">🎯</span>
         <span>鎖定角色</span>
       </button>
 
       {/* 收藏此角色 */}
       <button
         onClick={() => { setSaveCharacterName(""); setShowSaveModal(true); }}
-        className="flex flex-col items-center gap-1 py-3 bg-yellow-400/10 border border-yellow-400/30 text-yellow-300 rounded-xl text-xs font-bold hover:bg-yellow-400/20 transition-all active:scale-95"
+        className="flex flex-col items-center gap-1.5 py-3.5 bg-gradient-to-b from-yellow-400/15 to-yellow-400/5 border border-yellow-400/40 text-yellow-300 rounded-2xl text-xs font-black hover:from-yellow-400/25 hover:to-yellow-400/10 hover:border-yellow-400/60 transition-all active:scale-95 shadow-sm shadow-yellow-400/10"
       >
-        <span className="text-base">⭐</span>
+        <span className="text-lg">⭐</span>
         <span>收藏角色</span>
       </button>
 
@@ -1457,19 +1456,24 @@ return (
           if (!lockedCharacterUrl) { alert('⚠️ 批次生成必須先鎖定角色'); return; }
           setShowBatchModal(true);
         }}
-        className={`flex flex-col items-center gap-1 py-3 rounded-xl text-xs font-bold border transition-all active:scale-95 ${
+        className={`flex flex-col items-center gap-1.5 py-3.5 rounded-2xl text-xs font-black border transition-all active:scale-95 ${
           plan !== 'free' && lockedCharacterUrl
-            ? 'bg-blue-500/10 border-blue-500/30 text-blue-300 hover:bg-blue-500/20'
-            : 'bg-white/4 border-white/10 text-white/25'
+            ? 'bg-gradient-to-b from-blue-500/15 to-blue-500/5 border-blue-400/40 text-blue-300 hover:from-blue-500/25 hover:border-blue-400/60 shadow-sm shadow-blue-400/10'
+            : 'bg-white/3 border-white/8 text-white/20 cursor-not-allowed'
         }`}
       >
-        <span className="text-base">🎭</span>
+        <span className="text-lg">🎭</span>
         <span>批次生成</span>
+        {(plan === 'free' || !lockedCharacterUrl) && (
+          <span className="text-[9px] text-white/20 font-normal -mt-0.5">
+            {plan === 'free' ? '付費限定' : '需鎖定角色'}
+          </span>
+        )}
       </button>
     </div>
 
     {/* 次要操作：解除鎖定 + 上傳轉影片 */}
-    <div className="grid grid-cols-2 gap-2">
+    <div className={`grid gap-2 ${lockedCharacterUrl ? 'grid-cols-2' : 'grid-cols-1'}`}>
       {lockedCharacterUrl && (
         <button
           onClick={async () => {
@@ -1481,15 +1485,16 @@ return (
             });
             localStorage.removeItem('locked_character');
             setLockedCharacterUrl(null);
+            setLockedCharacterId(null);
           }}
-          className="py-2.5 bg-white/4 border border-white/10 text-white/40 rounded-xl text-xs font-bold hover:bg-white/8 transition-all active:scale-95"
+          className="py-2.5 bg-white/3 border border-white/10 text-white/35 rounded-xl text-xs font-bold hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-400/60 transition-all active:scale-95"
         >
           🔓 解除鎖定
         </button>
       )}
       <button
         onClick={() => setShowUploadModal(true)}
-        className={`py-2.5 bg-[#89f5a2]/8 border border-[#89f5a2]/20 text-[#89f5a2]/60 rounded-xl text-xs font-bold hover:bg-[#89f5a2]/15 transition-all active:scale-95 ${lockedCharacterUrl ? '' : 'col-span-2'}`}
+        className="py-2.5 bg-[#89f5a2]/6 border border-[#89f5a2]/20 text-[#89f5a2]/55 rounded-xl text-xs font-bold hover:bg-[#89f5a2]/12 hover:border-[#89f5a2]/35 hover:text-[#89f5a2]/80 transition-all active:scale-95"
       >
         📁 上傳照片轉影片
       </button>
@@ -1498,15 +1503,33 @@ return (
     {/* 推薦賺點橫幅 */}
     <button
       onClick={() => setShowReferralModal(true)}
-      className="w-full flex items-center gap-3 px-4 py-2 bg-yellow-400/8 border border-yellow-400/20 rounded-xl hover:bg-yellow-400/15 transition-all group"
+      className="w-full flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-yellow-400/10 to-amber-500/5 border border-yellow-400/25 rounded-2xl hover:from-yellow-400/18 hover:border-yellow-400/40 transition-all group"
     >
-      <span className="text-base">✨</span>
-      <div className="text-left flex-1">
-        <p className="text-yellow-300 text-sm font-black">推薦好友賺點數</p>
-        <p className="text-white/30 text-xs">推薦升級即得獎勵</p>
+      <div className="w-8 h-8 rounded-xl bg-yellow-400/15 flex items-center justify-center flex-shrink-0">
+        <span className="text-base">🎁</span>
       </div>
-      <span className="text-yellow-300/40 text-xs group-hover:translate-x-0.5 transition-transform">→</span>
+      <div className="text-left flex-1 min-w-0">
+        <p className="text-yellow-300 text-sm font-black leading-tight">推薦好友賺點數</p>
+        <p className="text-white/30 text-[11px] mt-0.5">推薦升級最高可得獎勵點數</p>
+      </div>
+      <span className="text-yellow-400/50 text-sm group-hover:translate-x-0.5 transition-transform flex-shrink-0">›</span>
     </button>
+
+    {/* 成人專區入口（暫時隱藏） */}
+    {false && (
+      <button
+        className="w-full flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-pink-500/8 to-rose-500/5 border border-pink-500/20 rounded-2xl hover:from-pink-500/15 hover:border-pink-500/35 transition-all group opacity-60"
+      >
+        <div className="w-8 h-8 rounded-xl bg-pink-500/15 flex items-center justify-center flex-shrink-0">
+          <span className="text-base">🔞</span>
+        </div>
+        <div className="text-left flex-1 min-w-0">
+          <p className="text-pink-300 text-sm font-black leading-tight">成人專區</p>
+          <p className="text-white/25 text-[11px] mt-0.5">即將開放 · 需年齡驗證</p>
+        </div>
+        <span className="text-xs px-2 py-0.5 bg-pink-500/15 text-pink-300/60 rounded-full border border-pink-500/15 flex-shrink-0">Coming Soon</span>
+      </button>
+    )}
 
   </div>
 )}

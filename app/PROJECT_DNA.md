@@ -373,6 +373,8 @@ TURNSTILE_SECRET_KEY=（已設定於 Vercel Sensitive，備用，需要時去 Cl
 ✅ 文字生成影片 Modal（模型選擇/比例/秒數/描述輸入/中翻英，付費限定，免費用戶點擊顯示升級提示）
 ✅ handleText2Video 函式（mode: "text2video"，不需圖片，直接呼叫 Kling 或 Seedance）
 ✅ route.ts 新增 text2video 分支（付費驗證、Seedance 無 Omni 定價、Kling 純文字生成）
+✅ 頁面載入 API 順序優化：credits 優先載入，saved-characters 延遲 400ms 打，避免同時三支 API 競爭
+✅ 結果區按鈕 UI 美化（鎖定/收藏/批次漸層升級，批次按鈕顯示限制原因，解除鎖定加紅色 hover，推薦橫幅加 icon 底色）
 
 12. 待完成項目（下一步）
 
@@ -484,6 +486,7 @@ h1 {
 - 若出現 Turbopack FATAL error，先讀 panic log：type C:\Users\123\AppData\Local\Temp\next-panic-*.log
 globals.css 不在 git 追蹤中，需要用 git add -f app/globals.css 才能強制加入
 GlobalHeader 未登入狀態：if (!session) 不能直接 return null，必須顯示登入按鈕，否則登出後無法重新登入。已修正為未登入時顯示 LOGO + 「使用 Google 登入」按鈕（justify-between 左LOGO右登入）。
+GlobalHeader 登入按鈕必須用 signIn("google", {}, { prompt: "select_account" })，不能用 signIn("google")，否則手機版會強制使用已登入的 Google 帳號，無法切換其他帳號
 
 BUG 修正記錄（2026/04/19）：
 - 未登入畫面 LOGO 消失：GlobalHeader if (!session) 分支缺少 LOGO，改為 justify-between 左放LOGO右放登入按鈕
@@ -496,6 +499,7 @@ git add -f app/globals.css
 git add -A
 git commit -m "說明"
 git push
+setTimeout 內的 fetch 必須用 session?.user?.email（optional chaining），不能用 session.user.email，否則 TypeScript 報 ts(18048) 錯誤
 
 14. 未來功能規劃（優先順序）
 
