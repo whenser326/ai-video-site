@@ -16,6 +16,12 @@ const PLAN_HISTORY_LIMIT: Record<string, number> = {
   pro: 30,
 };
 
+const PLAN_CREDITS: Record<string, number> = {
+  starter: 30,
+  standard: 80,
+  pro: 200,
+};
+
 function aesDecrypt(encrypted: string): string {
   const decipher = crypto.createDecipheriv("aes-256-cbc", HASH_KEY, HASH_IV);
   decipher.setAutoPadding(false);
@@ -38,20 +44,20 @@ export async function POST(req: NextRequest) {
     // AES 解密
     const decrypted = aesDecrypt(tradeInfo);
     const params = new URLSearchParams(decrypted);
-
     const merchantOrderNo = params.get("MerchantOrderNo") || "";
-    const amt = params.get("Amt") || "0";
 
-    // 從 MerchantOrderNo 解析 plan / email / referralCode
-    // 格式：CF{timestamp}_{plan}_{base64email}_{referralCode}
-    const parts = merchantOrderNo.split("_");
-    if (parts.length < 4) {
-      return NextResponse.json({ error: "Invalid order format" }, { status: 400 });
+    // 從 pending_orders 查訂單資訊
+    const { data: order } = await supabase
+      .from("pending_orders")
+      .select("email, plan, referral_code")
+      .eq("order_no", merchantOrderNo)
+      .single();
+
+    if (!order) {
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
-    const plan = parts[1];
-    const email = Buffer.from(parts[2], "base64url").toString("utf8");
-    const referralCode = parts[3] === "none" ? null : parts[3];
+    const { email, plan, referral_code } = order;
 
     // 取得現有 profile
     const { data: profile } = await supabase
@@ -59,12 +65,6 @@ export async function POST(req: NextRequest) {
       .select("credits, referred_by")
       .eq("email", email)
       .single();
-
-    const PLAN_CREDITS: Record<string, number> = {
-      starter: 30,
-      standard: 80,
-      pro: 200,
-    };
 
     const addCredits = PLAN_CREDITS[plan] ?? 0;
     const currentCredits = profile?.credits ?? 0;
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
         credits: currentCredits + addCredits,
         plan: plan,
         history_limit: PLAN_HISTORY_LIMIT[plan] ?? 5,
-        ...(referralCode && !profile?.referred_by ? { referred_by: referralCode } : {}),
+        ...(referral_code && !profile?.referred_by ? { referred_by: referral_code } : {}),
       })
       .eq("email", email);
 
@@ -115,6 +115,12 @@ export async function POST(req: NextRequest) {
         }
       }
     }
+
+    // 刪除已處理的訂單
+    await supabase
+      .from("pending_orders")
+      .delete()
+      .eq("order_no", merchantOrderNo);
 
     return NextResponse.json({ received: true });
   } catch (error: any) {
