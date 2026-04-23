@@ -149,8 +149,8 @@ if (data.TradeInfo) {
       </div>
 
       <div className="max-w-4xl mx-auto relative z-10">
-        <button onClick={() => router.push('/')} className="mb-8 flex items-center gap-2 text-white/40 hover:text-white/70 transition-colors text-sm">
-          ← 返回主頁
+        <button onClick={() => router.push('/')} className="mb-8 flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 rounded-full text-white/50 text-xs font-bold hover:bg-white/10 hover:text-white/70 transition-all">
+          ← 返回首頁
         </button>
 
         <div

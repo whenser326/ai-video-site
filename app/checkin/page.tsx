@@ -62,7 +62,15 @@ export default function CheckinPage() {
     <main className="flex min-h-screen flex-col items-center px-3 sm:px-4 pt-2 pb-8 bg-gradient-to-br from-[#0d2318] via-[#1a3a25] to-[#2d5a3d]">
       <div className="h-12" />
       <div className="w-full max-w-lg mt-4 space-y-4">
-
+{/* 返回按鈕 */}
+        <div className="flex items-center mb-2">
+          <button
+            onClick={() => router.push('/')}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 rounded-full text-white/50 text-xs font-bold hover:bg-white/10 hover:text-white/70 transition-all"
+          >
+            ← 返回首頁
+          </button>
+        </div>
         {/* 標題 */}
         <div className="text-center mb-2">
           <p className="text-4xl mb-2">📅</p>

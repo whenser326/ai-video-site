@@ -37,9 +37,9 @@ export default function CharactersPage() {
         <div className="flex items-center gap-3 mb-6 mt-2">
           <button
             onClick={() => router.push('/')}
-            className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-full text-white/50 text-xs font-bold hover:bg-white/10 transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 rounded-full text-white/50 text-xs font-bold hover:bg-white/10 hover:text-white/70 transition-all"
           >
-            ← 返回
+            ← 返回首頁
           </button>
           <h1 className="text-white font-black text-xl">🎭 我的角色</h1>
         </div>
