@@ -527,6 +527,11 @@ Code Splitting 注意（2026/04/23）：
 - Android 用 App 內建瀏覽器登入出現 disallowed_useragent 是 Google OAuth 限制，叫用戶改用 Chrome，不需改程式碼
 BUG 修正（2026/04/23）：
 - 鎖定按鈕解除後殘留「🔄 鎖定中...」：刪除 if (btn) btn.textContent = '🔄 鎖定中...' 這行即可修復
+LINE 內建瀏覽器登入問題（2026/04/23）：
+- 從 LINE 點連結進來會出現 disallowed_useragent，Google 擋掉非標準瀏覽器登入
+- 修法：GlobalHeader.tsx 登入按鈕 onClick 加入 ua.includes('Line/') 偵測
+- 偵測到 LINE 瀏覽器時，自動在網址後加 openExternalBrowser=1 參數，LINE 會自動跳出去用外部瀏覽器開啟
+- 這樣用戶就能正常 Google 登入，不需要手動複製網址
 
 14. 未來功能規劃（優先順序）
 

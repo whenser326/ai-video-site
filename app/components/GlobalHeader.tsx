@@ -72,7 +72,17 @@ if (!session) return (
         </span>
       </button>
       <button
-        onClick={() => signIn("google", {}, { prompt: "select_account" })}
+        onClick={() => {
+  const ua = navigator.userAgent;
+  const isInAppBrowser = ua.includes('Line/') || ua.includes('FBAN') || ua.includes('FBAV') || ua.includes('Instagram') || ua.includes('WhatsApp') || ua.includes('Twitter');
+if (isInAppBrowser) {
+    window.location.href = window.location.href +
+      (window.location.href.includes('?') ? '&' : '?') +
+      'openExternalBrowser=1';
+    return;
+  }
+  signIn("google", {}, { prompt: "select_account" });
+}}
         className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold
                    border border-[#89f5a2]/30 text-[#89f5a2] bg-[#89f5a2]/10 hover:bg-[#89f5a2]/20 transition-all"
       >
