@@ -10,6 +10,10 @@ interface SaveCharacterModalProps {
   selectedPersonality: string;
   selectedJob: string;
   customPersonality: string;
+  selectedHair: string;
+  selectedEye: string;
+  selectedBody: string;
+  customAppearance: string;
   predictionOutput: string | null;
   userEmail: string | null | undefined;
   plan: string;
@@ -24,6 +28,10 @@ export default function SaveCharacterModal({
   selectedPersonality,
   selectedJob,
   customPersonality,
+  selectedHair,
+  selectedEye,
+  selectedBody,
+  customAppearance,
   predictionOutput,
   userEmail,
   plan,
@@ -57,7 +65,6 @@ export default function SaveCharacterModal({
             disabled={isSaving}
             onClick={async () => {
               if (!predictionOutput) return;
-              // isSaving 由父層 page.tsx 控制，這裡直接呼叫 API
               const res = await fetch("/api/saved-characters", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -67,7 +74,7 @@ export default function SaveCharacterModal({
                   image_url: predictionOutput,
                   plan,
                   description:
-                    [selectedPersonality, selectedJob, customPersonality]
+                    [selectedPersonality, selectedJob, customPersonality, selectedHair, selectedEye, selectedBody, customAppearance]
                       .filter(Boolean)
                       .join("・") || null,
                 }),

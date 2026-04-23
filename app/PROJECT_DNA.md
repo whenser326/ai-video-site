@@ -387,15 +387,11 @@ TURNSTILE_SECRET_KEY=（已設定於 Vercel Sensitive，備用，需要時去 Cl
 
 12. 待完成項目（下一步）
 
-⬜ page.tsx Code Splitting：將6個 Modal 拆成獨立元件用 dynamic import 懶載入
-   - 對象：批次生成Modal、TTS Modal、Wav2Lip Modal、推薦賺點Modal、收藏角色Modal、影片設定Modal、文字生成影片Modal
-   - 目的：減少首屏 JS bundle 大小，改善手機載入速度
-   - 做法：每個Modal建立獨立元件檔案，page.tsx用 dynamic(() => import(...), { ssr: false }) 引入
-⬜ 藍新信用卡審核通過後實測付款流程
-⬜ 審核通過後移除舊 Stripe 相關程式碼（app/api/stripe/）
 ⬜ 人設標籤第二層（角色個性/職業/背景設定，存入角色資料）
 ⬜ 每日簽到領點數（每天1點，連續7天額外+3點，需防多帳號濫用）
 ⬜ 首頁 Hero 循環影片製作完成後替換（/public/hero.mp4，1200×675px 16:9 無聲）
+⬜ 藍新信用卡審核通過後實測付款流程
+⬜ 審核通過後移除舊 Stripe 相關程式碼（app/api/stripe/）
 ⬜ Vercel 升級為付費版 Pro（$20 USD/月）— 預計 2026 年 5 月底前完成（網站已正式上線有商業收費，Hobby 條款禁止商業用途）
 ⬜ 成人站架構規劃（獨立網域、獨立服務、獨立金流）
 ⬜ 成人站身份驗證系統（上傳身份證、後台審核、adult_verified欄位）
@@ -527,11 +523,11 @@ Code Splitting 注意（2026/04/23）：
 - Android 用 App 內建瀏覽器登入出現 disallowed_useragent 是 Google OAuth 限制，叫用戶改用 Chrome，不需改程式碼
 BUG 修正（2026/04/23）：
 - 鎖定按鈕解除後殘留「🔄 鎖定中...」：刪除 if (btn) btn.textContent = '🔄 鎖定中...' 這行即可修復
-LINE 內建瀏覽器登入問題（2026/04/23）：
-- 從 LINE 點連結進來會出現 disallowed_useragent，Google 擋掉非標準瀏覽器登入
-- 修法：GlobalHeader.tsx 登入按鈕 onClick 加入 ua.includes('Line/') 偵測
-- 偵測到 LINE 瀏覽器時，自動在網址後加 openExternalBrowser=1 參數，LINE 會自動跳出去用外部瀏覽器開啟
-- 這樣用戶就能正常 Google 登入，不需要手動複製網址
+內建瀏覽器登入問題（2026/04/23）：
+- 從 LINE/FB/IG/WhatsApp/Twitter 內建瀏覽器點連結進來會出現 disallowed_useragent，Google 擋掉非標準瀏覽器登入
+- 修法：GlobalHeader.tsx 登入按鈕 onClick 偵測 ua，包含 Line/ / FBAN / FBAV / Instagram / WhatsApp / Twitter 任一字串即觸發
+- 偵測到內建瀏覽器時，自動在網址後加 openExternalBrowser=1，跳出去用外部瀏覽器開啟
+- 變數名稱：isInAppBrowser
 
 14. 未來功能規劃（優先順序）
 

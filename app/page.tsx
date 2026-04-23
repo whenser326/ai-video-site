@@ -31,6 +31,14 @@ const IMAGE_COUNTDOWN = 60; // 圖片預估 60 秒
 const [generationMode, setGenerationMode] = useState<"image" | "video" | "upload" | "text2video">("image");
 // [DNA_PATCH_START] Steps 2-6 手風琴狀態
 const [activeStep, setActiveStep] = useState<number>(2);
+// [DNA_PATCH_START] STEP 2 外貌特徵 state
+const [selectedHair, setSelectedHair] = useState("");
+const [selectedEye, setSelectedEye] = useState("");
+const [selectedBody, setSelectedBody] = useState("");
+// [DNA_PATCH_START] 外貌特徵自訂輸入
+const [customAppearance, setCustomAppearance] = useState("");
+const [customAppearanceTranslated, setCustomAppearanceTranslated] = useState<string | null>(null);
+const [isCustomAppearanceTranslating, setIsCustomAppearanceTranslating] = useState(false);
 const [selectedPersona, setSelectedPersona] = useState("");
 const [selectedPersonality, setSelectedPersonality] = useState("");
 const [selectedJob, setSelectedJob] = useState("");
@@ -832,8 +840,8 @@ return (
                 <div className="border border-white/8 rounded-2xl overflow-hidden">
                   <button type="button" onClick={() => setActiveStep(isOpen ? 0 : 2)}
                     className="w-full flex items-center gap-3 px-4 py-3 bg-white/4 hover:bg-white/7 transition-all">
-                    <span className="text-[10px] font-black text-white/30 w-12 flex-shrink-0">STEP 2</span>
-                    <span className="text-sm font-bold text-white/80 flex-1 text-left">角色人設</span>
+                    <span className="text-[10px] font-black text-white/30 w-12 flex-shrink-0">STEP 1</span>
+<span className="text-sm font-bold text-white/80 flex-1 text-left">角色風格</span>
                     {summary.length > 0 && !isOpen && (
                       <span className="text-[10px] text-[#89f5a2]/70 truncate max-w-[120px]">
                         {summary.map(v => {
@@ -953,16 +961,142 @@ return (
                         </div>
                       )}
                       </div>
-                      <button type="button" onClick={() => setActiveStep(3)}
-                        className="w-full py-2 text-xs text-white/40 hover:text-white/60 transition-all">
-                        下一步 →
-                      </button>
+                      <button type="button" onClick={() => setActiveStep(25)}
+  className="w-full py-2 text-xs text-white/40 hover:text-white/60 transition-all">
+  下一步 →
+</button>
                     </div>
                   )}
                 </div>
               );
             })()}
-
+{/* STEP 2：外貌特徵（選填，存入 description，不進 prompt） */}
+{(() => {
+  const isOpen = activeStep === 25;
+  const summary = [selectedHair, selectedEye, selectedBody].filter(Boolean);
+  return (
+    <div className="border border-white/8 rounded-2xl overflow-hidden">
+      <button type="button" onClick={() => setActiveStep(isOpen ? 0 : 25)}
+        className="w-full flex items-center gap-3 px-4 py-3 bg-white/4 hover:bg-white/7 transition-all">
+        <span className="text-[10px] font-black text-white/30 w-12 flex-shrink-0">STEP 2</span>
+        <span className="text-sm font-bold text-white/80 flex-1 text-left">外貌特徵</span>
+        {summary.length > 0 && !isOpen && (
+          <span className="text-[10px] text-pink-300/70 truncate max-w-[120px]">{summary.join(" · ")}</span>
+        )}
+        <span className="text-white/20 text-[10px] mr-1">選填</span>
+        <span className="text-white/30 text-xs ml-1">{isOpen ? "▲" : "▼"}</span>
+      </button>
+      {isOpen && (
+        <div className="px-4 pb-4 pt-2 space-y-3 bg-black/20">
+          {/* 髮色 */}
+          <div>
+            <p className="text-white/30 text-[10px] font-bold tracking-wider uppercase mb-2">髮色</p>
+            <div className="flex gap-2 flex-wrap">
+              {[
+                { label: "🖤 黑髮", value: "黑髮" },
+                { label: "🤎 棕髮", value: "棕髮" },
+                { label: "💛 金髮", value: "金髮" },
+                { label: "🤍 銀白髮", value: "銀白髮" },
+                { label: "❤️ 紅髮", value: "紅髮" },
+              ].map((item) => (
+                <button key={item.value} type="button"
+                  onClick={() => setSelectedHair(selectedHair === item.value ? "" : item.value)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                    selectedHair === item.value
+                      ? "bg-pink-400/30 text-pink-300 border-pink-400/60"
+                      : "bg-white/5 text-white/50 border-white/10 hover:border-pink-400/40"
+                  }`}>{item.label}</button>
+              ))}
+            </div>
+          </div>
+          {/* 眼睛 */}
+          <div>
+            <p className="text-white/30 text-[10px] font-bold tracking-wider uppercase mb-2">眼睛</p>
+            <div className="flex gap-2 flex-wrap">
+              {[
+                { label: "⚫ 黑眸", value: "黑眸" },
+                { label: "🔵 藍眸", value: "藍眸" },
+                { label: "🟢 綠眸", value: "綠眸" },
+                { label: "✨ 異色瞳", value: "異色瞳" },
+              ].map((item) => (
+                <button key={item.value} type="button"
+                  onClick={() => setSelectedEye(selectedEye === item.value ? "" : item.value)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                    selectedEye === item.value
+                      ? "bg-pink-400/30 text-pink-300 border-pink-400/60"
+                      : "bg-white/5 text-white/50 border-white/10 hover:border-pink-400/40"
+                  }`}>{item.label}</button>
+              ))}
+            </div>
+          </div>
+          {/* 身材 */}
+          <div>
+            <p className="text-white/30 text-[10px] font-bold tracking-wider uppercase mb-2">身材</p>
+            <div className="flex gap-2 flex-wrap">
+              {[
+                { label: "🌸 嬌小", value: "嬌小" },
+                { label: "🦋 高挑", value: "高挑" },
+                { label: "💪 健壯", value: "健壯" },
+                { label: "🍃 纖細", value: "纖細" },
+              ].map((item) => (
+                <button key={item.value} type="button"
+                  onClick={() => setSelectedBody(selectedBody === item.value ? "" : item.value)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                    selectedBody === item.value
+                      ? "bg-pink-400/30 text-pink-300 border-pink-400/60"
+                      : "bg-white/5 text-white/50 border-white/10 hover:border-pink-400/40"
+                  }`}>{item.label}</button>
+              ))}
+            </div>
+          </div>
+          {!selectedHair && !selectedEye && !selectedBody && (
+            <div className="space-y-1">
+              <p className="text-white/30 text-[10px] font-bold tracking-wider uppercase mb-2">自訂外貌</p>
+              <div className="relative">
+                <textarea
+                  rows={2}
+                  value={customAppearance}
+                  onChange={(e) => { setCustomAppearance(e.target.value); setCustomAppearanceTranslated(null); }}
+                  placeholder="或自行描述外貌特徵...可中文輸入！輸入後點「翻譯」按鈕幫你翻譯 🌐"
+                  className="w-full px-3 py-2 pr-16 rounded-xl bg-white/5 border border-white/10 text-white text-xs placeholder-white/25 focus:outline-none focus:border-pink-400/40 resize-none leading-relaxed"
+                />
+                {hasChinese(customAppearance) && !customAppearanceTranslated && (
+                  <button type="button"
+                    onClick={async () => {
+                      setIsCustomAppearanceTranslating(true);
+                      try {
+                        const res = await fetch("/api/translate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: customAppearance }) });
+                        const data = await res.json();
+                        if (data.translated) setCustomAppearanceTranslated(data.translated);
+                      } finally { setIsCustomAppearanceTranslating(false); }
+                    }}
+                    disabled={isCustomAppearanceTranslating}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 bg-pink-400/20 border border-pink-400/40 text-pink-300 text-[10px] rounded-lg font-bold disabled:opacity-40">
+                    {isCustomAppearanceTranslating ? "翻譯中..." : "🌐 翻譯"}
+                  </button>
+                )}
+              </div>
+              {customAppearanceTranslated && (
+                <div className="flex gap-2 items-center px-2 py-1.5 bg-pink-400/10 border border-pink-400/20 rounded-xl">
+                  <p className="text-pink-300 text-[10px] flex-1">{customAppearanceTranslated}</p>
+                  <button type="button" onClick={() => { setCustomAppearance(customAppearanceTranslated); setCustomAppearanceTranslated(null); }}
+                    className="text-[10px] px-2 py-0.5 bg-pink-400/30 text-pink-300 rounded-lg font-bold flex-shrink-0">採用</button>
+                  <button type="button" onClick={() => setCustomAppearanceTranslated(null)}
+                    className="text-[10px] text-white/30 flex-shrink-0">略過</button>
+                </div>
+              )}
+            </div>
+          )}
+          <p className="text-white/20 text-[10px]">此設定存入角色資料，不影響生成 prompt</p>
+          <button type="button" onClick={() => setActiveStep(3)}
+            className="w-full py-2 text-xs text-white/40 hover:text-white/60 transition-all">
+            下一步 →
+          </button>
+        </div>
+      )}
+    </div>
+  );
+})()}
             {/* Step 3：個性職業 */}
             {(() => {
               const isOpen = activeStep === 3;
@@ -972,7 +1106,7 @@ return (
                   <button type="button" onClick={() => setActiveStep(isOpen ? 0 : 3)}
                     className="w-full flex items-center gap-3 px-4 py-3 bg-white/4 hover:bg-white/7 transition-all">
                     <span className="text-[10px] font-black text-white/30 w-12 flex-shrink-0">STEP 3</span>
-                    <span className="text-sm font-bold text-white/80 flex-1 text-left">個性職業</span>
+<span className="text-sm font-bold text-white/80 flex-1 text-left">個性職業</span>
                     {summary.length > 0 && !isOpen && (
                       <span className="text-[10px] text-purple-300/70 truncate max-w-[120px]">{summary.join(" · ")}</span>
                     )}
@@ -1140,52 +1274,60 @@ return (
               );
             })()}
 
-            {/* Step 5：鏡頭角度（影片模式限定） */}
-            {generationMode !== "image" && (
-              (() => {
-                const isOpen = activeStep === 5;
-                const shotLabels: Record<string,string> = {
-                  "close-up shot, detailed face": "特寫",
-                  "full body shot": "全身鏡",
-                  "low angle shot, looking up": "從下往上",
-                  "orbiting camera, 360 around subject": "環繞鏡頭",
-                  "slow push in, camera moving forward": "慢速推近",
-                };
-                return (
-                  <div className="border border-white/8 rounded-2xl overflow-hidden">
-                    <button type="button" onClick={() => setActiveStep(isOpen ? 0 : 5)}
-                      className="w-full flex items-center gap-3 px-4 py-3 bg-white/4 hover:bg-white/7 transition-all">
-                      <span className="text-[10px] font-black text-white/30 w-12 flex-shrink-0">STEP 5</span>
-                      <span className="text-sm font-bold text-white/80 flex-1 text-left">鏡頭角度</span>
-                      {selectedShot && !isOpen && (
-                        <span className="text-[10px] text-amber-300/70">{shotLabels[selectedShot] || selectedShot}</span>
-                      )}
-                      <span className="text-amber-400/50 text-[10px] mr-1">影片限定</span>
-                      <span className="text-white/30 text-xs">{isOpen ? "▲" : "▼"}</span>
-                    </button>
-                    {isOpen && (
-                      <div className="px-4 pb-4 pt-2 bg-black/20">
-                        <div className="flex gap-2 flex-wrap">
-                          {Object.entries(shotLabels).map(([value, label]) => (
-                            <button key={value} type="button"
-                              onClick={() => setSelectedShot(selectedShot === value ? "" : value)}
-                              className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
-                                selectedShot === value
-                                  ? "bg-amber-400/30 text-amber-300 border-amber-400/60"
-                                  : "bg-white/5 text-white/50 border-white/10 hover:border-amber-400/40"
-                              }`}>{label}</button>
-                          ))}
-                        </div>
-                        <button type="button" onClick={() => setActiveStep(6)}
-                          className="w-full py-2 mt-3 text-xs text-white/40 hover:text-white/60 transition-all">
-                          下一步 →
-                        </button>
-                      </div>
+            {/* STEP 5：鏡頭角度（永遠顯示，圖片模式灰暗不可點） */}
+            {(() => {
+              const isLocked = generationMode === "image";
+              const isOpen = activeStep === 5 && !isLocked;
+              const shotLabels: Record<string,string> = {
+                "close-up shot, detailed face": "特寫",
+                "full body shot": "全身鏡",
+                "low angle shot, looking up": "從下往上",
+                "orbiting camera, 360 around subject": "環繞鏡頭",
+                "slow push in, camera moving forward": "慢速推近",
+              };
+              return (
+                <div className={`border rounded-2xl overflow-hidden transition-all ${
+                  isLocked ? "border-white/4 opacity-40" : "border-white/8"
+                }`}>
+                  <button
+                    type="button"
+                    disabled={isLocked}
+                    onClick={() => !isLocked && setActiveStep(isOpen ? 0 : 5)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 transition-all ${
+                      isLocked ? "bg-white/2 cursor-not-allowed" : "bg-white/4 hover:bg-white/7"
+                    }`}>
+                    <span className="text-[10px] font-black text-white/30 w-12 flex-shrink-0">STEP 5</span>
+                    <span className={`text-sm font-bold flex-1 text-left ${isLocked ? "text-white/30" : "text-white/80"}`}>鏡頭角度</span>
+                    {!isLocked && selectedShot && !isOpen && (
+                      <span className="text-[10px] text-amber-300/70">{shotLabels[selectedShot] || selectedShot}</span>
                     )}
-                  </div>
-                );
-              })()
-            )}
+                    <span className="text-white/25 text-[10px] mr-1">
+                      {isLocked ? "🔒 選影片模式才開放" : "影片限定"}
+                    </span>
+                    {!isLocked && <span className="text-white/30 text-xs">{isOpen ? "▲" : "▼"}</span>}
+                  </button>
+                  {isOpen && (
+                    <div className="px-4 pb-4 pt-2 bg-black/20">
+                      <div className="flex gap-2 flex-wrap">
+                        {Object.entries(shotLabels).map(([value, label]) => (
+                          <button key={value} type="button"
+                            onClick={() => setSelectedShot(selectedShot === value ? "" : value)}
+                            className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                              selectedShot === value
+                                ? "bg-amber-400/30 text-amber-300 border-amber-400/60"
+                                : "bg-white/5 text-white/50 border-white/10 hover:border-amber-400/40"
+                            }`}>{label}</button>
+                        ))}
+                      </div>
+                      <button type="button" onClick={() => setActiveStep(6)}
+                        className="w-full py-2 mt-3 text-xs text-white/40 hover:text-white/60 transition-all">
+                        下一步 →
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Step 6：自由輸入 */}
             {(() => {
@@ -2092,6 +2234,10 @@ onClick={() => {
     selectedPersonality={selectedPersonality}
     selectedJob={selectedJob}
     customPersonality={customPersonality}
+    selectedHair={selectedHair}
+selectedEye={selectedEye}
+selectedBody={selectedBody}
+customAppearance={customAppearance}
     predictionOutput={prediction?.output ?? null}
     userEmail={session?.user?.email}
     plan={plan}
