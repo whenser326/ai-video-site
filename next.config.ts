@@ -34,6 +34,14 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async rewrites() {
+    return [
+      {
+        source: "/.well-known/apple-developer-merchantid-domain-association",
+        destination: "/api/apple-pay-verify",
+      },
+    ];
+  },
 };
 
 export default nextConfig;
