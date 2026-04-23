@@ -69,6 +69,9 @@ TTS 試聽防呆更新：
 - 加入 git 追蹤指令：git add -f app/globals.css
 - 修改此類檔案前必須先備份內容到 PROJECT_DNA.md
 每次開始開發前必須先確認現有 page.tsx 包含哪些已完成功能，禁止在沒確認的情況下直接覆蓋或修改，避免已完成功能被蓋掉
+簽到防呆：同帳號每天只能簽一次（比對 checkin_last_date）、同 IP 每天只能一個帳號簽到（比對 checkin_logs）
+簽到獎勵：每日+1點，連續第7天+3點，第14天+5點，第21天+5點，第30天+10點
+簽到時區：台灣時區（Asia/Taipei），用 toLocaleDateString("en-CA") 取得 YYYY-MM-DD 格式
 
 3. 專案核心
 
@@ -96,6 +99,8 @@ Storage bucket：character-images（Public，已設定 allow all policy）
 表格：referral_logs（欄位：id, referrer_email, referred_email, plan, credits_awarded, created_at）
 表格：model_tracker（欄位：id, model_id, model_name, status, note, created_at, updated_at）
 表格：pending_orders（欄位：id, order_no, email, plan, referral_code, created_at）
+表格：checkin_logs（欄位：id, email, ip, checkin_date, streak, credits_earned, created_at）
+profiles 新增欄位：checkin_last_date（date）、checkin_streak（int4, default 0）
 
 5. 定價方案
 
@@ -384,11 +389,14 @@ TURNSTILE_SECRET_KEY=（已設定於 Vercel Sensitive，備用，需要時去 Cl
 ✅ page.tsx Code Splitting 完成（7個Modal拆成獨立元件，dynamic import懶載入）
    - app/components/BatchModal.tsx / TtsModal.tsx / ReferralModal.tsx / SaveCharacterModal.tsx / VideoSettingsModal.tsx / Text2VideoModal.tsx
 ✅ 鎖定角色按鈕刪除 btn.textContent DOM 操作，改靠縮圖列顯示鎖定狀態
+✅ STEP 編號重整（選擇模式無編號，STEP 1角色風格/STEP 2外貌特徵/STEP 3個性職業/STEP 4場景選擇/STEP 5鏡頭角度/STEP 6補充細節）
+✅ STEP 2 外貌特徵新增（髮色/眼睛/身材標籤+自訂輸入含中文翻譯，存入description不進prompt，選填）
+✅ STEP 5 鏡頭角度改為永遠顯示，圖片模式灰暗不可點，顯示「🔒 選影片模式才開放」
+✅ 每日簽到功能上線（app/checkin/page.tsx + app/api/checkin/route.ts）
+✅ GlobalHeader 漢堡選單加入「📅 每日簽到」入口
 
 12. 待完成項目（下一步）
 
-⬜ 人設標籤第二層（角色個性/職業/背景設定，存入角色資料）
-⬜ 每日簽到領點數（每天1點，連續7天額外+3點，需防多帳號濫用）
 ⬜ 首頁 Hero 循環影片製作完成後替換（/public/hero.mp4，1200×675px 16:9 無聲）
 ⬜ 藍新信用卡審核通過後實測付款流程
 ⬜ 審核通過後移除舊 Stripe 相關程式碼（app/api/stripe/）

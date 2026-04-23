@@ -61,6 +61,8 @@ export async function POST(req: NextRequest) {
   // 計算獎勵點數
   let bonusCredits = 0;
   if (newStreak === 7) bonusCredits = 3;
+  if (newStreak === 14) bonusCredits = 5;
+  if (newStreak === 21) bonusCredits = 5;
   if (newStreak === 30) bonusCredits = 10;
   const totalCredits = 1 + bonusCredits;
 

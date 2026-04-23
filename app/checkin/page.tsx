@@ -52,8 +52,10 @@ export default function CheckinPage() {
     const day = i + 1;
     const isChecked = day <= currentStreak;
     const isBonus7 = day === 7;
+    const isBonus14 = day === 14;
+    const isBonus21 = day === 21;
     const isBonus30 = day === 30;
-    return { day, isChecked, isBonus7, isBonus30 };
+    return { day, isChecked, isBonus7, isBonus14, isBonus21, isBonus30 };
   });
 
   return (
@@ -112,19 +114,19 @@ export default function CheckinPage() {
         <div className="bg-black/25 backdrop-blur-xl rounded-3xl border border-white/10 p-5">
           <p className="text-white/40 text-xs font-bold uppercase tracking-widest mb-4">簽到進度</p>
           <div className="grid grid-cols-7 gap-2">
-            {cells.map(({ day, isChecked, isBonus7, isBonus30 }) => (
+            {cells.map(({ day, isChecked, isBonus7, isBonus14, isBonus21, isBonus30 }) => (
               <div key={day}
                 className={`relative aspect-square rounded-xl flex flex-col items-center justify-center text-xs font-black border transition-all
                   ${isChecked
                     ? "bg-[#89f5a2]/20 border-[#89f5a2]/50 text-[#89f5a2]"
                     : "bg-white/4 border-white/8 text-white/25"
                   }
-                  ${isBonus7 || isBonus30 ? "ring-1 ring-yellow-400/50" : ""}
+                  ${isBonus7 || isBonus14 || isBonus21 || isBonus30 ? "ring-1 ring-yellow-400/50" : ""}
                 `}>
                 {isChecked ? "✓" : day}
-                {(isBonus7 || isBonus30) && (
+                {(isBonus7 || isBonus14 || isBonus21 || isBonus30) && (
                   <span className="absolute -top-1.5 -right-1.5 text-[8px] bg-yellow-400 text-[#0d2318] rounded-full px-1 font-black leading-tight">
-                    {isBonus7 ? "+3" : "+10"}
+                    {isBonus7 ? "+3" : isBonus14 ? "+5" : isBonus21 ? "+5" : "+10"}
                   </span>
                 )}
               </div>
@@ -151,6 +153,8 @@ export default function CheckinPage() {
           <p className="text-white/40 text-xs font-bold uppercase tracking-widest">獎勵規則</p>
           <p className="text-white/50 text-xs">📅 每日簽到 → +1點</p>
           <p className="text-white/50 text-xs">🎯 連續簽到第7天 → 額外 +3點</p>
+          <p className="text-white/50 text-xs">⭐ 連續簽到第14天 → 額外 +5點</p>
+          <p className="text-white/50 text-xs">⭐ 連續簽到第21天 → 額外 +5點</p>
           <p className="text-white/50 text-xs">🏆 連續簽到第30天 → 額外 +10點</p>
           <p className="text-white/50 text-xs">⚠️ 中斷一天後連續天數重新計算</p>
           <p className="text-white/50 text-xs">📱 每個網路每日限一個帳號簽到</p>
