@@ -516,8 +516,13 @@ setTimeout 內的 fetch 必須用 session?.user?.email（optional chaining），
 ⬜ 自訓角色模型（用戶上傳10-20張圖訓練專屬模型）
 ⬜ 公開畫廊（含匿名選項，需 public_gallery 資料表）
 ⬜ 角色公開/匿名分享功能（三選項：私人/匿名公開/公開分享，預設私人）
+⬜ PWA 支援（讓用戶可將網站加到手機桌面，體驗接近 App，零上架成本）
+⬜ React Native App（前端重寫，後端 API 與 Supabase 完全共用，無需改動）
 
 長期：
 ⬜ Live Portrait 動態呼吸效果（串接 LivePortrait API）
 ⬜ API 開放（讓第三方開發者串接）
 ⬜ LPM 1.0（Anuttacon）— 即時雙向對話角色，一張圖生成即時會說話/聆聽/有表情的AI角色，支援無限長度，待API開放後評估串接，目前僅學術用途，無API
+⬜ App Store 上架評估（主站非成人版本，需確保服務條款/網站內容完全不提成人相關字眼）
+注意：成人站禁止上架 App Store，走獨立網域 + PWA 路線
+注意：AI 生成人物圖片在 Apple 審核屬敏感領域，上架前需法律評估
