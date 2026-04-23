@@ -21,6 +21,19 @@ const nextConfig: NextConfig = {
     ],
     minimumCacheTTL: 2592000, // 圖片快取 30 天
   },
+  async headers() {
+    return [
+      {
+        source: "/.well-known/apple-developer-merchantid-domain-association",
+        headers: [
+          {
+            key: "Content-Type",
+            value: "application/json",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
