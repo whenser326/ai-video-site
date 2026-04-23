@@ -149,39 +149,41 @@ const [batchCurrentIndex, setBatchCurrentIndex] = useState(-1);
 if (session?.user?.email) {
   setLockedCharacterUrl(localStorage.getItem('locked_character'));
 }
+    // [DNA_PATCH_START] history 延遲載入，不阻塞首屏
     if (session?.user?.email) {
-      // 抓取歷史紀錄
-      fetch(`/api/history?email=${session.user.email}`)
-        .then(res => res.json())
-        .then(data => {
-          setHistory(data);
-          // [DNA_PATCH_START] 靈感畫廊：從歷史抓最多4張有 prompt 的圖
-          const FALLBACK_GALLERY = [
-            { title: "迷人貓咪", prompt: "Breathtakingly beautiful cat", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719479381.png" },
-            { title: "韓系男生", prompt: "A handsome Korean man looks at the camera with a smile ~ the background is a men's clothing store", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719447992.png" },
-            { title: "城市女孩", prompt: "Beautiful woman walking on city street", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719327300.png" },
-            { title: "走向鏡頭", prompt: "Slowly walk into the camera ~ getting closer and closer", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775716736592.png" },
-            { title: "貓狗好友", prompt: "Beautiful cat playing with dog", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775658563619.png" },
-            { title: "校園奔跑", prompt: "Running on campus", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775657672714.png" },
-            { title: "健壯男士", prompt: "Handsome man showing off his strong muscles and wiping sweat", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719396914.png" },
-            { title: "沙灘活力", prompt: "A fit woman playing beach volleyball on a tropical beach, action shot, dynamic movement, cinematic lighting", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719296354.png" },
-          ];
-          if (Array.isArray(data)) {
-            const fromHistory = data
-              .filter((item: any) => item.image_url && item.prompt && !item.video_url)
-              .slice(0, 4)
-              .map((item: any) => ({
-                title: "我的作品",
-                prompt: item.prompt,
-                image: item.image_url,
-              }));
-            const combined = [...fromHistory, ...FALLBACK_GALLERY].slice(0, 8);
-            setGalleryItems(combined);
-          } else {
-            setGalleryItems(FALLBACK_GALLERY);
-          }
-          // [DNA_PATCH_END]
-        });
+      setTimeout(() => {
+        fetch(`/api/history?email=${session?.user?.email}`)
+          .then(res => res.json())
+          .then(data => {
+            setHistory(data);
+            // [DNA_PATCH_START] 靈感畫廊：從歷史抓最多4張有 prompt 的圖
+            const FALLBACK_GALLERY = [
+              { title: "迷人貓咪", prompt: "Breathtakingly beautiful cat", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719479381.png" },
+              { title: "韓系男生", prompt: "A handsome Korean man looks at the camera with a smile ~ the background is a men's clothing store", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719447992.png" },
+              { title: "城市女孩", prompt: "Beautiful woman walking on city street", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719327300.png" },
+              { title: "走向鏡頭", prompt: "Slowly walk into the camera ~ getting closer and closer", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775716736592.png" },
+              { title: "貓狗好友", prompt: "Beautiful cat playing with dog", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775658563619.png" },
+              { title: "校園奔跑", prompt: "Running on campus", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775657672714.png" },
+              { title: "健壯男士", prompt: "Handsome man showing off his strong muscles and wiping sweat", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719396914.png" },
+              { title: "沙灘活力", prompt: "A fit woman playing beach volleyball on a tropical beach, action shot, dynamic movement, cinematic lighting", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719296354.png" },
+            ];
+            if (Array.isArray(data)) {
+              const fromHistory = data
+                .filter((item: any) => item.image_url && item.prompt && !item.video_url)
+                .slice(0, 4)
+                .map((item: any) => ({
+                  title: "我的作品",
+                  prompt: item.prompt,
+                  image: item.image_url,
+                }));
+              const combined = [...fromHistory, ...FALLBACK_GALLERY].slice(0, 8);
+              setGalleryItems(combined);
+            } else {
+              setGalleryItems(FALLBACK_GALLERY);
+            }
+            // [DNA_PATCH_END]
+          });
+      }, 1500); // 延遲 1.5 秒，讓首屏點數/登入狀態先跑完
 
       // [DNA_PATCH_START] 點數優先載入，收藏角色延遲 400ms
       fetch(`/api/user/credits?email=${session.user.email}`)
@@ -2298,7 +2300,7 @@ onClick={() => {
 // [DNA_PATCH_END]
               >
                 <div className="w-32 h-32 rounded-2xl border border-white/10 overflow-hidden shadow-lg transition-all duration-200 hover:scale-105 hover:border-[#89f5a2]/50 hover:shadow-[0_0_20px_rgba(137,245,162,0.15)] relative">
-                  <img src={item.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
+                  <img src={item.image} loading="lazy" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-200 flex items-end justify-center pb-2">
                     <span className="text-white text-[10px] font-black opacity-0 group-hover:opacity-100 transition-opacity duration-200 drop-shadow-lg bg-black/50 px-2 py-0.5 rounded-full">套用靈感</span>
                   </div>

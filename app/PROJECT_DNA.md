@@ -378,6 +378,7 @@ TURNSTILE_SECRET_KEY=（已設定於 Vercel Sensitive，備用，需要時去 Cl
 ✅ pricing/page.tsx handleBuy 從Stripe改為藍新隱藏表單POST
 ✅ 各路由加入 loading.tsx（app/、app/pricing/、app/characters/）
 ✅ next.config.ts 加入圖片快取（Supabase + Replicate remotePatterns，minimumCacheTTL 30天）
+✅ Apple Pay 網域驗證完成（public/.well-known + API route + next.config.ts rewrites）
 
 12. 待完成項目（下一步）
 
@@ -400,6 +401,8 @@ TURNSTILE_SECRET_KEY=（已設定於 Vercel Sensitive，備用，需要時去 Cl
 ⬜ 綁定後提交 Google Search Console 驗證所有權
 ⬜ Search Console 提交 sitemap（Next.js 可自動產生 /sitemap.xml）
 ⬜ SEO metadata 優化（og:title / og:description 改為正式內容）
+⬜ 等待藍新回覆 Apple Pay 幕後支付授權串接文件
+⬜ 藍新信用卡/Google Pay/Samsung Pay/WebATM/ATM 審核通過後實測付款流程
 
 13. 已知問題備忘
 
@@ -507,7 +510,7 @@ setTimeout 內的 fetch 必須用 session?.user?.email（optional chaining），
 藍新 MerchantOrderNo 長度上限 30 字元，禁止把 email 編碼塞入，改用 pending_orders 資料表暫存訂單資訊
 藍新 notify 用 POST formData 傳送，不是 JSON，必須用 req.formData() 解析
 藍新 AES 解密後需 .replace(/\x00+$/, "").trim() 去除 padding
-
+Apple Pay 幕後支付需完成網域驗證才能啟用，驗證檔放在 public/.well-known/apple-developer-merchantid-domain-association.txt，透過 app/api/apple-pay-verify/route.ts 讀取並回傳，next.config.ts 加 rewrites 將 /.well-known/apple-developer-merchantid-domain-association 導向 /api/apple-pay-verify
 
 14. 未來功能規劃（優先順序）
 
