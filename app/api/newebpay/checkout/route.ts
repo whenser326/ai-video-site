@@ -63,6 +63,11 @@ export async function POST(req: NextRequest) {
       ClientBackURL: `${process.env.NEXTAUTH_URL}/pricing?cancel=1`,
       LoginType: "0",
       CREDIT: "1",
+      BARCODE: "1",
+      CVS: "1",
+      WEBATM: "1",
+      ATM: "1",
+      UNIONPAY: "1",
     }).toString();
 
     const tradeInfoEncrypted = aesEncrypt(tradeInfo);
