@@ -105,6 +105,11 @@ if (isInAppBrowser) {
       className: 'text-purple-300 border-purple-400/30 bg-purple-400/10 hover:bg-purple-400/20',
     },
     {
+      label: '📅 每日簽到',
+      onClick: () => { router.push('/checkin'); setMenuOpen(false); },
+      className: 'text-blue-300 border-blue-400/30 bg-blue-400/10 hover:bg-blue-400/20',
+    },
+    {
       label: '💳 儲值點數',
       onClick: handleTopUp,
       className: 'text-[#89f5a2] border-[#89f5a2]/30 bg-[#89f5a2]/10 hover:bg-[#89f5a2]/20',
