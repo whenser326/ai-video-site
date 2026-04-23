@@ -7,7 +7,7 @@ export async function GET() {
     process.cwd(),
     "public",
     ".well-known",
-    "apple-developer-merchantid-domain-association"
+    "apple-developer-merchantid-domain-association.txt"
   );
   const content = readFileSync(filePath, "utf-8");
   return new NextResponse(content, {
