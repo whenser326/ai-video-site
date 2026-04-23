@@ -1423,7 +1423,6 @@ return (
         onClick={async () => {
           try {
             const btn = document.activeElement as HTMLButtonElement;
-            if (btn) btn.textContent = '🔄 鎖定中...';
             const res = await fetch("/api/upload-image", {
               method: "POST",
               headers: { "Content-Type": "application/json" },

@@ -381,6 +381,9 @@ TURNSTILE_SECRET_KEY=（已設定於 Vercel Sensitive，備用，需要時去 Cl
 ✅ Apple Pay 網域驗證完成（public/.well-known + API route + next.config.ts rewrites）
 ✅ 首屏效能優化：gallery lazy img + history 延遲1.5秒載入
 ✅ 藍新金流加入 ATM/WebATM/超商條碼/超商代碼/銀聯卡 付款選項
+✅ page.tsx Code Splitting 完成（7個Modal拆成獨立元件，dynamic import懶載入）
+   - app/components/BatchModal.tsx / TtsModal.tsx / ReferralModal.tsx / SaveCharacterModal.tsx / VideoSettingsModal.tsx / Text2VideoModal.tsx
+✅ 鎖定角色按鈕刪除 btn.textContent DOM 操作，改靠縮圖列顯示鎖定狀態
 
 12. 待完成項目（下一步）
 
@@ -393,6 +396,7 @@ TURNSTILE_SECRET_KEY=（已設定於 Vercel Sensitive，備用，需要時去 Cl
 ⬜ 人設標籤第二層（角色個性/職業/背景設定，存入角色資料）
 ⬜ 每日簽到領點數（每天1點，連續7天額外+3點，需防多帳號濫用）
 ⬜ 首頁 Hero 循環影片製作完成後替換（/public/hero.mp4，1200×675px 16:9 無聲）
+⬜ Vercel 升級為付費版 Pro（$20 USD/月）— 預計 2026 年 5 月底前完成（網站已正式上線有商業收費，Hobby 條款禁止商業用途）
 ⬜ 成人站架構規劃（獨立網域、獨立服務、獨立金流）
 ⬜ 成人站身份驗證系統（上傳身份證、後台審核、adult_verified欄位）
 ⬜ 成人站獨立點數系統（adult_credits欄位，與主站完全分離）
@@ -517,6 +521,12 @@ setTimeout 內的 fetch 必須用 session?.user?.email（optional chaining），
 藍新 notify 用 POST formData 傳送，不是 JSON，必須用 req.formData() 解析
 藍新 AES 解密後需 .replace(/\x00+$/, "").trim() 去除 padding
 Apple Pay 幕後支付需完成網域驗證才能啟用，驗證檔放在 public/.well-known/apple-developer-merchantid-domain-association.txt，透過 app/api/apple-pay-verify/route.ts 讀取並回傳，next.config.ts 加 rewrites 將 /.well-known/apple-developer-merchantid-domain-association 導向 /api/apple-pay-verify
+Code Splitting 注意（2026/04/23）：
+- VideoSettingsModal.tsx 的 videoModel/setVideoModel props 型別必須是 "kling" | "seedance"，不能用 string
+- page.tsx dynamic import 只能寫一次，不能重複貼入
+- Android 用 App 內建瀏覽器登入出現 disallowed_useragent 是 Google OAuth 限制，叫用戶改用 Chrome，不需改程式碼
+BUG 修正（2026/04/23）：
+- 鎖定按鈕解除後殘留「🔄 鎖定中...」：刪除 if (btn) btn.textContent = '🔄 鎖定中...' 這行即可修復
 
 14. 未來功能規劃（優先順序）
 
