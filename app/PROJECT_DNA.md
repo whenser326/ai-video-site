@@ -379,9 +379,15 @@ TURNSTILE_SECRET_KEY=（已設定於 Vercel Sensitive，備用，需要時去 Cl
 ✅ 各路由加入 loading.tsx（app/、app/pricing/、app/characters/）
 ✅ next.config.ts 加入圖片快取（Supabase + Replicate remotePatterns，minimumCacheTTL 30天）
 ✅ Apple Pay 網域驗證完成（public/.well-known + API route + next.config.ts rewrites）
+✅ 首屏效能優化：gallery lazy img + history 延遲1.5秒載入
+✅ 藍新金流加入 ATM/WebATM/超商條碼/超商代碼/銀聯卡 付款選項
 
 12. 待完成項目（下一步）
 
+⬜ page.tsx Code Splitting：將6個 Modal 拆成獨立元件用 dynamic import 懶載入
+   - 對象：批次生成Modal、TTS Modal、Wav2Lip Modal、推薦賺點Modal、收藏角色Modal、影片設定Modal、文字生成影片Modal
+   - 目的：減少首屏 JS bundle 大小，改善手機載入速度
+   - 做法：每個Modal建立獨立元件檔案，page.tsx用 dynamic(() => import(...), { ssr: false }) 引入
 ⬜ 藍新信用卡審核通過後實測付款流程
 ⬜ 審核通過後移除舊 Stripe 相關程式碼（app/api/stripe/）
 ⬜ 人設標籤第二層（角色個性/職業/背景設定，存入角色資料）

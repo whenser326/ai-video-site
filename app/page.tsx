@@ -5,6 +5,15 @@ import { useState, useEffect, useRef } from "react";
 // [DNA_PATCH_START] 防止視窗切換時自動刷新
 import { useRouter } from 'next/navigation';
 
+// [DNA_PATCH_START] Code Splitting — dynamic import 懶載入 Modal
+import dynamic from "next/dynamic";
+
+const BatchModal = dynamic(() => import("./components/BatchModal"), { ssr: false });
+const TtsModal = dynamic(() => import("./components/TtsModal"), { ssr: false });
+const ReferralModal = dynamic(() => import("./components/ReferralModal"), { ssr: false });
+const SaveCharacterModal = dynamic(() => import("./components/SaveCharacterModal"), { ssr: false });
+const VideoSettingsModal = dynamic(() => import("./components/VideoSettingsModal"), { ssr: false });
+const Text2VideoModal = dynamic(() => import("./components/Text2VideoModal"), { ssr: false });
 export default function Home() {
   const hasLoadedFromStorage = useRef(false);
   const { data: session } = useSession();
@@ -1577,383 +1586,55 @@ return (
   </div>
 )}
 {/* [DNA_PATCH_END] */}
-{/* [DNA_PATCH_START] 影片設定 Modal */}
+{/* [DNA_PATCH_START] 影片設定 Modal — Code Split */}
 {showVideoModal && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-    <div className="w-full max-w-md bg-[#0d2318] border border-[#89f5a2]/20 rounded-3xl p-6 space-y-4 shadow-2xl overflow-y-auto max-h-[90vh]">
-      <h2 className="text-white font-black text-lg text-center">🎬 影片設定</h2>
-      <p className="text-center text-sm font-black tracking-widest -mt-2" style={{color: '#fb923c'}}>
-            {videoModel === "seedance" ? "✨ Powered by Seedance 1.5 Pro" : "⚡ Powered by Kling 3.0"}
-          </p>
-
-// [DNA_PATCH_START] 模型選擇
-<div>
-  <p className="text-white/40 text-xs mb-2">影片模型</p>
-  <div className="flex flex-col gap-2">
-
-    {/* Kling 3.0 */}
-    <button
-      onClick={() => setVideoModel("kling")}
-      className={`w-full px-4 py-3 rounded-xl text-left border transition-all ${
-        videoModel === "kling"
-          ? "bg-[#89f5a2]/15 border-[#89f5a2] text-white"
-          : "bg-white/5 text-white/50 border-white/10 hover:border-white/30"
-      }`}
-    >
-      <div className="flex items-center justify-between">
-        <span className="font-black text-sm">⚡ Kling 3.0</span>
-        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-          videoModel === "kling" ? "bg-[#89f5a2] text-[#0d2318]" : "bg-white/10 text-white/40"
-        }`}>推薦</span>
-      </div>
-      <p className="text-xs mt-1 opacity-60">4K高解析・角色一致性強・生成快速・CP值最高</p>
-      <p className="text-xs mt-0.5 font-bold" style={{color: '#89f5a2'}}>5秒 4-6點 ／ 10秒 8-12點</p>
-    </button>
-
-    {/* Seedance 2.0 */}
-    <button
-      onClick={() => setVideoModel("seedance")}
-      className={`w-full px-4 py-3 rounded-xl text-left border transition-all ${
-        videoModel === "seedance"
-          ? "bg-[#fb923c]/15 border-[#fb923c] text-white"
-          : "bg-white/5 text-white/50 border-white/10 hover:border-white/30"
-      }`}
-    >
-      <div className="flex items-center justify-between">
-  <span className="text-white font-black text-sm">✨ Seedance 2.0</span>
-  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-[#fb923c] text-white">高畫質溢價</span>
-</div>
-<p className="text-white/50 text-xs mt-1">物理動態超真實・原生音訊・場景特效強</p>
-<p className="text-white/30 text-xs mt-0.5">🔒 Replicate 官方版・非第三方不穩定版</p>
-      <p className="text-xs mt-0.5 font-bold" style={{color: '#fb923c'}}>
-        5秒 {plan === 'starter' ? '17點' : plan === 'standard' ? '15點' : plan === 'pro' ? '13點' : '—'} ／
-10秒 {plan === 'starter' ? '27點' : plan === 'standard' ? '25點' : plan === 'pro' ? '21點' : '—'}
-        　⚠️ 點數較高
-      </p>
-    </button>
-
-  </div>
-</div>
-{/* [DNA_PATCH_END] */}
-      {/* 影片動作指令 */}
-{/* 影片動作指令 */}
-{/* [DNA_PATCH_START] 影片動作指令 + 翻譯 */}
-<div>
-  <p className="text-white/40 text-xs mb-2">影片動作指令（選填）</p>
-  <div className="relative">
-    <textarea
-      value={videoPrompt}
-      onChange={(e) => { setVideoPrompt(e.target.value); setVideoTranslatedPrompt(null); }}
-      placeholder="例如：在雪地打仗、在逛街、跳舞...（中文也可以！輸入後點「翻譯成英文」按鈕，我們幫你自動翻譯 🌐）"
-      rows={2}
-      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder-white/20 resize-none focus:outline-none focus:border-[#89f5a2]/50"
-    />
-    <div className="absolute bottom-2 right-2">
-      {hasChinese(videoPrompt) && !videoTranslatedPrompt && (
-        <button
-          type="button"
-          onClick={handleVideoTranslate}
-          disabled={isVideoTranslating}
-          className="px-2 py-1 bg-[#89f5a2]/20 border border-[#89f5a2]/40 text-[#89f5a2] text-xs rounded-lg font-bold hover:bg-[#89f5a2]/30 transition-all disabled:opacity-40"
-        >
-          {isVideoTranslating ? "翻譯中..." : "🌐 翻譯"}
-        </button>
-      )}
-    </div>
-  </div>
-  {videoTranslatedPrompt && (
-    <div className="mt-2 bg-[#89f5a2]/10 border border-[#89f5a2]/30 rounded-xl p-3 space-y-2">
-      <p className="text-white/40 text-xs font-bold uppercase">🌐 翻譯結果</p>
-      <p className="text-[#89f5a2] text-sm">{videoTranslatedPrompt}</p>
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={() => { setVideoPrompt(videoTranslatedPrompt); setVideoTranslatedPrompt(null); }}
-          className="flex-1 py-1.5 bg-[#89f5a2] text-[#0d2318] rounded-lg text-xs font-black hover:opacity-90 transition-all"
-        >
-          ✅ 採用
-        </button>
-        <button
-          type="button"
-          onClick={() => setVideoTranslatedPrompt(null)}
-          className="px-3 py-1.5 bg-white/5 border border-white/10 text-white/40 rounded-lg text-xs font-bold hover:bg-white/10 transition-all"
-        >
-          略過
-        </button>
-      </div>
-    </div>
-  )}
-</div>
-{/* [DNA_PATCH_END] */}
-{/* [DNA_PATCH_START] Omni-Reference 區塊（Seedance 專屬） */}
-{videoModel === "seedance" && (
-  <div className="border border-[#fb923c]/20 rounded-2xl overflow-hidden">
-    <div className="px-4 py-3 bg-[#fb923c]/5 flex items-center justify-between">
-      <div>
-        <p className="text-[#fb923c] text-xs font-black">✨ Omni-Reference 多參考圖（選填）</p>
-        <p className="text-white/30 text-[10px] mt-0.5">
-          上傳後額外加費：入門+6點・標準+5點・專業+4點
-        </p>
-      </div>
-    </div>
-    <div className="px-4 pb-4 pt-2 space-y-3 bg-black/10">
-      {[
-        { label: "🎭 第二角色", hint: "加入第二個人物", state: omniRef1, setter: setOmniRef1 },
-        { label: "🌄 場景風格", hint: "指定場景或背景風格", state: omniRef2, setter: setOmniRef2 },
-        { label: "🎬 動作參考", hint: "指定動作或姿勢", state: omniRef3, setter: setOmniRef3 },
-      ].map((item, idx) => (
-        <div key={idx}>
-          <p className="text-white/40 text-[10px] font-bold mb-1">{item.label}
-            <span className="text-white/20 font-normal ml-1">（{item.hint}）</span>
-          </p>
-          <label className="block cursor-pointer">
-            <div className={`border border-dashed rounded-xl p-3 text-center transition-all ${
-              item.state
-                ? "border-[#fb923c]/50 bg-[#fb923c]/5"
-                : "border-white/10 hover:border-[#fb923c]/30"
-            }`}>
-              {item.state ? (
-                <div className="relative">
-                  <img src={item.state} className="w-full max-h-24 object-contain rounded-lg" />
-                  <button
-                    type="button"
-                    onClick={(e) => { 
-  e.preventDefault(); 
-  item.setter(null);
-  const input = e.currentTarget.closest('label')?.querySelector('input[type="file"]') as HTMLInputElement;
-  if (input) input.value = '';
-}}
-                    className="absolute top-1 right-1 w-5 h-5 bg-red-500/80 rounded-full text-white text-xs flex items-center justify-center font-black hover:bg-red-500"
-                  >×</button>
-                </div>
-              ) : (
-                <p className="text-white/25 text-xs">點擊上傳圖片</p>
-              )}
-            </div>
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  const reader = new FileReader();
-                  reader.onload = () => item.setter(reader.result as string);
-                  reader.readAsDataURL(file);
-                }
-              }}
-            />
-          </label>
-        </div>
-      ))}
-    </div>
-  </div>
+  <VideoSettingsModal
+    plan={plan}
+    videoModel={videoModel}
+    setVideoModel={setVideoModel}
+    videoPrompt={videoPrompt}
+    setVideoPrompt={setVideoPrompt}
+    videoTranslatedPrompt={videoTranslatedPrompt}
+    setVideoTranslatedPrompt={setVideoTranslatedPrompt}
+    isVideoTranslating={isVideoTranslating}
+    handleVideoTranslate={handleVideoTranslate}
+    videoRatio={videoRatio}
+    setVideoRatio={setVideoRatio}
+    videoDuration={videoDuration}
+    setVideoDuration={setVideoDuration}
+    omniRef1={omniRef1}
+    setOmniRef1={setOmniRef1}
+    omniRef2={omniRef2}
+    setOmniRef2={setOmniRef2}
+    omniRef3={omniRef3}
+    setOmniRef3={setOmniRef3}
+    predictionOutput={prediction?.output ?? null}
+    onClose={() => setShowVideoModal(false)}
+    onGenerate={(refs) => {
+      setShowVideoModal(false);
+      handleGenerateVideo(prediction.output, videoTranslatedPrompt || videoPrompt, videoRatio, videoDuration, videoModel, refs);
+    }}
+  />
 )}
-{/* [DNA_PATCH_END] */}
-      {/* 比例選擇 */}
-      <div>
-        <p className="text-white/40 text-xs mb-2">影片比例</p>
-        <div className="flex gap-2 flex-wrap">
-          {["1:1", "16:9", "9:16", "4:3", "3:4"].map((r) => (
-            <button
-              key={r}
-              onClick={() => setVideoRatio(r)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
-                videoRatio === r
-                  ? "bg-[#89f5a2] text-[#0d2318] border-[#89f5a2]"
-                  : "bg-white/5 text-white/50 border-white/10 hover:border-white/30"
-              }`}
-            >
-              {r}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* 秒數選擇 */}
-      <div>
-        <p className="text-white/40 text-xs mb-2">影片秒數</p>
-        <div className="flex gap-2">
-          {[{ s: 5, label: "5秒", cost: "4-6點" }, { s: 10, label: "10秒", cost: "8-12點" }].map((item) => (
-            <button
-              key={item.s}
-              onClick={() => setVideoDuration(item.s)}
-              className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all ${
-                videoDuration === item.s
-                  ? "bg-[#89f5a2] text-[#0d2318] border-[#89f5a2]"
-                  : "bg-white/5 text-white/50 border-white/10 hover:border-white/30"
-              }`}
-            >
-              {item.label} <span className="opacity-60">{item.cost}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <button
-          onClick={() => setShowVideoModal(false)}
-          className="py-3 rounded-xl border border-white/10 text-white/50 text-sm font-bold hover:bg-white/5 transition-all"
-        >
-          取消
-        </button>
-        <button
-          // [DNA_PATCH_START] 傳入 omniRefs
-onClick={() => {
-  setShowVideoModal(false);
-  const refs = videoModel === "seedance" ? [omniRef1, omniRef2, omniRef3] : [];
-  handleGenerateVideo(prediction.output, videoTranslatedPrompt || videoPrompt, videoRatio, videoDuration, videoModel, refs);
-  setOmniRef1(null); setOmniRef2(null); setOmniRef3(null);
-}}
-// [DNA_PATCH_END]
-          className="py-3 rounded-xl bg-gradient-to-r from-[#89f5a2] to-[#4ade80] text-[#0d2318] text-sm font-bold hover:opacity-90 transition-all"
-        >
-          🎬 開始生成
-        </button>
-      </div>
-    </div>
-  </div>
-)}
-{/* [DNA_PATCH_END] */}
-{/* [DNA_PATCH_START] 文字生成影片 Modal */}
+{/* [DNA_PATCH_START] 文字生成影片 Modal — Code Split */}
 {showText2VideoModal && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-    <div className="w-full max-w-md bg-[#0d2318] border border-white/10 rounded-3xl p-6 space-y-5 shadow-2xl overflow-y-auto max-h-[90vh]">
-
-      {/* 標題 */}
-      <div className="text-center">
-        <p className="text-3xl mb-1">✨</p>
-        <h2 className="text-white font-black text-xl">文字生成影片</h2>
-        <p className="text-white/40 text-xs mt-1">用文字描述你想要的影片內容</p>
-      </div>
-
-      {/* 付費限定提醒 */}
-      <div className="flex items-center gap-2 px-3 py-2.5 bg-yellow-400/10 border border-yellow-400/20 rounded-xl">
-        <span className="text-yellow-300 text-sm">💎</span>
-        <p className="text-yellow-300 text-xs font-bold">付費方案限定功能 — 免費用戶無法使用</p>
-      </div>
-
-      {/* 模型選擇 */}
-      <div>
-        <p className="text-white/40 text-xs font-bold tracking-widest uppercase mb-2">選擇模型</p>
-        <div className="grid grid-cols-2 gap-2">
-          <button type="button"
-            onClick={() => setText2videoModel("kling")}
-            className={`flex flex-col items-start px-4 py-3 rounded-2xl border transition-all ${
-              text2videoModel === "kling"
-                ? "border-[#89f5a2]/60 bg-[#89f5a2]/10"
-                : "border-white/10 bg-white/4 hover:border-[#89f5a2]/30"
-            }`}>
-            <span className={`text-sm font-bold ${text2videoModel === "kling" ? "text-[#89f5a2]" : "text-white/70"}`}>⚡ Kling 3.0</span>
-            <span className="text-[10px] text-white/30 mt-0.5">推薦・5秒 {plan === "pro" ? "4" : plan === "standard" ? "5" : "6"}點</span>
-          </button>
-          <button type="button"
-            onClick={() => setText2videoModel("seedance")}
-            className={`flex flex-col items-start px-4 py-3 rounded-2xl border transition-all ${
-              text2videoModel === "seedance"
-                ? "border-orange-400/60 bg-orange-400/10"
-                : "border-white/10 bg-white/4 hover:border-orange-400/30"
-            }`}>
-            <span className={`text-sm font-bold ${text2videoModel === "seedance" ? "text-orange-300" : "text-white/70"}`}>✨ Seedance 2.0</span>
-            <span className="text-[10px] text-white/30 mt-0.5">高畫質・5秒 {plan === "pro" ? "13" : plan === "standard" ? "15" : "17"}點</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 比例選擇 */}
-      <div>
-        <p className="text-white/40 text-xs font-bold tracking-widest uppercase mb-2">影片比例</p>
-        <div className="flex flex-wrap gap-2">
-          {["16:9","9:16","1:1","4:3","3:4"].map(r => (
-            <button key={r} type="button"
-              onClick={() => setText2videoRatio(r)}
-              className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
-                text2videoRatio === r
-                  ? "bg-[#89f5a2]/20 text-[#89f5a2] border-[#89f5a2]/50"
-                  : "bg-white/5 text-white/50 border-white/10 hover:border-white/30"
-              }`}>{r}</button>
-          ))}
-        </div>
-      </div>
-
-      {/* 秒數選擇 */}
-      <div>
-        <p className="text-white/40 text-xs font-bold tracking-widest uppercase mb-2">影片長度</p>
-        <div className="flex gap-2">
-          {[5, 10].map(d => (
-            <button key={d} type="button"
-              onClick={() => setText2videoDuration(d)}
-              className={`flex-1 py-2.5 rounded-xl text-sm font-bold border transition-all ${
-                text2videoDuration === d
-                  ? "bg-[#89f5a2]/20 text-[#89f5a2] border-[#89f5a2]/50"
-                  : "bg-white/5 text-white/50 border-white/10 hover:border-white/30"
-              }`}>
-              {d} 秒
-              <span className="text-[10px] block opacity-60 mt-0.5">
-                {text2videoModel === "seedance"
-                  ? (d === 5 ? (plan === "pro" ? "13" : plan === "standard" ? "15" : "17") : (plan === "pro" ? "21" : plan === "standard" ? "25" : "27")) + "點"
-                  : (d === 5 ? (plan === "pro" ? "4" : plan === "standard" ? "5" : "6") : (plan === "pro" ? "6" : plan === "standard" ? "7" : "8")) + "點"
-                }
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* 影片描述輸入 */}
-      <div>
-        <p className="text-white/40 text-xs font-bold tracking-widest uppercase mb-2">影片描述 <span className="text-red-400">*</span></p>
-        <div className="relative">
-          <textarea
-            rows={3}
-            value={text2videoPrompt}
-            onChange={(e) => { setText2videoPrompt(e.target.value); setText2videoTranslated(null); }}
-            placeholder="描述你想要的影片內容...可以輸入中文！&#10;例如：一個女生在海邊散步，陽光灑落，慢動作鏡頭"
-            className="w-full px-3 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder-white/25 focus:outline-none focus:border-[#89f5a2]/40 resize-none leading-relaxed"
-          />
-          {hasChinese(text2videoPrompt) && !text2videoTranslated && (
-            <button type="button"
-              onClick={async () => {
-                setIsText2videoTranslating(true);
-                try {
-                  const res = await fetch("/api/translate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: text2videoPrompt }) });
-                  const data = await res.json();
-                  if (data.translated) setText2videoTranslated(data.translated);
-                } finally { setIsText2videoTranslating(false); }
-              }}
-              disabled={isText2videoTranslating}
-              className="absolute bottom-2 right-2 px-2 py-1 bg-[#89f5a2]/20 border border-[#89f5a2]/40 text-[#89f5a2] text-xs rounded-lg font-bold disabled:opacity-40">
-              {isText2videoTranslating ? "翻譯中..." : "🌐 翻譯"}
-            </button>
-          )}
-        </div>
-        {text2videoTranslated && (
-          <div className="flex gap-2 items-center mt-1.5 px-3 py-2 bg-[#89f5a2]/10 border border-[#89f5a2]/20 rounded-xl">
-            <p className="text-[#89f5a2] text-xs flex-1">{text2videoTranslated}</p>
-            <button type="button" onClick={() => { setText2videoPrompt(text2videoTranslated); setText2videoTranslated(null); }}
-              className="text-xs px-2 py-0.5 bg-[#89f5a2]/30 text-[#89f5a2] rounded-lg font-bold flex-shrink-0">採用</button>
-            <button type="button" onClick={() => setText2videoTranslated(null)}
-              className="text-xs text-white/30 flex-shrink-0">略過</button>
-          </div>
-        )}
-      </div>
-
-      {/* 按鈕 */}
-      <div className="grid grid-cols-2 gap-3 pt-1">
-        <button type="button"
-          onClick={() => { setShowText2VideoModal(false); setGenerationMode("image"); }}
-          className="py-3 rounded-xl border border-white/10 text-white/50 text-sm font-bold hover:bg-white/5 transition-all">
-          取消
-        </button>
-        <button type="button"
-          onClick={handleText2Video}
-          disabled={!text2videoPrompt.trim()}
-          className="py-3 rounded-xl bg-gradient-to-r from-[#89f5a2] to-[#4ade80] text-[#0d2318] text-sm font-black disabled:opacity-40 hover:opacity-90 transition-all">
-          🎬 開始生成
-        </button>
-      </div>
-    </div>
-  </div>
+  <Text2VideoModal
+    plan={plan}
+    text2videoModel={text2videoModel}
+    setText2videoModel={setText2videoModel}
+    text2videoRatio={text2videoRatio}
+    setText2videoRatio={setText2videoRatio}
+    text2videoDuration={text2videoDuration}
+    setText2videoDuration={setText2videoDuration}
+    text2videoPrompt={text2videoPrompt}
+    setText2videoPrompt={setText2videoPrompt}
+    text2videoTranslated={text2videoTranslated}
+    setText2videoTranslated={setText2videoTranslated}
+    isText2videoTranslating={isText2videoTranslating}
+    setIsText2videoTranslating={setIsText2videoTranslating}
+    onClose={() => { setShowText2VideoModal(false); setGenerationMode("image"); }}
+    onGenerate={handleText2Video}
+  />
 )}
 {/* [DNA_PATCH_END] */}
 {/* 上傳圖片轉影片 Modal */}
@@ -2353,593 +2034,87 @@ onClick={() => {
         )}
       </div>
       {/* [DNA_PATCH_END] */}
-        {/* [DNA_PATCH_START] TTS Modal */}
+        {/* [DNA_PATCH_START] TTS Modal — Code Split */}
 {showTtsModal && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-    <div className="w-full max-w-sm bg-[#0d2318] border border-purple-500/20 rounded-3xl p-6 space-y-4 shadow-2xl overflow-y-auto max-h-[90vh]">
-      <div className="text-center">
-        <p className="text-3xl mb-1">🎙️</p>
-        <h2 className="text-white font-black text-lg">語音合成</h2>
-        <p className="text-white/40 text-xs mt-1">輸入台詞，讓角色開口說話</p>
-      </div>
-
-      {/* 聲音選擇 */}
-      <div>
-        <p className="text-white/40 text-xs font-bold mb-2">選擇聲音</p>
-        <div className="grid grid-cols-5 gap-2">
-          {[
-            { id: "female-1", label: "👩 低沉女聲" },
-            { id: "female-2", label: "👩 甜美女聲" },
-            { id: "female-3", label: "👩 清晰女聲" },
-            { id: "female-4", label: "👩 活潑女聲" },
-            { id: "female-5", label: "👩 溫柔女聲" },
-            { id: "male-1", label: "👨 專業男聲" },
-            { id: "male-2", label: "👨 溫暖男聲" },
-            { id: "male-3", label: "👨 成熟男聲" },
-            { id: "male-4", label: "👨 旁白男聲" },
-            { id: "male-5", label: "👨 深沉男聲" },
-          ].map((v) => (
-            <button
-              key={v.id}
-              // [DNA_PATCH_START] 切換聲音時先查暫存
-onClick={() => {
-  setTtsVoice(v.id);
-  setTtsTrimmed(false);
-  if (ttsCache[v.id]) {
-    setTtsAudio(ttsCache[v.id]);
-  } else {
-    setTtsAudio(null);
-  }
-}}
-// [DNA_PATCH_END]
-              className={`py-2 rounded-lg text-xs font-bold border transition-all ${
-                ttsVoice === v.id
-                  ? "bg-purple-500/30 text-purple-200 border-purple-500"
-                  : "bg-white/5 text-white/50 border-white/10 hover:border-white/30"
-              }`}
-            >
-              {v.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* 台詞輸入 */}
-      <div>
-        <div className="flex justify-between items-center mb-2">
-          <p className="text-white/40 text-xs font-bold">輸入台詞</p>
-          <p className={`text-xs ${ttsText.length > (videoDuration === 5 ? 30 : 55) ? "text-red-400 font-bold" : "text-white/30"}`}>
-  {ttsText.length}/{videoDuration === 5 ? 30 : 55}字
-  {ttsText.length > (videoDuration === 5 ? 30 : 55) ? "　⚠ 已超過上限，請刪減後再試聽" : ""}
-</p>
-        </div>
-        <textarea
-          value={ttsText}
-          onChange={(e) => { setTtsText(e.target.value); setTtsAudio(null); }}
-          placeholder="中英文皆可，例如：大家好，我是AI生成的角色！"
-          rows={3}
-          maxLength={videoDuration === 5 ? 30 : 55}
-          className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 text-sm resize-none focus:outline-none focus:border-purple-500/50"
-        />
-        {ttsTrimmed && (
-          <p className="text-yellow-300 text-xs mt-1">⚠️ 文字已超過上限，自動截斷</p>
-        )}
-      </div>
-
-      {/* 試聽區 */}
-      {ttsAudio && (
-          <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-3 space-y-3">
-            <p className="text-purple-300 text-xs font-bold">🎵 試聽結果</p>
-            <audio controls className="w-full" src={`data:audio/mp3;base64,${ttsAudio}`} />
-            <button
-              onClick={async () => {
-                const link = document.createElement("a");
-                link.href = `data:audio/mp3;base64,${ttsAudio}`;
-                link.download = `ai-voice-${Date.now()}.mp3`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                const planCredits = plan === 'starter' ? 8 : plan === 'standard' ? 7 : 6;
-                await fetch("/api/character", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ refundCredits: -planCredits, userEmail: session?.user?.email }),
-                });
-                fetch(`/api/user/credits?email=${session?.user?.email}`).then(r => r.json()).then(d => setCredits(d.credits));
-                alert("✅ 語音已下載，點數已扣除！");
-              }}
-              className="w-full py-2 rounded-xl bg-gradient-to-r from-purple-500 to-blue-500 text-white text-sm font-black hover:opacity-90 transition-all"
-            >
-              ⬇️ 下載語音（扣 {plan === 'starter' ? 8 : plan === 'standard' ? 7 : 6} 點）
-            </button>
-
-            {/* [DNA_PATCH_START] Wav2Lip 合成到影片 */}
-            <div className="border border-orange-400/30 bg-orange-400/5 rounded-xl p-3 space-y-2">
-              <p className="text-orange-300 font-black text-sm">🎬 合成到影片（讓角色開口說話）</p>
-              {/* [DNA_PATCH_START] Wav2Lip 進度條 */}
-              {isWav2lipLoading && (
-                <div className="p-4 bg-black/25 rounded-2xl border border-orange-400/20 space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-orange-300 text-xs font-black tracking-widest uppercase">🎬 合成中</span>
-                    <span className="text-white/60 text-xs font-mono">
-                      {wav2lipSeconds >= 120
-                        ? "請保持頁面開啟"
-                        : `剩餘約 ${Math.max(120 - wav2lipSeconds, 0)} 秒`}
-                    </span>
-                  </div>
-                  <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-orange-400 to-red-400 rounded-full transition-all duration-1000"
-                      style={{ width: `${Math.min((wav2lipSeconds / 120) * 100, 95)}%` }}
-                    />
-                  </div>
-                  <p className="text-white/25 text-[10px] text-center">
-                    {wav2lipSeconds >= 60
-                      ? "⚠️ 合成時間較長，請保持頁面開啟，若超過 3 分鐘仍未完成，可能是影片臉部不夠清晰導致，建議換一支影片重試"
-                      : "嘴型合成約需 60～120 秒，請耐心等候"}
-                  </p>
-                </div>
-              )}
-              {/* [DNA_PATCH_END] */}
-              <p className="text-orange-200 text-xs font-bold leading-relaxed">
-                ⚠️ 注意：影片必須包含<span className="text-orange-300 font-black">清晰正面人臉</span>，側臉或無臉的影片將會合成失敗！
-              </p>
-              <p className="text-white/40 text-xs">扣 {plan === 'starter' ? 10 : plan === 'standard' ? 9 : 8} 點，失敗自動退點</p>
-              {wav2lipResult ? (
-                <div className="space-y-2">
-                  <video controls className="w-full rounded-lg" src={wav2lipResult} />
-                  <button
-                    onClick={() => downloadFile(wav2lipResult)}
-                    className="w-full py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white text-sm font-black hover:opacity-90 transition-all"
-                  >
-                    ⬇️ 下載說話影片
-                  </button>
-                  <button
-                    onClick={() => { setWav2lipResult(null); setShowTtsModal(false); setTtsAudio(null); }}
-                    className="w-full py-2 rounded-xl border border-white/10 text-white/50 text-sm font-bold hover:bg-white/5 transition-all"
-                  >
-                    ✅ 完成，關閉視窗
-                  </button>
-                </div>
-                
-              ) : (
-                <button
-                  disabled={isWav2lipLoading}
-                  onClick={async () => {
-                    if (!prediction?.output) {
-                      alert("找不到影片，請重新生成影片後再試");
-                      return;
-                    }
-                    setIsWav2lipLoading(true);
-                    setWav2lipResult(null);
-                    try {
-                      // 啟動合成
-                      const startRes = await fetch("/api/wav2lip", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          videoUrl: prediction.output,
-                          audioBase64: ttsAudio,
-                          userEmail: session?.user?.email,
-                          plan,
-                        }),
-                      });
-                      const startData = await startRes.json();
-                      if (!startData.id) {
-                        alert(startData.error || "合成啟動失敗");
-                        setIsWav2lipLoading(false);
-                        return;
-                      }
-                      fetch(`/api/user/credits?email=${session?.user?.email}`).then(r => r.json()).then(d => setCredits(d.credits));
-                      // Polling
-                      const pollWav2lip = async (id: string) => {
-                        const pollRes = await fetch(`/api/wav2lip?id=${id}&email=${session?.user?.email}`);
-                        const pollData = await pollRes.json();
-                        if (pollData.status === "succeeded" && pollData.output) {
-                          setWav2lipResult(pollData.output);
-                          setIsWav2lipLoading(false);
-                        } else if (pollData.status === "failed") {
-                          alert("合成失敗，點數已退還");
-                          fetch(`/api/user/credits?email=${session?.user?.email}`).then(r => r.json()).then(d => setCredits(d.credits));
-                          setIsWav2lipLoading(false);
-                        } else {
-                          setTimeout(() => pollWav2lip(id), 3000);
-                        }
-                      };
-                      pollWav2lip(startData.id);
-                    } catch (err) {
-                      alert("合成失敗，請重試");
-                      setIsWav2lipLoading(false);
-                    }
-                  }}
-                  className="w-full py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white text-sm font-black hover:opacity-90 transition-all disabled:opacity-40"
-                >
-                  {isWav2lipLoading ? "⏳ 合成中，請稍候..." : `🎬 合成到影片（扣 ${plan === 'starter' ? 10 : plan === 'standard' ? 9 : 8} 點）`}
-                </button>
-              )}
-            </div>
-            {/* [DNA_PATCH_END] */}
-          </div>
-        )}
-{/* [DNA_PATCH_START] TTS 載入提示 */}
-{isTtsLoading && (
-  <div className="p-4 bg-black/25 rounded-2xl border border-purple-500/20 space-y-2">
-    <div className="flex justify-between items-center">
-      <span className="text-purple-300 text-xs font-black tracking-widest uppercase">🎙️ 語音生成中</span>
-      <span className="text-white/60 text-xs font-mono">
-        {ttsSeconds >= 60
-          ? "請耐心等候"
-          : `剩餘約 ${Math.max(60 - ttsSeconds, 0)} 秒`}
-      </span>
-    </div>
-    <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
-      <div
-        className="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full transition-all duration-1000"
-        style={{ width: `${Math.min((ttsSeconds / 60) * 100, 95)}%` }}
-      />
-    </div>
-    <p className="text-white/25 text-[10px] text-center">
-      {ttsSeconds >= 60
-        ? "語音生成時間較長，請保持頁面開啟"
-        : "語音生成約需 30 至 60 秒，請耐心等候"}
-    </p>
-  </div>
+  <TtsModal
+    plan={plan}
+    videoDuration={videoDuration}
+    ttsText={ttsText}
+    setTtsText={setTtsText}
+    ttsVoice={ttsVoice}
+    setTtsVoice={setTtsVoice}
+    ttsAudio={ttsAudio}
+    setTtsAudio={setTtsAudio}
+    isTtsLoading={isTtsLoading}
+    setIsTtsLoading={setIsTtsLoading}
+    ttsTrimmed={ttsTrimmed}
+    setTtsTrimmed={setTtsTrimmed}
+    ttsCache={ttsCache}
+    setTtsCache={setTtsCache}
+    ttsPreviewCount={ttsPreviewCount}
+    setTtsPreviewCount={setTtsPreviewCount}
+    TTS_MAX_PREVIEW={TTS_MAX_PREVIEW}
+    ttsSeconds={ttsSeconds}
+    isWav2lipLoading={isWav2lipLoading}
+    setIsWav2lipLoading={setIsWav2lipLoading}
+    wav2lipResult={wav2lipResult}
+    setWav2lipResult={setWav2lipResult}
+    wav2lipSeconds={wav2lipSeconds}
+    prediction={prediction}
+    userEmail={session?.user?.email}
+    setCredits={(fn) => setCredits(fn as any)}
+    onClose={() => setShowTtsModal(false)}
+    downloadFile={downloadFile}
+  />
 )}
 {/* [DNA_PATCH_END] */}
-{/* [DNA_PATCH_START] 試聽次數提示+按鈕 */}
-<p className="text-center text-xs font-black text-yellow-300">
-  ⚠️ 本影片免費試聽 {TTS_MAX_PREVIEW} 次（剩餘 {Math.max(TTS_MAX_PREVIEW - ttsPreviewCount, 0)} 次）
-</p>
-<div className="grid grid-cols-2 gap-3">
-  <button
-    onClick={() => { setShowTtsModal(false); setTtsAudio(null); }}
-    className="py-3 rounded-xl border border-white/10 text-white/50 text-sm font-bold hover:bg-white/5 transition-all"
-  >取消</button>
-  <button
-    disabled={isTtsLoading || !ttsText.trim() || ttsText.length > (videoDuration === 5 ? 30 : 55)}
-    onClick={async () => {
-      if (ttsCache[ttsVoice]) {
-        setTtsAudio(ttsCache[ttsVoice]);
-        return;
-      }
-      if (!ttsCache[ttsVoice] && ttsPreviewCount >= TTS_MAX_PREVIEW) {
-  alert("本影片試聽次數已用完");
-  return;
-}
-      setIsTtsLoading(true);
-      setTtsAudio(null);
-      setTtsTrimmed(false);
-      const res = await fetch("/api/tts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: ttsText, voiceId: ttsVoice, videoDuration }),
-      });
-      const data = await res.json();
-      if (data.audio) {
-        setTtsAudio(data.audio);
-        setTtsTrimmed(data.trimmed);
-        setTtsCache(prev => ({ ...prev, [ttsVoice]: data.audio }));
-        setTtsPreviewCount(prev => prev + 1);
-      } else {
-        alert(data.error || "語音生成失敗");
-      }
-      setIsTtsLoading(false);
-    }}
-    className="py-3 rounded-xl bg-gradient-to-r from-purple-500 to-blue-500 text-white text-sm font-black disabled:opacity-40 hover:opacity-90 transition-all"
-  >
-    {isTtsLoading ? "生成中..." : ttsCache[ttsVoice] ? "🔄 重新播放" : ttsPreviewCount >= TTS_MAX_PREVIEW ? "🚫 試聽次數已用完" : "🎙️ 免費試聽"}
-</button>
-</div>
-    </div>
-  </div>
-)}
-{/* [DNA_PATCH_END] */}
-{/* [DNA_PATCH_START] 批次生成 Modal */}
+{/* [DNA_PATCH_START] 批次生成 Modal — Code Split */}
 {showBatchModal && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-    <div className="w-full max-w-md bg-[#0d2318] border border-blue-500/20 rounded-3xl p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
-      <div className="text-center">
-        <p className="text-3xl mb-1">🎭</p>
-        <h2 className="text-white font-black text-lg">批次生成不同 Pose</h2>
-        <p className="text-white/40 text-xs mt-1">同一套衣服，不同姿勢／角度，每張 1 點</p>
-      </div>
-
-      {/* 張數選擇 */}
-      <div>
-        <p className="text-white/40 text-xs font-bold tracking-wider uppercase mb-2">生成張數</p>
-        <div className="flex gap-2">
-          {Array.from({ length: getMaxBatch() }, (_, i) => i + 1).map(n => (
-            <button
-              key={n}
-              onClick={() => setBatchCount(n)}
-              className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all ${
-                batchCount === n
-                  ? "bg-blue-500/30 text-blue-300 border-blue-500"
-                  : "bg-white/5 text-white/40 border-white/10 hover:border-white/30"
-              }`}
-            >{n} 張</button>
-          ))}
-        </div>
-        <p className="text-blue-300/50 text-xs mt-1.5 text-center">
-          {plan === 'starter' ? '入門包：最多2張' : plan === 'standard' ? '標準包：最多4張' : '專業包：最多6張'}
-        </p>
-      </div>
-
-      {/* 方案上限提示 */}
-      <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl px-4 py-2">
-        <p className="text-blue-300 text-xs font-bold">⚠️ 建議：同一套衣服 + 不同姿勢效果最穩定</p>
-        <p className="text-white/30 text-xs mt-0.5">換衣服或換風格臉部可能不一致，請注意</p>
-      </div>
-
-      {/* 每張的 Prompt 輸入 */}
-      <div className="space-y-3">
-        <p className="text-white/40 text-xs font-bold tracking-wider uppercase">每張 Pose 描述</p>
-        {Array.from({ length: batchCount }, (_, i) => (
-          <div key={i} className="bg-white/5 border border-white/10 rounded-xl p-3 space-y-2">
-            <p className="text-white/50 text-xs font-bold">第 {i + 1} 張</p>
-            <div className="relative">
-  <input
-    type="text"
-    value={batchPrompts[i]?.prompt || ""}
-    onChange={(e) => {
-      const updated = [...batchPrompts];
-      updated[i] = { ...updated[i], prompt: e.target.value, translated: false };
-      setBatchPrompts(updated);
-    }}
-    placeholder="姿勢描述（英文）例：standing sideways, arms crossed"
-    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-xs placeholder-white/20 focus:outline-none focus:border-blue-400/50 pr-20"
+  <BatchModal
+    plan={plan}
+    batchCount={batchCount}
+    setBatchCount={setBatchCount}
+    batchPrompts={batchPrompts}
+    setBatchPrompts={setBatchPrompts}
+    batchResults={batchResults}
+    isBatchGenerating={isBatchGenerating}
+    batchCurrentIndex={batchCurrentIndex}
+    onClose={() => { setShowBatchModal(false); setBatchResults([]); setBatchCurrentIndex(-1); }}
+    onGenerate={handleBatchGenerate}
   />
-  {hasChinese(batchPrompts[i]?.prompt || "") && !batchPrompts[i]?.translated && (
-    <button
-      type="button"
-      disabled={batchPrompts[i]?.isTranslating}
-      onClick={async () => {
-        const updated = [...batchPrompts];
-        updated[i] = { ...updated[i], isTranslating: true };
-        setBatchPrompts(updated);
-        try {
-          const res = await fetch("/api/translate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: batchPrompts[i].prompt }),
-          });
-          const data = await res.json();
-          if (data.translated) {
-            updated[i] = { ...updated[i], prompt: data.translated, isTranslating: false, translated: true };
-          } else {
-            updated[i] = { ...updated[i], isTranslating: false };
-          }
-        } catch {
-          updated[i] = { ...updated[i], isTranslating: false };
-        }
-        setBatchPrompts([...updated]);
-      }}
-      className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 bg-[#89f5a2]/20 border border-[#89f5a2]/40 text-[#89f5a2] text-[10px] rounded font-bold hover:bg-[#89f5a2]/30 transition-all disabled:opacity-40 whitespace-nowrap"
-    >
-      {batchPrompts[i]?.isTranslating ? "翻譯中..." : "🌐 翻譯"}
-    </button>
-  )}
-</div>
-            <p className="text-white/25 text-[10px]">📌 備註（選填）：補充角度、距離、表情等細節，例如：微笑、特寫、從後方拍（中文也可以！輸入後點「翻譯成英文」按鈕，我們幫你自動翻譯 🌐）</p>
-<div className="relative">
-  <input
-    type="text"
-    value={batchPrompts[i]?.note || ""}
-    onChange={(e) => {
-      const updated = [...batchPrompts];
-      updated[i] = { ...updated[i], note: e.target.value, noteTranslated: false };
-      setBatchPrompts(updated);
-    }}
-    placeholder="例：微笑表情、從側面拍、特寫臉部..."
-    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white/70 text-xs placeholder-white/20 focus:outline-none focus:border-blue-400/30 pr-20"
-  />
-  {hasChinese(batchPrompts[i]?.note || "") && !batchPrompts[i]?.noteTranslated && (
-    <button
-      type="button"
-      disabled={batchPrompts[i]?.isNoteTranslating}
-      onClick={async () => {
-        const updated = [...batchPrompts];
-        updated[i] = { ...updated[i], isNoteTranslating: true };
-        setBatchPrompts(updated);
-        try {
-          const res = await fetch("/api/translate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: batchPrompts[i].note }),
-          });
-          const data = await res.json();
-          if (data.translated) {
-            updated[i] = { ...updated[i], note: data.translated, isNoteTranslating: false, noteTranslated: true };
-          } else {
-            updated[i] = { ...updated[i], isNoteTranslating: false };
-          }
-        } catch {
-          updated[i] = { ...updated[i], isNoteTranslating: false };
-        }
-        setBatchPrompts([...updated]);
-      }}
-      className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 bg-[#89f5a2]/20 border border-[#89f5a2]/40 text-[#89f5a2] text-[10px] rounded font-bold hover:bg-[#89f5a2]/30 transition-all disabled:opacity-40 whitespace-nowrap"
-    >
-      {batchPrompts[i]?.isNoteTranslating ? "翻譯中..." : "🌐 翻譯"}
-    </button>
-  )}
-</div>
-          </div>
-        ))}
-      </div>
-
-      {/* 生成結果區 */}
-      {batchResults.length > 0 && (
-        <div>
-          <p className="text-white/40 text-xs font-bold tracking-wider uppercase mb-2">生成進度</p>
-          <div className="grid grid-cols-3 gap-2">
-            {batchResults.map((r, i) => (
-              <div key={i} className="aspect-square rounded-xl overflow-hidden border border-white/10 flex items-center justify-center bg-white/5 relative">
-                {r.status === "done" && r.url ? (
-                  <img src={r.url} className="w-full h-full object-cover" />
-                ) : r.status === "generating" ? (
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="w-5 h-5 border-2 border-blue-400/40 border-t-blue-400 rounded-full animate-spin" />
-                    <span className="text-blue-300 text-[9px]">生成中</span>
-                  </div>
-                ) : r.status === "failed" ? (
-                  <span className="text-red-400 text-[9px] text-center px-1">失敗已退點</span>
-                ) : (
-                  <span className="text-white/20 text-[10px]">等待中</span>
-                )}
-                <span className="absolute bottom-1 left-1 text-white/40 text-[8px] font-bold">#{i + 1}</span>
-              </div>
-            ))}
-          </div>
-          {isBatchGenerating && batchCurrentIndex >= 0 && (
-            <p className="text-blue-300 text-xs text-center mt-2 font-bold">
-              ⚡ 正在生成第 {batchCurrentIndex + 1} 張，完成後自動儲存到角色相簿
-            </p>
-          )}
-          {!isBatchGenerating && batchResults.every(r => r.status === "done" || r.status === "failed") && (
-            <p className="text-[#89f5a2] text-xs text-center mt-2 font-bold">✅ 批次生成完成！已自動儲存到角色相簿</p>
-          )}
-        </div>
-      )}
-
-      <div className="grid grid-cols-2 gap-3">
-        <button
-          onClick={() => { setShowBatchModal(false); setBatchResults([]); setBatchCurrentIndex(-1); }}
-          disabled={isBatchGenerating}
-          className="py-3 rounded-xl border border-white/10 text-white/50 text-sm font-bold hover:bg-white/5 transition-all disabled:opacity-30"
-        >關閉</button>
-        <button
-          onClick={handleBatchGenerate}
-          disabled={isBatchGenerating}
-          className="py-3 rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 text-white text-sm font-black disabled:opacity-40 hover:opacity-90 transition-all"
-        >
-          {isBatchGenerating ? `生成中 ${batchCurrentIndex + 1}/${batchResults.length}...` : `🎭 開始生成（${batchCount} 點）`}
-        </button>
-      </div>
-    </div>
-  </div>
 )}
 {/* [DNA_PATCH_END] */}
-{/* [DNA_PATCH_START] 收藏命名 Modal */}
+{/* [DNA_PATCH_START] 收藏命名 Modal — Code Split */}
 {showSaveModal && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-    <div className="w-full max-w-sm bg-[#0d2318] border border-yellow-400/20 rounded-3xl p-6 space-y-4 shadow-2xl">
-      <div className="text-center">
-        <p className="text-3xl mb-1">⭐</p>
-        <h2 className="text-white font-black text-lg">收藏此角色</h2>
-        <p className="text-white/40 text-xs mt-1">幫這個角色取個名字吧！</p>
-      </div>
-      <input
-        type="text"
-        value={saveCharacterName}
-        onChange={(e) => setSaveCharacterName(e.target.value)}
-        placeholder="例如：我的主角、帥氣男生..."
-        maxLength={20}
-        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/25 text-sm focus:outline-none focus:border-yellow-400/50"
-      />
-      <div className="grid grid-cols-2 gap-3">
-        <button
-          onClick={() => setShowSaveModal(false)}
-          className="py-3 rounded-xl border border-white/10 text-white/50 text-sm font-bold hover:bg-white/5 transition-all"
-        >取消</button>
-        <button
-          disabled={isSaving}
-          onClick={async () => {
-            if (!prediction?.output) return;
-            setIsSaving(true);
-            const res = await fetch("/api/saved-characters", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              // [DNA_PATCH_START] 收藏時帶入個性職業描述
-body: JSON.stringify({
-  email: session?.user?.email,
-  name: saveCharacterName || "未命名角色",
-  image_url: prediction.output,
-  plan,
-  description: [selectedPersonality, selectedJob, customPersonality].filter(Boolean).join("・") || null,
-}),
-// [DNA_PATCH_END]
-            });
-            const data = await res.json();
-            if (data.error) {
-              alert(data.error);
-            } else {
-              setSavedCharacters(prev => [data.data, ...prev]);
-              setShowSaveModal(false);
-              alert("✅ 角色已收藏！");
-            }
-            setIsSaving(false);
-          }}
-          className="py-3 rounded-xl bg-gradient-to-r from-yellow-400 to-yellow-300 text-[#0d2318] text-sm font-black disabled:opacity-40 hover:opacity-90 transition-all"
-        >{isSaving ? "收藏中..." : "⭐ 確認收藏"}</button>
-      </div>
-    </div>
-  </div>
+  <SaveCharacterModal
+    saveCharacterName={saveCharacterName}
+    setSaveCharacterName={setSaveCharacterName}
+    isSaving={isSaving}
+    selectedPersonality={selectedPersonality}
+    selectedJob={selectedJob}
+    customPersonality={customPersonality}
+    predictionOutput={prediction?.output ?? null}
+    userEmail={session?.user?.email}
+    plan={plan}
+    onSaveSuccess={(data) => {
+      setSavedCharacters(prev => [data, ...prev]);
+      setShowSaveModal(false);
+    }}
+    onClose={() => setShowSaveModal(false)}
+  />
 )}
 {/* [DNA_PATCH_END] */}
-        {/* [DNA_PATCH_START] 推薦賺點 Modal */}
+        {/* [DNA_PATCH_START] 推薦賺點 Modal — Code Split */}
 {showReferralModal && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-    <div className="w-full max-w-md bg-[#0d2318] border border-yellow-400/20 rounded-3xl p-6 space-y-5 shadow-2xl">
-      <div className="text-center">
-        <p className="text-3xl mb-1">🎁</p>
-        <h2 className="text-white font-black text-xl">推薦賺點</h2>
-        <p className="text-white/50 text-xs mt-1">
-          推薦朋友升級方案，朋友付款成功後<br />
-          你最高可獲得 <span className="text-yellow-300 font-black">{referralCredits?.pro ?? "..."} 點</span> 獎勵！
-        </p>
-      </div>
-      <div className="bg-white/5 rounded-2xl p-4 space-y-2">
-        <p className="text-white/40 text-xs font-bold tracking-wider uppercase mb-3">方案獎勵對照</p>
-        {[
-          { label: "🌱 入門包", key: "starter" },
-          { label: "⭐ 標準包", key: "standard" },
-          { label: "🚀 專業包", key: "pro" },
-        ].map(({ label, key }) => (
-          <div key={key} className="flex justify-between items-center">
-            <span className="text-white/70 text-sm">{label}</span>
-            <span className="text-yellow-300 font-black text-sm">
-              + {referralCredits?.[key as "starter" | "standard" | "pro"] ?? "..."} 點
-            </span>
-          </div>
-        ))}
-      </div>
-      <div>
-        <p className="text-white/40 text-xs font-bold tracking-wider uppercase mb-2">你的專屬介紹碼</p>
-        <div className="flex gap-2">
-          <div className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white font-mono font-black tracking-widest text-center">
-            {referralCode ?? "載入中..."}
-          </div>
-          <button
-            onClick={() => { if (referralCode) { navigator.clipboard.writeText(referralCode); setCopiedCode(true); setTimeout(() => setCopiedCode(false), 2000); } }}
-            className="px-4 py-3 bg-yellow-400/20 border border-yellow-400/30 rounded-xl text-yellow-300 text-xs font-bold hover:bg-yellow-400/30 transition-all whitespace-nowrap"
-          >
-            {copiedCode ? "✅ 已複製" : "複製"}
-          </button>
-        </div>
-      </div>
-      <div>
-        <p className="text-white/40 text-xs font-bold tracking-wider uppercase mb-2">你的專屬連結</p>
-        <div className="flex gap-2">
-          <div className="flex-1 px-3 py-3 bg-white/5 border border-white/10 rounded-xl text-white/50 text-xs font-mono truncate">
-            {referralCode ? `${window.location.origin}/pricing?ref=${referralCode}` : "載入中..."}
-          </div>
-          <button
-            onClick={() => { if (referralCode) { navigator.clipboard.writeText(`${window.location.origin}/pricing?ref=${referralCode}`); setCopiedLink(true); setTimeout(() => setCopiedLink(false), 2000); } }}
-            className="px-4 py-3 bg-yellow-400/20 border border-yellow-400/30 rounded-xl text-yellow-300 text-xs font-bold hover:bg-yellow-400/30 transition-all whitespace-nowrap"
-          >
-            {copiedLink ? "✅ 已複製" : "複製"}
-          </button>
-        </div>
-      </div>
-      <button
-        onClick={() => setShowReferralModal(false)}
-        className="w-full py-3 rounded-xl border border-white/10 text-white/50 text-sm font-bold hover:bg-white/5 transition-all"
-      >
-        關閉
-      </button>
-    </div>
-  </div>
+  <ReferralModal
+    referralCode={referralCode}
+    referralCredits={referralCredits}
+    copiedCode={copiedCode}
+    setCopiedCode={setCopiedCode}
+    copiedLink={copiedLink}
+    setCopiedLink={setCopiedLink}
+    onClose={() => setShowReferralModal(false)}
+  />
 )}
 {/* [DNA_PATCH_END] */}
         </main>
