@@ -16,6 +16,7 @@ const VideoSettingsModal = dynamic(() => import("./components/VideoSettingsModal
 const Text2VideoModal = dynamic(() => import("./components/Text2VideoModal"), { ssr: false });
 export default function Home() {
   const hasLoadedFromStorage = useRef(false);
+  const progressRef = useRef<HTMLDivElement>(null);
   const { data: session } = useSession();
   const [prompt, setPrompt] = useState("");
   const [selectedStyle, setSelectedStyle] = useState("");
@@ -319,6 +320,7 @@ console.log("finalUrl:", finalUrl, "resolvedGenType:", resolvedGenType, "output:
         const formattedData = { ...data, output: finalUrl };
         
         setPrediction(formattedData);
+        setGenType(resolvedGenType as "image" | "video");
         // [DNA_PATCH_START]
 // 新影片生成完成：歸零試聽計數，保留 ttsCache（用戶可重聽舊聲音）
 const resolvedIsVideo = resolvedGenType === "video";
@@ -436,6 +438,7 @@ if (session?.user?.email) fetch(`/api/history?email=${session.user.email}`).then
     setPrediction(null);
     setSeconds(0);
     setGenType("image");
+    setTimeout(() => progressRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
 
     try {
       // [DNA_PATCH_START] 直接用 state 而非重新從 API 抓
@@ -651,6 +654,7 @@ const handleText2Video = async () => {
   setError("");
   setSeconds(0);
   setGenType("video");
+  setTimeout(() => progressRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
 
   try {
     const res = await fetch("/api/character", {
@@ -684,6 +688,7 @@ const handleGenerateVideo = async (imageUrl: string, prompt?: string, ratio?: st
     setError("");
     setSeconds(0);
     setGenType("video");
+    setTimeout(() => progressRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
 
     try {
       const res = await fetch("/api/character", {
@@ -1433,7 +1438,7 @@ return (
 
         {/* 進度條 */}
         {loading && (
-          <div className="mt-4 p-5 bg-black/25 backdrop-blur-xl rounded-2xl border border-white/10">
+          <div ref={progressRef} className="mt-4 p-5 bg-black/25 backdrop-blur-xl rounded-2xl border border-white/10">
             <div className="flex justify-between items-center mb-3">
               <span className="text-[#89f5a2] text-xs font-black tracking-widest uppercase">
                 {genType === "image" ? "🎨 Image Rendering" : "🎥 Video Animating"}
@@ -1490,7 +1495,9 @@ return (
                 >
                   ⬇️ 儲存成果
                 </button>
-
+<p className="text-white/25 text-[10px] text-center mt-1">
+  📱 手機用戶：長按圖片／影片可直接存到相簿
+</p>
                 <button
                   onClick={() => setShowVideoModal(true)}
                   disabled={loading || (credits !== null && credits <= 0)}
