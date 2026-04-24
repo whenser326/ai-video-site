@@ -22,6 +22,10 @@ export default function Home() {
   const [selectedStyle, setSelectedStyle] = useState("");
   const [prediction, setPrediction] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  // [DNA_PATCH_START] 入場動畫
+const [pageReady, setPageReady] = useState(false);
+const [splashDone, setSplashDone] = useState(false);
+// [DNA_PATCH_END]
   const [error, setError] = useState("");
   const [history, setHistory] = useState<any[]>([]);
   const [seconds, setSeconds] = useState(0);
@@ -272,7 +276,18 @@ useEffect(() => {
 }, [showReferralModal]);
 // [DNA_PATCH_END]
 
-// ✨ 修正後的下載功能：支援 Flux Pro 圖片與影片
+// [DNA_PATCH_START] 偵測主頁載入完成 → 結束入場動畫
+useEffect(() => {
+  const maxWait = setTimeout(() => setPageReady(true), 2500);
+  if (credits !== null) {
+    setPageReady(true);
+    clearTimeout(maxWait);
+  }
+  return () => clearTimeout(maxWait);
+}, [credits]);
+// [DNA_PATCH_END]
+
+// ✨ 修正後的下載功能
   const downloadFile = async (url: string) => {
     try {
       setLoading(true); // 下載大檔案時顯示一下載入狀態
@@ -719,6 +734,131 @@ const handleGenerateVideo = async (imageUrl: string, prompt?: string, ratio?: st
   };
 
 return (
+  <>
+{/* [DNA_PATCH_START] Splash 入場動畫蓋板 */}
+{!splashDone && (
+  <div
+    style={{
+      position: "fixed", inset: 0, zIndex: 9999,
+      background: "#0f2e18",
+      display: "flex", flexDirection: "column",
+      alignItems: "center", justifyContent: "center",
+      opacity: pageReady ? 0 : 1,
+      transition: "opacity 0.7s ease",
+      pointerEvents: pageReady ? "none" : "auto",
+      overflow: "hidden",
+    }}
+    onTransitionEnd={() => { if (pageReady) setSplashDone(true); }}
+  >
+    <style>{`
+      @keyframes orbitSpin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
+      @keyframes sweep { 0%{left:-80%} 65%,100%{left:160%} }
+      @keyframes logoPulse {
+        0%,100%{filter:drop-shadow(0 0 16px rgba(137,245,162,0.7)) drop-shadow(0 0 40px rgba(137,245,162,0.4));transform:scale(1)}
+        50%{filter:drop-shadow(0 0 30px rgba(137,245,162,1)) drop-shadow(0 0 70px rgba(137,245,162,0.7));transform:scale(1.03)}
+      }
+      @keyframes scan { 0%{left:-40px} 100%{left:150px} }
+      @keyframes textGlow {
+        0%,100%{text-shadow:0 0 8px rgba(137,245,162,0.3)}
+        50%{text-shadow:0 0 22px rgba(137,245,162,0.85),0 0 40px rgba(137,245,162,0.3)}
+      }
+      @keyframes dotB {
+        0%,100%{transform:translateY(0);opacity:0.3}
+        50%{transform:translateY(-7px);opacity:1}
+      }
+      @keyframes lineFlash {
+        0%,100%{opacity:0.35;width:70px}
+        50%{opacity:1;width:120px}
+      }
+      @keyframes glowDrift {
+        0%,100%{opacity:0.5;transform:scale(1)}
+        50%{opacity:1;transform:scale(1.1)}
+      }
+      .splash-orbit {
+        position:absolute; width:210px; height:210px; border-radius:50%;
+        border:1px solid rgba(137,245,162,0.18);
+        animation:orbitSpin 7s linear infinite;
+      }
+      .splash-orbit::after {
+        content:''; position:absolute;
+        width:7px; height:7px; border-radius:50%;
+        background:#89f5a2;
+        top:-3.5px; left:50%; transform:translateX(-50%);
+        box-shadow:0 0 10px #89f5a2, 0 0 20px rgba(137,245,162,0.5);
+      }
+      .splash-sweep-bar {
+        position:absolute; top:0; left:-80%;
+        width:45%; height:100%;
+        background:linear-gradient(90deg,transparent,rgba(137,245,162,0.45),transparent);
+        animation:sweep 2.6s ease-in-out infinite;
+      }
+      .splash-logo-img {
+        width:100%; height:100%; object-fit:cover;
+      }
+      .splash-scandot {
+        width:36px; height:100%;
+        background:linear-gradient(90deg,transparent,#89f5a2,transparent);
+        position:absolute; left:-40px;
+        animation:scan 2.6s linear infinite;
+      }
+      .splash-scandot-delay { animation-delay:0.5s; }
+      .splash-brand {
+        color:#89f5a2; font-weight:900; font-size:20px; letter-spacing:0.2em;
+        animation:textGlow 2.6s ease-in-out infinite;
+      }
+      .splash-dot { animation:dotB 1.3s ease-in-out infinite; }
+      .splash-dot:nth-child(2) { animation-delay:0.22s; }
+      .splash-dot:nth-child(3) { animation-delay:0.44s; }
+      .splash-bottom-line {
+        position:absolute; bottom:36px; height:1px;
+        background:linear-gradient(90deg,transparent,rgba(137,245,162,0.45),transparent);
+        animation:lineFlash 2.6s ease-in-out infinite;
+      }
+      .splash-bg1 {
+        position:absolute; width:320px; height:320px;
+        top:-80px; right:-80px; border-radius:50%;
+        background:radial-gradient(circle,rgba(137,245,162,0.18) 0%,transparent 70%);
+        animation:glowDrift 5s ease-in-out infinite;
+      }
+      .splash-bg2 {
+        position:absolute; width:260px; height:260px;
+        bottom:-60px; left:-60px; border-radius:50%;
+        background:radial-gradient(circle,rgba(137,245,162,0.15) 0%,transparent 70%);
+        animation:glowDrift 5s ease-in-out infinite 2.5s;
+      }
+    `}</style>
+    <div className="splash-bg1" />
+    <div className="splash-bg2" />
+    <div style={{ position:"relative", width:220, height:220, display:"flex", alignItems:"center", justifyContent:"center" }}>
+      <div className="splash-orbit" />
+      <div style={{ position:"absolute", inset:0, borderRadius:"50%", overflow:"hidden", zIndex:2, pointerEvents:"none" }}>
+        <div className="splash-sweep-bar" />
+      </div>
+      <div style={{ width:200, height:200, borderRadius:"50%", overflow:"hidden", position:"relative", zIndex:1 }}>
+        <img className="splash-logo-img" src="/logo-splash.png" alt="Consistent Flow" style={{ width:"100%", height:"100%", objectFit:"cover", animation:"logoPulse 2.6s ease-in-out infinite" }} />
+      </div>
+    </div>
+    <div style={{ marginTop:8, display:"flex", flexDirection:"column", alignItems:"center", gap:5 }}>
+      <div style={{ width:130, height:1.5, background:"rgba(137,245,162,0.1)", borderRadius:2, overflow:"hidden", position:"relative" }}>
+        <div className="splash-scandot" />
+      </div>
+      <div style={{ width:85, height:1.5, background:"rgba(137,245,162,0.1)", borderRadius:2, overflow:"hidden", position:"relative" }}>
+        <div className="splash-scandot splash-scandot-delay" />
+      </div>
+    </div>
+    <div style={{ marginTop:20, textAlign:"center" }}>
+      <p className="splash-brand">CONSISTENT FLOW</p>
+      <p style={{ color:"rgba(137,245,162,0.42)", fontSize:11, letterSpacing:"0.28em", marginTop:6 }}>AI CHARACTER STUDIO</p>
+    </div>
+    <div style={{ display:"flex", gap:9, marginTop:32 }}>
+      {[0,1,2].map(i => (
+        <div key={i} className="splash-dot" style={{ width:7, height:7, borderRadius:"50%", background:"#89f5a2" }} />
+      ))}
+    </div>
+    <div className="splash-bottom-line" />
+  </div>
+)}
+{/* [DNA_PATCH_END] */}
     <main className="flex min-h-screen flex-col items-center px-3 sm:px-4 pt-2 pb-4 bg-gradient-to-br from-[#0d2318] via-[#1a3a25] to-[#2d5a3d] relative overflow-y-auto">
       
       {/* 背景裝飾光暈 */}
@@ -2292,5 +2432,6 @@ customAppearance={customAppearance}
 )}
 {/* [DNA_PATCH_END] */}
         </main>
+  </>
   );
 }

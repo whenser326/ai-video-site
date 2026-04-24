@@ -406,10 +406,12 @@ TURNSTILE_SECRET_KEY=（已設定於 Vercel Sensitive，備用，需要時去 Cl
 ✅ 影片生成後自動捲到進度條（progressRef + scrollIntoView）
 ✅ 儲存成果 genType race condition 修正（checkStatus 完成後強制 setGenType）
 ✅ 手機下載提示文字（長按圖片/影片可直接儲存到相簿）
+✅ 首頁 Hero 循環影片上線（Supabase CDN，URL: https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/hero.mp4）
+✅ downloadFile 改用 genType 判斷副檔名（genType === "video" → mp4，否則 png）
+✅ 儲存成果提示文字：長按圖片可存相簿，影片請點儲存成果下載
 
 12. 待完成項目（下一步）
 
-⬜ 首頁 Hero 循環影片製作完成後替換（/public/hero.mp4，1200×675px 16:9 無聲）
 ⬜ 藍新信用卡審核通過後實測付款流程
 ⬜ 審核通過後移除舊 Stripe 相關程式碼（app/api/stripe/）
 ⬜ Vercel 升級為付費版 Pro（$20 USD/月）— 預計 2026 年 5 月底前完成（網站已正式上線有商業收費，Hobby 條款禁止商業用途）
@@ -552,6 +554,9 @@ flux-kontext-pro 和 flux-1.1-pro 支援比例：1:1/16:9/9:16/4:3/3:4/3:2/2:3/4
 圖片比例 state 名稱：imageRatio，預設 "1:1"，透過 handleSubmit 傳入 character/route.ts
 Kling 影片比例受參考圖影響，根本解法是生圖時就選好目標比例，不做裁切
 儲存成果按鈕改為 downloadFile（不用 window.open，iOS Safari 新分頁無法顯示 Supabase 圖片）
+Hero 影片不放在 public/ 資料夾（git 無法追蹤 mp4），改用 Supabase Storage CDN 托管
+hero.mp4 位於 character-images bucket，更換影片直接在 Supabase Storage 覆蓋上傳即可，不需要改程式碼
+Hero 影片 <video> 標籤必須有 absolute inset-0，否則無法填滿容器
 
 14. 未來功能規劃（優先順序）
 
