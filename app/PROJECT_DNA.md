@@ -72,6 +72,12 @@ TTS 試聽防呆更新：
 簽到防呆：同帳號每天只能簽一次（比對 checkin_last_date）、同 IP 每天只能一個帳號簽到（比對 checkin_logs）
 簽到獎勵：每日+1點，連續第7天+3點，第14天+5點，第21天+5點，第30天+10點
 簽到時區：台灣時區（Asia/Taipei），用 toLocaleDateString("en-CA") 取得 YYYY-MM-DD 格式
+page.tsx 已知 TypeScript 舊錯誤（4個，不理會）：
+- validator.ts: Property 'id' is missing in type Promise<{id:string;}>
+- route.ts[Ln 170]: Unterminated string literal
+- route.ts[Ln 171]: ')' expected
+- route.ts[Ln 27]: 'id' is declared here
+以上四個是舊錯誤，每次對話不需理會，不需排查
 
 3. 專案核心
 
@@ -394,6 +400,12 @@ TURNSTILE_SECRET_KEY=（已設定於 Vercel Sensitive，備用，需要時去 Cl
 ✅ STEP 5 鏡頭角度改為永遠顯示，圖片模式灰暗不可點，顯示「🔒 選影片模式才開放」
 ✅ 每日簽到功能上線（app/checkin/page.tsx + app/api/checkin/route.ts）
 ✅ GlobalHeader 漢堡選單加入「📅 每日簽到」入口
+✅ 簽到獎勵改為7/14/21/30天四個里程碑（7天+3點/14天+5點/21天+5點/30天+10點）
+✅ 三頁返回首頁按鈕統一規格（characters/pricing/checkin，膠囊樣式「← 返回首頁」）
+✅ 圖片比例選擇功能（1:1/16:9/9:16/4:3/3:4，生成時直接套用，flux-kontext-pro和flux-1.1-pro均支援）
+✅ 影片生成後自動捲到進度條（progressRef + scrollIntoView）
+✅ 儲存成果 genType race condition 修正（checkStatus 完成後強制 setGenType）
+✅ 手機下載提示文字（長按圖片/影片可直接儲存到相簿）
 
 12. 待完成項目（下一步）
 
@@ -536,6 +548,10 @@ BUG 修正（2026/04/23）：
 - 修法：GlobalHeader.tsx 登入按鈕 onClick 偵測 ua，包含 Line/ / FBAN / FBAV / Instagram / WhatsApp / Twitter 任一字串即觸發
 - 偵測到內建瀏覽器時，自動在網址後加 openExternalBrowser=1，跳出去用外部瀏覽器開啟
 - 變數名稱：isInAppBrowser
+flux-kontext-pro 和 flux-1.1-pro 支援比例：1:1/16:9/9:16/4:3/3:4/3:2/2:3/4:5/5:4/21:9/9:21
+圖片比例 state 名稱：imageRatio，預設 "1:1"，透過 handleSubmit 傳入 character/route.ts
+Kling 影片比例受參考圖影響，根本解法是生圖時就選好目標比例，不做裁切
+儲存成果按鈕改為 downloadFile（不用 window.open，iOS Safari 新分頁無法顯示 Supabase 圖片）
 
 14. 未來功能規劃（優先順序）
 

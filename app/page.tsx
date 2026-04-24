@@ -1508,19 +1508,20 @@ return (
                 ) : (
                   <img src={prediction.output} alt="Result" className="rounded-2xl w-full shadow-xl" />
                 )}
-              </div>
+          <p className="text-white/25 text-[10px] text-center mt-1 mb-2">
+            📱 長按上方圖片／影片可直接儲存到相簿
+          </p>
+        </div>
 
-              {/* 操作按鈕 */}
+        {/* 操作按鈕 */}
               <div className="grid grid-cols-2 gap-3 p-4 pt-1">
                 <button
-                  onClick={() => window.open(prediction.output, '_blank')}
+                  onClick={() => downloadFile(prediction.output)}
                   className="flex items-center justify-center gap-2 py-3 bg-white text-[#0d2318] rounded-xl font-bold text-sm shadow-md hover:bg-[#89f5a2] transition-colors"
                 >
                   ⬇️ 儲存成果
                 </button>
-<p className="text-white/25 text-[10px] text-center mt-1">
-  📱 點擊後長按圖片／影片，選「儲存」可存到相簿
-</p>
+
                 <button
                   onClick={() => setShowVideoModal(true)}
                   disabled={loading || (credits !== null && credits <= 0)}
