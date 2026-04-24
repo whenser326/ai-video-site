@@ -280,8 +280,7 @@ useEffect(() => {
       const blob = await response.blob();
       
       // 自動判斷副檔名
-      let extension = "png";
-      if (url.includes(".mp4")) extension = "mp4";
+      let extension = genType === "video" ? "mp4" : "png";
       if (url.includes(".webp")) extension = "webp";
       if (url.includes(".jpg") || url.includes(".jpeg")) extension = "jpg";
 
@@ -1508,9 +1507,9 @@ return (
                 ) : (
                   <img src={prediction.output} alt="Result" className="rounded-2xl w-full shadow-xl" />
                 )}
-          <p className="text-white/25 text-[10px] text-center mt-1 mb-2">
-            📱 長按上方圖片／影片可直接儲存到相簿
-          </p>
+          <p className="text-white/25 text-[10px] text-center mt-1">
+  📱 長按上方圖片可直接儲存到相簿｜影片請點「儲存成果」下載
+</p>
         </div>
 
         {/* 操作按鈕 */}
