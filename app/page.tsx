@@ -32,6 +32,7 @@ const IMAGE_COUNTDOWN = 60; // 圖片預估 60 秒
 const [generationMode, setGenerationMode] = useState<"image" | "video" | "upload" | "text2video">("image");
 // [DNA_PATCH_START] Steps 2-6 手風琴狀態
 const [activeStep, setActiveStep] = useState<number>(2);
+const [imageRatio, setImageRatio] = useState("1:1");
 // [DNA_PATCH_START] STEP 2 外貌特徵 state
 const [selectedHair, setSelectedHair] = useState("");
 const [selectedEye, setSelectedEye] = useState("");
@@ -450,9 +451,9 @@ const lockedCharacter = lockedCharacterUrl || null;
         // [DNA_PATCH_START] prompt 組合含自訂欄位
 body: JSON.stringify({ 
   prompt: [selectedStyle, selectedPersona || customPersona, selectedScene || customScene, selectedShot, prompt].filter(Boolean).join(", "),
-// [DNA_PATCH_END]
   userEmail: session?.user?.email,
   lockedCharacter: lockedCharacter || null,
+  imageRatio: imageRatio,
 }),
       });
       const data = await res.json();
@@ -966,6 +967,28 @@ return (
                         </div>
                       )}
                       </div>
+                      {/* 圖片比例 */}
+<div>
+  <p className="text-white/30 text-[10px] font-bold tracking-wider uppercase mb-2">圖片比例</p>
+  <div className="flex gap-2 flex-wrap">
+    {[
+      { label: "1:1", value: "1:1" },
+      { label: "16:9", value: "16:9" },
+      { label: "9:16", value: "9:16" },
+      { label: "4:3", value: "4:3" },
+      { label: "3:4", value: "3:4" },
+    ].map((r) => (
+      <button key={r.value} type="button"
+        onClick={() => setImageRatio(r.value)}
+        className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+          imageRatio === r.value
+            ? "bg-[#89f5a2] text-[#0d2318] border-[#89f5a2]"
+            : "bg-white/5 text-white/50 border-white/10 hover:border-[#89f5a2]/40"
+        }`}>{r.label}</button>
+    ))}
+  </div>
+  <p className="text-white/20 text-[10px] mt-1.5">選好比例後生成，之後轉影片就不會變形</p>
+</div>
                       <button type="button" onClick={() => setActiveStep(25)}
   className="w-full py-2 text-xs text-white/40 hover:text-white/60 transition-all">
   下一步 →

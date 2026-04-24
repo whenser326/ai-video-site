@@ -37,7 +37,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "請求過於頻繁，請稍後再試" }, { status: 429 });
     }
 
-    const { prompt, image, mode, userEmail, videoPrompt, aspectRatio, duration, videoModel, refundCredits, batchPrompts, omniRefs } = await req.json();
+    const { prompt, image, mode, userEmail, videoPrompt, aspectRatio, duration, videoModel, refundCredits, batchPrompts, omniRefs, imageRatio } = await req.json();
 
     // [DNA_PATCH_START] 退點功能
     if (refundCredits && userEmail) {
@@ -265,7 +265,7 @@ export async function POST(req: Request) {
           input: {
             prompt: lockedPrompt,
             input_image: lockedCharacter,
-            aspect_ratio: "1:1",
+            aspect_ratio: imageRatio || "1:1",
             output_format: "png",
           }
         });
@@ -277,7 +277,7 @@ export async function POST(req: Request) {
           model: "black-forest-labs/flux-1.1-pro",
           input: {
             prompt: prompt || "AI Character",
-            aspect_ratio: "1:1",
+            aspect_ratio: imageRatio || "1:1",
             output_format: "png"
           }
         });
