@@ -755,7 +755,7 @@ return (
     </div>
     <p className="text-white/20 text-xs tracking-widest uppercase">展示影片製作中</p>
   </div>
-  <video src="/hero.mp4" autoPlay loop muted playsInline className="w-full h-full object-cover" />
+  <video src="https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/hero.mp4" autoPlay loop muted playsInline className="w-full h-full object-cover" />
 </div>
 {/* [DNA_PATCH_END] */}
 
