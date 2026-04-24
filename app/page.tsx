@@ -1513,13 +1513,13 @@ return (
               {/* 操作按鈕 */}
               <div className="grid grid-cols-2 gap-3 p-4 pt-1">
                 <button
-                  onClick={() => downloadFile(prediction.output)}
+                  onClick={() => window.open(prediction.output, '_blank')}
                   className="flex items-center justify-center gap-2 py-3 bg-white text-[#0d2318] rounded-xl font-bold text-sm shadow-md hover:bg-[#89f5a2] transition-colors"
                 >
                   ⬇️ 儲存成果
                 </button>
 <p className="text-white/25 text-[10px] text-center mt-1">
-  📱 手機用戶：長按圖片／影片可直接存到相簿
+  📱 點擊後長按圖片／影片，選「儲存」可存到相簿
 </p>
                 <button
                   onClick={() => setShowVideoModal(true)}
