@@ -193,9 +193,16 @@ Return API：app/api/newebpay/return/route.ts（付款完成跳轉回/pricing?su
 圖片上傳 API：app/api/upload-image/route.ts
 退點 API：POST /api/character 帶 { refundCredits, userEmail } 即退點
 成人站金流規劃：
-- 主力：SubscribeStar（個人可申請，信用卡訂閱制，約10%手續費）
-- 補充：NexaPay（免申請，信用卡付款收穩定幣，1-3%手續費，較新平台）
-- 長期目標：CCBill（需公司設立，業界最穩定成人金流）
+- 架構前提：網站架設於海外伺服器、公司登記於海外（愛沙尼亞或賽普勒斯）、金流走海外帳戶，不受台灣法律管轄
+- 提領路線：NOWPayments → USDT → 幣安/MAX → 換台幣出金，或透過 Payoneer 收款後轉台灣帳戶
+- 絕對不能用：Stripe、PayPal（Mastercard/Visa 網路明確禁止成人內容）
+- 主力（立即可用）：NOWPayments（加密貨幣，0.5% 手續費，300+幣種，明確支援成人平台，無 Chargeback 風險，台灣主體即可申請）
+- 補充：SubscribeStar（個人可申請，信用卡訂閱制，約10%手續費）
+- 補充：NexaPay（免申請，信用卡付款收穩定幣，1-3%手續費）
+- 中期目標：成立愛沙尼亞 e-Residency 公司（線上申請，數天完成，0%保留利潤企業稅），開通後申請 Segpay 或 Verotel 信用卡金流
+- 長期備用：CCBill（業界最穩定，需美國或歐洲公司主體）
+- Chargeback 控制：加密貨幣無 Chargeback，信用卡金流需控制在 0.75% 以下，超標即凍結帳戶，資金扣留 90-180 天
+- 多語系策略：網站以英文+德文+日文為主介面，吸引歐美日市場，有助於歐洲金流申請審核通過率
 - 成人站點數與主站點數完全分離，無移轉機制
 - 主站資料（角色/圖片）可移轉至成人站，不涉及金流
 
@@ -412,8 +419,9 @@ TURNSTILE_SECRET_KEY=（已設定於 Vercel Sensitive，備用，需要時去 Cl
 
 12. 待完成項目（下一步）
 
+
 ⬜ 藍新信用卡審核通過後實測付款流程
-⬜ 審核通過後移除舊 Stripe 相關程式碼（app/api/stripe/）
+⬜ 審核通過後移除舊 Stripe 相關程式碼（app/api/stripe/）— 暫緩，短期不上架 App，此條等 PWA 方向確認後再決定
 ⬜ Vercel 升級為付費版 Pro（$20 USD/月）— 預計 2026 年 5 月底前完成（網站已正式上線有商業收費，Hobby 條款禁止商業用途）
 ⬜ 成人站架構規劃（獨立網域、獨立服務、獨立金流）
 ⬜ 成人站身份驗證系統（上傳身份證、後台審核、adult_verified欄位）
@@ -557,6 +565,14 @@ Kling 影片比例受參考圖影響，根本解法是生圖時就選好目標�
 Hero 影片不放在 public/ 資料夾（git 無法追蹤 mp4），改用 Supabase Storage CDN 托管
 hero.mp4 位於 character-images bucket，更換影片直接在 Supabase Storage 覆蓋上傳即可，不需要改程式碼
 Hero 影片 <video> 標籤必須有 absolute inset-0，否則無法填滿容器
+Splash 入場動畫（2026/04/24）：
+- 觸發條件：credits !== null 時立刻結束，最長等 2500ms 強制結束
+- 背景色：#163d20（與首頁漸層起點略有差異，消費者感知不到）
+- LOGO 圖：public/logo-splash.png（400×400，原圖壓縮自 IMG_0260.png）
+- LOGO 顯示：圓形裁切（border-radius:50% + overflow:hidden）
+- 動畫元素：旋轉光環、掃光、logoPulse 發光、雙掃描線、文字 textGlow、三點跳動、底部閃爍線
+- state：pageReady / splashDone（禁止移除）
+- 蓋板淡出：opacity transition 0.7s，onTransitionEnd 後 setSplashDone(true) 從 DOM 移除
 
 14. 未來功能規劃（優先順序）
 
@@ -566,6 +582,7 @@ Hero 影片 <video> 標籤必須有 absolute inset-0，否則無法填滿容器
 ⬜ 公開畫廊（含匿名選項，需 public_gallery 資料表）
 ⬜ 角色公開/匿名分享功能（三選項：私人/匿名公開/公開分享，預設私人）
 ⬜ PWA 支援（讓用戶可將網站加到手機桌面，體驗接近 App，零上架成本）
+⬜ 多語系支援（英文/德文/日文/中文，使用 next-intl，一次到位，有助成人站金流審核與 SEO）
 ⬜ React Native App（前端重寫，後端 API 與 Supabase 完全共用，無需改動）
 
 長期：
@@ -573,5 +590,25 @@ Hero 影片 <video> 標籤必須有 absolute inset-0，否則無法填滿容器
 ⬜ API 開放（讓第三方開發者串接）
 ⬜ LPM 1.0（Anuttacon）— 即時雙向對話角色，一張圖生成即時會說話/聆聽/有表情的AI角色，支援無限長度，待API開放後評估串接，目前僅學術用途，無API
 ⬜ App Store 上架評估（主站非成人版本，需確保服務條款/網站內容完全不提成人相關字眼）
+⬜ App Store 上架（短期不建議）— 原因：Apple/Google 抽成 30%、審核成本高、需維護雙套金流。建議先完成 PWA，等營收規模足夠再重新評估。
 注意：成人站禁止上架 App Store，走獨立網域 + PWA 路線
 注意：AI 生成人物圖片在 Apple 審核屬敏感領域，上架前需法律評估
+成人站上線優先順序：
+1. 法律評估（海外公司架構確認）
+2. NOWPayments 帳號申請，測試 USDT 收款流程
+3. Atlas Cloud 申請，測試 Wan Spicy / Flux Dev 無審查 API 串接
+4. 成人站圖片功能先上，驗證用戶付費意願
+5. 影片功能等開源模型成熟後再上（預計 6-12 個月後，崩壞率需降至可接受水準）
+6. 愛沙尼亞 e-Residency 公司成立後申請 Segpay 信用卡金流
+7. 營收穩定後評估遷移至 RunPod Serverless 自建 GPU 架構
+成人站技術選型：
+- 圖片：Flux Dev 無審查微調版（Atlas Cloud API）
+- 影片：Wan Spicy（Atlas Cloud API，約 $0.01/秒，5秒約 $0.05-0.15）
+- 影片成本是圖片 10-20 倍，定價需精準，初期建議圖片站先行
+- 角色一致性：開源影片模型目前尚未成熟，崩壞率 30-50%，需退點機制
+多語系規劃（有助於金流審核與法律風險降低）：
+- 主力：英文（市場最大、法律風險最低）
+- 次要：德文（德國成人內容合法化完善，有助歐洲金流申請）
+- 次要：日文（消費力強，但 AI 生成成人內容法規仍在討論中）
+- 補充：中文（可做但行銷上低調，不主動推台灣市場）
+- 技術：Next.js i18n 內建支援，JSON 管理靜態翻譯，工程量不大

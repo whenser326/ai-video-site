@@ -1,0 +1,22 @@
+{
+  "name": "Consistent Flow - AI Character Studio",
+  "short_name": "Consistent Flow",
+  "description": "用 AI 生成高精度角色圖片與影片",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d2318",
+  "theme_color": "#0d2318",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/logo-splash.png",
+      "sizes": "400x400",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
