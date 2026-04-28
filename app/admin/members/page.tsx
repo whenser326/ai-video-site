@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 
 interface MemberProfile {
+  id: string
   email: string
   plan: string
   credits: number
@@ -39,36 +40,38 @@ export default function AdminMembersPage() {
   const [adjustReason, setAdjustReason] = useState('')
   const [adjusting, setAdjusting] = useState(false)
   const [adjustMsg, setAdjustMsg] = useState('')
-  const [selectedEmails, setSelectedEmails] = useState<Set<string>>(new Set())
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [deleting, setDeleting] = useState(false)
   const [deleteMsg, setDeleteMsg] = useState('')
 
-  const toggleSelect = (email: string) => {
-    setSelectedEmails(prev => {
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
       const next = new Set(prev)
-      if (next.has(email)) next.delete(email)
-      else next.add(email)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
       return next
     })
   }
 
   const handleBulkDelete = async () => {
-    if (selectedEmails.size === 0) return
-    if (!confirm(`確定要刪除這 ${selectedEmails.size} 個帳號嗎？此操作不可復原！`)) return
+    if (selectedIds.size === 0) return
+    if (!confirm(`確定要刪除這 ${selectedIds.size} 個帳號嗎？此操作不可復原！`)) return
     setDeleting(true)
+    const selectedProfiles = filtered.filter(p => selectedIds.has(p.id))
+    const emails = selectedProfiles.map(p => p.email)
     try {
       const res = await fetch('/api/admin/delete-users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           adminEmail: session?.user?.email,
-          emails: Array.from(selectedEmails),
+          emails,
         }),
       })
       const data = await res.json()
       if (data.ok) {
         setDeleteMsg(`✅ 已刪除 ${data.deleted} 個帳號`)
-        setSelectedEmails(new Set())
+        setSelectedIds(new Set())
         await loadStats()
         setTimeout(() => setDeleteMsg(''), 3000)
       } else {
@@ -145,21 +148,16 @@ export default function AdminMembersPage() {
     <div className="min-h-screen bg-[#0d2318] p-6">
       <div className="max-w-6xl mx-auto">
 
-        {/* 頂部 */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <button onClick={() => router.push('/admin')} className="text-[#89f5a2] hover:underline text-sm">← 返回後台</button>
             <p className="text-[#89f5a2] font-bold text-2xl">👥 會員統計</p>
           </div>
-          <button
-            onClick={loadStats}
-            className="px-4 py-1.5 rounded-full border border-[#89f5a2]/40 text-[#89f5a2] text-sm hover:bg-[#89f5a2]/10 transition"
-          >
+          <button onClick={loadStats} className="px-4 py-1.5 rounded-full border border-[#89f5a2]/40 text-[#89f5a2] text-sm hover:bg-[#89f5a2]/10 transition">
             🔄 重新整理
           </button>
         </div>
 
-        {/* 統計卡片 */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
           {[
             { label: '總會員數', value: stats?.totalMembers || 0, color: 'text-[#89f5a2]' },
@@ -174,7 +172,6 @@ export default function AdminMembersPage() {
           ))}
         </div>
 
-        {/* 方案分布 */}
         <div className="grid grid-cols-4 gap-3 mb-8">
           {(['free', 'starter', 'standard', 'pro'] as const).map(plan => (
             <div key={plan} className="bg-[#1a3a28] border border-[#2d5a3d] rounded-xl p-3 text-center">
@@ -184,38 +181,20 @@ export default function AdminMembersPage() {
           ))}
         </div>
 
-        {/* 批量刪除操作列 */}
-        {selectedEmails.size > 0 && (
+        {selectedIds.size > 0 && (
           <div className="flex items-center gap-3 mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl">
-            <span className="text-red-300 text-sm">已選 {selectedEmails.size} 個帳號</span>
-            <button
-              onClick={handleBulkDelete}
-              disabled={deleting}
-              className="px-4 py-1.5 bg-red-500/20 border border-red-500/40 rounded-lg text-red-300 text-sm font-bold hover:bg-red-500/30 transition disabled:opacity-40"
-            >
+            <span className="text-red-300 text-sm">已選 {selectedIds.size} 個帳號</span>
+            <button onClick={handleBulkDelete} disabled={deleting} className="px-4 py-1.5 bg-red-500/20 border border-red-500/40 rounded-lg text-red-300 text-sm font-bold hover:bg-red-500/30 transition disabled:opacity-40">
               {deleting ? '刪除中...' : '🗑️ 批量刪除'}
             </button>
-            <button
-              onClick={() => setSelectedEmails(new Set())}
-              className="px-3 py-1.5 text-white/40 text-sm hover:text-white/70 transition"
-            >取消選取</button>
+            <button onClick={() => setSelectedIds(new Set())} className="px-3 py-1.5 text-white/40 text-sm hover:text-white/70 transition">取消選取</button>
             {deleteMsg && <span className="text-sm">{deleteMsg}</span>}
           </div>
         )}
 
-        {/* 搜尋過濾 */}
         <div className="flex gap-3 mb-4">
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="搜尋 Email..."
-            className="flex-1 bg-[#1a3a28] border border-[#2d5a3d] rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-[#89f5a2]"
-          />
-          <select
-            value={filterPlan}
-            onChange={e => setFilterPlan(e.target.value)}
-            className="bg-[#1a3a28] border border-[#2d5a3d] rounded-xl px-3 py-2 text-white text-sm focus:outline-none"
-          >
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="搜尋 Email..." className="flex-1 bg-[#1a3a28] border border-[#2d5a3d] rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-[#89f5a2]" />
+          <select value={filterPlan} onChange={e => setFilterPlan(e.target.value)} className="bg-[#1a3a28] border border-[#2d5a3d] rounded-xl px-3 py-2 text-white text-sm focus:outline-none">
             <option value="all">全部方案</option>
             <option value="free">免費</option>
             <option value="starter">入門</option>
@@ -224,22 +203,17 @@ export default function AdminMembersPage() {
           </select>
         </div>
 
-        {/* 會員列表 */}
         <div className="bg-[#1a3a28] border border-[#2d5a3d] rounded-2xl overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[#2d5a3d]">
                 <th className="text-center text-[#89f5a2] px-4 py-3">
-                  <input
-                    type="checkbox"
+                  <input type="checkbox"
                     onChange={() => {
-                      if (filtered.every(p => selectedEmails.has(p.email))) {
-                        setSelectedEmails(new Set())
-                      } else {
-                        setSelectedEmails(new Set(filtered.map(p => p.email)))
-                      }
+                      if (filtered.every(p => selectedIds.has(p.id))) setSelectedIds(new Set())
+                      else setSelectedIds(new Set(filtered.map(p => p.id)))
                     }}
-                    checked={filtered.length > 0 && filtered.every(p => selectedEmails.has(p.email))}
+                    checked={filtered.length > 0 && filtered.every(p => selectedIds.has(p.id))}
                     className="w-4 h-4"
                   />
                 </th>
@@ -253,14 +227,9 @@ export default function AdminMembersPage() {
             </thead>
             <tbody>
               {filtered.map((p, i) => (
-  <tr key={`${p.email}-${i}`} className={`border-b border-[#2d5a3d]/50 ${i % 2 === 0 ? '' : 'bg-[#0d2318]/40'}`}>
+                <tr key={p.id} className={`border-b border-[#2d5a3d]/50 ${i % 2 === 0 ? '' : 'bg-[#0d2318]/40'}`}>
                   <td className="px-4 py-3 text-center">
-                    <input
-                      type="checkbox"
-                      checked={selectedEmails.has(p.email)}
-                      onChange={() => toggleSelect(p.email)}
-                      className="w-4 h-4"
-                    />
+                    <input type="checkbox" checked={selectedIds.has(p.id)} onChange={() => toggleSelect(p.id)} className="w-4 h-4" />
                   </td>
                   <td className="px-4 py-3 text-white">{p.email}</td>
                   <td className="px-4 py-3 text-center">{PLAN_LABEL[p.plan] || p.plan}</td>
@@ -268,10 +237,7 @@ export default function AdminMembersPage() {
                   <td className="px-4 py-3 text-center text-purple-300">{p.generations}</td>
                   <td className="px-4 py-3 text-center text-gray-400">{new Date(p.created_at).toLocaleDateString('zh-TW')}</td>
                   <td className="px-4 py-3 text-center">
-                    <button
-                      onClick={() => { setAdjustModal({ email: p.email }); setAdjustAmount(''); setAdjustReason(''); setAdjustMsg('') }}
-                      className="px-3 py-1 bg-yellow-500/20 border border-yellow-500/30 rounded-lg text-yellow-300 text-xs font-bold hover:bg-yellow-500/30 transition"
-                    >
+                    <button onClick={() => { setAdjustModal({ email: p.email }); setAdjustAmount(''); setAdjustReason(''); setAdjustMsg('') }} className="px-3 py-1 bg-yellow-500/20 border border-yellow-500/30 rounded-lg text-yellow-300 text-xs font-bold hover:bg-yellow-500/30 transition">
                       💰 補點
                     </button>
                   </td>
@@ -284,7 +250,6 @@ export default function AdminMembersPage() {
           </table>
         </div>
 
-        {/* 補點 Modal */}
         {adjustModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
             <div className="bg-[#1a3a28] border border-[#2d5a3d] rounded-2xl p-6 w-full max-w-sm mx-4">
@@ -292,35 +257,16 @@ export default function AdminMembersPage() {
               <p className="text-white/50 text-xs mb-4">{adjustModal.email}</p>
               <div className="mb-3">
                 <label className="text-white/60 text-xs mb-1 block">點數（正數補點、負數扣點）</label>
-                <input
-                  type="number"
-                  value={adjustAmount}
-                  onChange={e => setAdjustAmount(e.target.value)}
-                  placeholder="例如：10 或 -5"
-                  className="w-full bg-[#0d2318] border border-[#2d5a3d] rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-[#89f5a2]"
-                />
+                <input type="number" value={adjustAmount} onChange={e => setAdjustAmount(e.target.value)} placeholder="例如：10 或 -5" className="w-full bg-[#0d2318] border border-[#2d5a3d] rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-[#89f5a2]" />
               </div>
               <div className="mb-4">
                 <label className="text-white/60 text-xs mb-1 block">備註原因（選填）</label>
-                <input
-                  type="text"
-                  value={adjustReason}
-                  onChange={e => setAdjustReason(e.target.value)}
-                  placeholder="例如：BUG補償、活動獎勵..."
-                  className="w-full bg-[#0d2318] border border-[#2d5a3d] rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-[#89f5a2]"
-                />
+                <input type="text" value={adjustReason} onChange={e => setAdjustReason(e.target.value)} placeholder="例如：BUG補償、活動獎勵..." className="w-full bg-[#0d2318] border border-[#2d5a3d] rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-[#89f5a2]" />
               </div>
               {adjustMsg && <p className="text-sm mb-3">{adjustMsg}</p>}
               <div className="flex gap-3">
-                <button
-                  onClick={() => setAdjustModal(null)}
-                  className="flex-1 py-2 rounded-xl border border-white/20 text-white/50 text-sm hover:bg-white/5 transition"
-                >取消</button>
-                <button
-                  onClick={handleAdjustCredits}
-                  disabled={adjusting || !adjustAmount}
-                  className="flex-1 py-2 rounded-xl bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 font-bold text-sm hover:bg-yellow-500/30 transition disabled:opacity-40"
-                >
+                <button onClick={() => setAdjustModal(null)} className="flex-1 py-2 rounded-xl border border-white/20 text-white/50 text-sm hover:bg-white/5 transition">取消</button>
+                <button onClick={handleAdjustCredits} disabled={adjusting || !adjustAmount} className="flex-1 py-2 rounded-xl bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 font-bold text-sm hover:bg-yellow-500/30 transition disabled:opacity-40">
                   {adjusting ? '處理中...' : '確認補點'}
                 </button>
               </div>
@@ -328,7 +274,6 @@ export default function AdminMembersPage() {
           </div>
         )}
 
-        {/* 補點紀錄 */}
         {adjustments.length > 0 && (
           <div className="bg-[#1a3a28] border border-[#2d5a3d] rounded-2xl p-6 mt-6">
             <h2 className="text-[#89f5a2] font-bold text-lg mb-4">📋 補點紀錄</h2>

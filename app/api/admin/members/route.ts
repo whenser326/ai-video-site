@@ -17,7 +17,7 @@ export async function GET() {
 
   const { data: profiles, error } = await supabase
     .from('profiles')
-    .select('email, plan, credits, created_at')
+    .select('id, email, plan, credits, created_at')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
@@ -59,6 +59,7 @@ export async function GET() {
     totalGenerations,
     newToday,
     profiles: profiles?.map(p => ({
+      id: p.id,
       email: p.email,
       plan: p.plan,
       credits: p.credits,
