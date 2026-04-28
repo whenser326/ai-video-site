@@ -236,7 +236,7 @@ export default function AdminMembersPage() {
                       if (e.target.checked) setSelectedEmails(new Set(filtered.map(p => p.email)))
                       else setSelectedEmails(new Set())
                     }}
-                    checked={filtered.length > 0 && selectedEmails.size === filtered.length}
+                    checked={filtered.length > 0 && filtered.every(p => selectedEmails.has(p.email))}
                     className="w-4 h-4"
                   />
                 </th>
