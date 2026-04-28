@@ -232,9 +232,12 @@ export default function AdminMembersPage() {
                 <th className="text-center text-[#89f5a2] px-4 py-3">
                   <input
                     type="checkbox"
-                    onChange={e => {
-                      if (e.target.checked) setSelectedEmails(new Set(filtered.map(p => p.email)))
-                      else setSelectedEmails(new Set())
+                    onChange={() => {
+                      if (filtered.every(p => selectedEmails.has(p.email))) {
+                        setSelectedEmails(new Set())
+                      } else {
+                        setSelectedEmails(new Set(filtered.map(p => p.email)))
+                      }
                     }}
                     checked={filtered.length > 0 && filtered.every(p => selectedEmails.has(p.email))}
                     className="w-4 h-4"
