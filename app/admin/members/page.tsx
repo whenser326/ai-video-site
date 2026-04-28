@@ -253,7 +253,7 @@ export default function AdminMembersPage() {
             </thead>
             <tbody>
               {filtered.map((p, i) => (
-                <tr key={p.email} className={`border-b border-[#2d5a3d]/50 ${i % 2 === 0 ? '' : 'bg-[#0d2318]/40'}`}>
+  <tr key={`${p.email}-${i}`} className={`border-b border-[#2d5a3d]/50 ${i % 2 === 0 ? '' : 'bg-[#0d2318]/40'}`}>
                   <td className="px-4 py-3 text-center">
                     <input
                       type="checkbox"
