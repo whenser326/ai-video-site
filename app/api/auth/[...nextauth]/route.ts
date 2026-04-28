@@ -1,5 +1,12 @@
+// [DNA_PATCH_START] 完整 auth-route.ts
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+);
 
 export const authOptions = {
   providers: [
@@ -11,12 +18,29 @@ export const authOptions = {
   callbacks: {
     async signIn({ user }: { user: any }) {
       console.log("🔴 DEBUG: Google SignIn triggered for", user.email);
-      // 這裡維持 return true，確保前端能拿到 session，資庫寫入交給 character API
+
+      if (user.email) {
+        const [localPart, domain] = user.email.split('@');
+        if (domain === 'gmail.com') {
+          const normalized = localPart.split('+')[0].replace(/\./g, '') + '@' + domain;
+          if (normalized !== user.email) {
+            const { data: existing } = await supabase
+              .from('profiles')
+              .select('email')
+              .eq('email', normalized)
+              .maybeSingle();
+            if (existing) {
+              console.log(`❌ 拒絕重複帳號: ${user.email} → 已存在 ${normalized}`);
+              return false;
+            }
+          }
+        }
+      }
       return true;
     },
   },
 };
 
 const handler = NextAuth(authOptions);
-
 export { handler as GET, handler as POST };
+// [DNA_PATCH_END]

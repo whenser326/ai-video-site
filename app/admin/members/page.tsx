@@ -39,6 +39,48 @@ export default function AdminMembersPage() {
   const [adjustAmount, setAdjustAmount] = useState('')
   const [adjustReason, setAdjustReason] = useState('')
   const [adjusting, setAdjusting] = useState(false)
+  // [DNA_PATCH_START] 批量刪帳號 state
+const [selectedEmails, setSelectedEmails] = useState<Set<string>>(new Set())
+const [deleting, setDeleting] = useState(false)
+const [deleteMsg, setDeleteMsg] = useState('')
+
+const toggleSelect = (email: string) => {
+  setSelectedEmails(prev => {
+    const next = new Set(prev)
+    if (next.has(email)) next.delete(email)
+    else next.add(email)
+    return next
+  })
+}
+
+const handleBulkDelete = async () => {
+  if (selectedEmails.size === 0) return
+  if (!confirm(`確定要刪除這 ${selectedEmails.size} 個帳號嗎？此操作不可復原！`)) return
+  setDeleting(true)
+  try {
+    const res = await fetch('/api/admin/delete-users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        adminEmail: session?.user?.email,
+        emails: Array.from(selectedEmails),
+      }),
+    })
+    const data = await res.json()
+    if (data.ok) {
+      setDeleteMsg(`✅ 已刪除 ${data.deleted} 個帳號`)
+      setSelectedEmails(new Set())
+      await loadStats()
+      setTimeout(() => setDeleteMsg(''), 3000)
+    } else {
+      setDeleteMsg('❌ 刪除失敗：' + data.error)
+    }
+  } catch {
+    setDeleteMsg('❌ 連線失敗')
+  }
+  setDeleting(false)
+}
+// [DNA_PATCH_END]
   const [adjustMsg, setAdjustMsg] = useState('')
   // [DNA_PATCH_END]
 
@@ -147,6 +189,25 @@ export default function AdminMembersPage() {
           ))}
         </div>
 
+{/* [DNA_PATCH_START] 批量刪除操作列 */}
+{selectedEmails.size > 0 && (
+  <div className="flex items-center gap-3 mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl">
+    <span className="text-red-300 text-sm">已選 {selectedEmails.size} 個帳號</span>
+    <button
+      onClick={handleBulkDelete}
+      disabled={deleting}
+      className="px-4 py-1.5 bg-red-500/20 border border-red-500/40 rounded-lg text-red-300 text-sm font-bold hover:bg-red-500/30 transition disabled:opacity-40"
+    >
+      {deleting ? '刪除中...' : '🗑️ 批量刪除'}
+    </button>
+    <button
+      onClick={() => setSelectedEmails(new Set())}
+      className="px-3 py-1.5 text-white/40 text-sm hover:text-white/70 transition"
+    >取消選取</button>
+    {deleteMsg && <span className="text-sm">{deleteMsg}</span>}
+  </div>
+)}
+{/* [DNA_PATCH_END] */}
         {/* 搜尋過濾 */}
         <div className="flex gap-3 mb-4">
           <input
@@ -173,6 +234,18 @@ export default function AdminMembersPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[#2d5a3d]">
+                {/* [DNA_PATCH_START] 全選欄 */}
+<th className="text-center text-[#89f5a2] px-4 py-3">
+  <input type="checkbox"
+    onChange={e => {
+      if (e.target.checked) setSelectedEmails(new Set(filtered.map(p => p.email)))
+      else setSelectedEmails(new Set())
+    }}
+    checked={filtered.length > 0 && selectedEmails.size === filtered.length}
+    className="w-4 h-4"
+  />
+</th>
+{/* [DNA_PATCH_END] */}
                 <th className="text-left text-[#89f5a2] px-4 py-3">Email</th>
                 <th className="text-center text-[#89f5a2] px-4 py-3">方案</th>
                 <th className="text-center text-[#89f5a2] px-4 py-3">點數</th>
@@ -185,6 +258,15 @@ export default function AdminMembersPage() {
               {filtered.map((p, i) => (
                 <tr key={p.email} className={`border-b border-[#2d5a3d]/50 ${i % 2 === 0 ? '' : 'bg-[#0d2318]/40'}`}>
                   <td className="px-4 py-3 text-white">{p.email}</td>
+                  {/* [DNA_PATCH_START] 每列勾選欄 */}
+<td className="px-4 py-3 text-center">
+  <input type="checkbox"
+    checked={selectedEmails.has(p.email)}
+    onChange={() => toggleSelect(p.email)}
+    className="w-4 h-4"
+  />
+</td>
+{/* [DNA_PATCH_END] */}
                   <td className="px-4 py-3 text-center">{PLAN_LABEL[p.plan] || p.plan}</td>
                   <td className="px-4 py-3 text-center text-yellow-300">{p.credits}</td>
                   <td className="px-4 py-3 text-center text-purple-300">{p.generations}</td>
