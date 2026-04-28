@@ -246,18 +246,6 @@ const handleBulkDelete = async () => {
   />
 </th>
 {/* [DNA_PATCH_END] */}
-{/* [DNA_PATCH_START] 全選欄 */}
-<th className="text-center text-[#89f5a2] px-4 py-3">
-  <input type="checkbox"
-    onChange={e => {
-      if (e.target.checked) setSelectedEmails(new Set(filtered.map(p => p.email)))
-      else setSelectedEmails(new Set())
-    }}
-    checked={filtered.length > 0 && selectedEmails.size === filtered.length}
-    className="w-4 h-4"
-  />
-</th>
-{/* [DNA_PATCH_END] */}
                 <th className="text-left text-[#89f5a2] px-4 py-3">Email</th>
                 <th className="text-center text-[#89f5a2] px-4 py-3">方案</th>
                 <th className="text-center text-[#89f5a2] px-4 py-3">點數</th>
@@ -269,7 +257,7 @@ const handleBulkDelete = async () => {
             <tbody>
               {filtered.map((p, i) => (
                 <tr key={p.email} className={`border-b border-[#2d5a3d]/50 ${i % 2 === 0 ? '' : 'bg-[#0d2318]/40'}`}>
-                  {/* [DNA_PATCH_START] 每列勾選欄 */}
+{/* [DNA_PATCH_START] 每列勾選欄 */}
 <td className="px-4 py-3 text-center">
   <input type="checkbox"
     checked={selectedEmails.has(p.email)}
@@ -279,14 +267,6 @@ const handleBulkDelete = async () => {
 </td>
 {/* [DNA_PATCH_END] */}
 <td className="px-4 py-3 text-white">{p.email}</td>
-<td className="px-4 py-3 text-center">
-  <input type="checkbox"
-    checked={selectedEmails.has(p.email)}
-    onChange={() => toggleSelect(p.email)}
-    className="w-4 h-4"
-  />
-</td>
-{/* [DNA_PATCH_END] */}
                   <td className="px-4 py-3 text-center">{PLAN_LABEL[p.plan] || p.plan}</td>
                   <td className="px-4 py-3 text-center text-yellow-300">{p.credits}</td>
                   <td className="px-4 py-3 text-center text-purple-300">{p.generations}</td>
@@ -304,7 +284,7 @@ const handleBulkDelete = async () => {
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={6} className="text-center text-gray-400 py-8">沒有符合的會員</td></tr>
+                <tr><td colSpan={7} className="text-center text-gray-400 py-8">沒有符合的會員</td></tr>
               )}
             </tbody>
           </table>

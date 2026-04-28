@@ -68,6 +68,23 @@ TTS 試聽防呆更新：
 - app/globals.css → 內容見第 13 節備忘，損壞會導致全站樣式異常
 - 加入 git 追蹤指令：git add -f app/globals.css
 - 修改此類檔案前必須先備份內容到 PROJECT_DNA.md
+後台批量刪帳號功能：
+- app/admin/members/page.tsx 會員列表新增勾選框和批量刪除按鈕
+- app/api/admin/delete-users/route.ts 新增刪帳號 API
+- 勾選後出現紅色操作列，顯示已選數量和批量刪除按鈕
+- 刪除範圍：profiles、user_generations、saved_characters、checkin_logs 四個表
+- 管理員權限驗證：只有 whenser@gmail.com 才能執行
+
+Email 正規化防薅羊毛：
+- app/api/auth/[...nextauth]/route.ts 的 signIn callback 加入 Gmail +. 漏洞防護
+- 正規化邏輯：移除 + 後綴和所有點，比對是否已有相同正規化帳號
+- 有重複則拒絕登入（return false）
+
+IP 限流：
+- middleware.ts 在根目錄（與 app、package.json 同層）
+- 攔截 /api/auth/callback 路徑
+- 同一 IP 24小時內最多建立 3 個帳號
+
 每次開始開發前必須先確認現有 page.tsx 包含哪些已完成功能，禁止在沒確認的情況下直接覆蓋或修改，避免已完成功能被蓋掉
 簽到防呆：同帳號每天只能簽一次（比對 checkin_last_date）、同 IP 每天只能一個帳號簽到（比對 checkin_logs）
 簽到獎勵：每日+1點，連續第7天+3點，第14天+5點，第21天+5點，第30天+10點
