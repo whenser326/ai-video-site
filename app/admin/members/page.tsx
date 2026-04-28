@@ -34,55 +34,51 @@ export default function AdminMembersPage() {
   const [adjustments, setAdjustments] = useState<{id:string; user_email:string; amount:number; reason:string|null; created_at:string}[]>([])
   const [search, setSearch] = useState('')
   const [filterPlan, setFilterPlan] = useState('all')
-  // [DNA_PATCH_START] 補點功能
   const [adjustModal, setAdjustModal] = useState<{ email: string } | null>(null)
   const [adjustAmount, setAdjustAmount] = useState('')
   const [adjustReason, setAdjustReason] = useState('')
   const [adjusting, setAdjusting] = useState(false)
-  // [DNA_PATCH_START] 批量刪帳號 state
-const [selectedEmails, setSelectedEmails] = useState<Set<string>>(new Set())
-const [deleting, setDeleting] = useState(false)
-const [deleteMsg, setDeleteMsg] = useState('')
-
-const toggleSelect = (email: string) => {
-  setSelectedEmails(prev => {
-    const next = new Set(prev)
-    if (next.has(email)) next.delete(email)
-    else next.add(email)
-    return next
-  })
-}
-
-const handleBulkDelete = async () => {
-  if (selectedEmails.size === 0) return
-  if (!confirm(`確定要刪除這 ${selectedEmails.size} 個帳號嗎？此操作不可復原！`)) return
-  setDeleting(true)
-  try {
-    const res = await fetch('/api/admin/delete-users', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        adminEmail: session?.user?.email,
-        emails: Array.from(selectedEmails),
-      }),
-    })
-    const data = await res.json()
-    if (data.ok) {
-      setDeleteMsg(`✅ 已刪除 ${data.deleted} 個帳號`)
-      setSelectedEmails(new Set())
-      await loadStats()
-      setTimeout(() => setDeleteMsg(''), 3000)
-    } else {
-      setDeleteMsg('❌ 刪除失敗：' + data.error)
-    }
-  } catch {
-    setDeleteMsg('❌ 連線失敗')
-  }
-  setDeleting(false)
-}
-// [DNA_PATCH_END]
   const [adjustMsg, setAdjustMsg] = useState('')
-  // [DNA_PATCH_END]
+  const [selectedEmails, setSelectedEmails] = useState<Set<string>>(new Set())
+  const [deleting, setDeleting] = useState(false)
+  const [deleteMsg, setDeleteMsg] = useState('')
+
+  const toggleSelect = (email: string) => {
+    setSelectedEmails(prev => {
+      const next = new Set(prev)
+      if (next.has(email)) next.delete(email)
+      else next.add(email)
+      return next
+    })
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedEmails.size === 0) return
+    if (!confirm(`確定要刪除這 ${selectedEmails.size} 個帳號嗎？此操作不可復原！`)) return
+    setDeleting(true)
+    try {
+      const res = await fetch('/api/admin/delete-users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          adminEmail: session?.user?.email,
+          emails: Array.from(selectedEmails),
+        }),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        setDeleteMsg(`✅ 已刪除 ${data.deleted} 個帳號`)
+        setSelectedEmails(new Set())
+        await loadStats()
+        setTimeout(() => setDeleteMsg(''), 3000)
+      } else {
+        setDeleteMsg('❌ 刪除失敗：' + data.error)
+      }
+    } catch {
+      setDeleteMsg('❌ 連線失敗')
+    }
+    setDeleting(false)
+  }
 
   useEffect(() => {
     if (status === 'unauthenticated') { router.push('/'); return }
@@ -100,7 +96,6 @@ const handleBulkDelete = async () => {
 
   useEffect(() => { loadStats() }, [])
 
-  // [DNA_PATCH_START] 補點函數
   const handleAdjustCredits = async () => {
     if (!adjustModal || !adjustAmount) return
     const amount = parseInt(adjustAmount)
@@ -135,7 +130,6 @@ const handleBulkDelete = async () => {
     }
     setAdjusting(false)
   }
-  // [DNA_PATCH_END]
 
   const filtered = stats?.profiles.filter(p => {
     const matchSearch = p.email.toLowerCase().includes(search.toLowerCase())
@@ -150,6 +144,7 @@ const handleBulkDelete = async () => {
   return (
     <div className="min-h-screen bg-[#0d2318] p-6">
       <div className="max-w-6xl mx-auto">
+
         {/* 頂部 */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -189,25 +184,25 @@ const handleBulkDelete = async () => {
           ))}
         </div>
 
-{/* [DNA_PATCH_START] 批量刪除操作列 */}
-{selectedEmails.size > 0 && (
-  <div className="flex items-center gap-3 mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl">
-    <span className="text-red-300 text-sm">已選 {selectedEmails.size} 個帳號</span>
-    <button
-      onClick={handleBulkDelete}
-      disabled={deleting}
-      className="px-4 py-1.5 bg-red-500/20 border border-red-500/40 rounded-lg text-red-300 text-sm font-bold hover:bg-red-500/30 transition disabled:opacity-40"
-    >
-      {deleting ? '刪除中...' : '🗑️ 批量刪除'}
-    </button>
-    <button
-      onClick={() => setSelectedEmails(new Set())}
-      className="px-3 py-1.5 text-white/40 text-sm hover:text-white/70 transition"
-    >取消選取</button>
-    {deleteMsg && <span className="text-sm">{deleteMsg}</span>}
-  </div>
-)}
-{/* [DNA_PATCH_END] */}
+        {/* 批量刪除操作列 */}
+        {selectedEmails.size > 0 && (
+          <div className="flex items-center gap-3 mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl">
+            <span className="text-red-300 text-sm">已選 {selectedEmails.size} 個帳號</span>
+            <button
+              onClick={handleBulkDelete}
+              disabled={deleting}
+              className="px-4 py-1.5 bg-red-500/20 border border-red-500/40 rounded-lg text-red-300 text-sm font-bold hover:bg-red-500/30 transition disabled:opacity-40"
+            >
+              {deleting ? '刪除中...' : '🗑️ 批量刪除'}
+            </button>
+            <button
+              onClick={() => setSelectedEmails(new Set())}
+              className="px-3 py-1.5 text-white/40 text-sm hover:text-white/70 transition"
+            >取消選取</button>
+            {deleteMsg && <span className="text-sm">{deleteMsg}</span>}
+          </div>
+        )}
+
         {/* 搜尋過濾 */}
         <div className="flex gap-3 mb-4">
           <input
@@ -234,18 +229,17 @@ const handleBulkDelete = async () => {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[#2d5a3d]">
-                {/* [DNA_PATCH_START] 全選欄 */}
-<th className="text-center text-[#89f5a2] px-4 py-3">
-  <input type="checkbox"
-    onChange={e => {
-      if (e.target.checked) setSelectedEmails(new Set(filtered.map(p => p.email)))
-      else setSelectedEmails(new Set())
-    }}
-    checked={filtered.length > 0 && selectedEmails.size === filtered.length}
-    className="w-4 h-4"
-  />
-</th>
-{/* [DNA_PATCH_END] */}
+                <th className="text-center text-[#89f5a2] px-4 py-3">
+                  <input
+                    type="checkbox"
+                    onChange={e => {
+                      if (e.target.checked) setSelectedEmails(new Set(filtered.map(p => p.email)))
+                      else setSelectedEmails(new Set())
+                    }}
+                    checked={filtered.length > 0 && selectedEmails.size === filtered.length}
+                    className="w-4 h-4"
+                  />
+                </th>
                 <th className="text-left text-[#89f5a2] px-4 py-3">Email</th>
                 <th className="text-center text-[#89f5a2] px-4 py-3">方案</th>
                 <th className="text-center text-[#89f5a2] px-4 py-3">點數</th>
@@ -257,21 +251,19 @@ const handleBulkDelete = async () => {
             <tbody>
               {filtered.map((p, i) => (
                 <tr key={p.email} className={`border-b border-[#2d5a3d]/50 ${i % 2 === 0 ? '' : 'bg-[#0d2318]/40'}`}>
-{/* [DNA_PATCH_START] 每列勾選欄 */}
-<td className="px-4 py-3 text-center">
-  <input type="checkbox"
-    checked={selectedEmails.has(p.email)}
-    onChange={() => toggleSelect(p.email)}
-    className="w-4 h-4"
-  />
-</td>
-{/* [DNA_PATCH_END] */}
-<td className="px-4 py-3 text-white">{p.email}</td>
+                  <td className="px-4 py-3 text-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedEmails.has(p.email)}
+                      onChange={() => toggleSelect(p.email)}
+                      className="w-4 h-4"
+                    />
+                  </td>
+                  <td className="px-4 py-3 text-white">{p.email}</td>
                   <td className="px-4 py-3 text-center">{PLAN_LABEL[p.plan] || p.plan}</td>
                   <td className="px-4 py-3 text-center text-yellow-300">{p.credits}</td>
                   <td className="px-4 py-3 text-center text-purple-300">{p.generations}</td>
                   <td className="px-4 py-3 text-center text-gray-400">{new Date(p.created_at).toLocaleDateString('zh-TW')}</td>
-                  {/* [DNA_PATCH_START] 補點按鈕 */}
                   <td className="px-4 py-3 text-center">
                     <button
                       onClick={() => { setAdjustModal({ email: p.email }); setAdjustAmount(''); setAdjustReason(''); setAdjustMsg('') }}
@@ -280,7 +272,6 @@ const handleBulkDelete = async () => {
                       💰 補點
                     </button>
                   </td>
-                  {/* [DNA_PATCH_END] */}
                 </tr>
               ))}
               {filtered.length === 0 && (
@@ -290,7 +281,7 @@ const handleBulkDelete = async () => {
           </table>
         </div>
 
-        {/* [DNA_PATCH_START] 補點 Modal */}
+        {/* 補點 Modal */}
         {adjustModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
             <div className="bg-[#1a3a28] border border-[#2d5a3d] rounded-2xl p-6 w-full max-w-sm mx-4">
@@ -333,9 +324,8 @@ const handleBulkDelete = async () => {
             </div>
           </div>
         )}
-        {/* [DNA_PATCH_END] */}
 
-        {/* [DNA_PATCH_START] 補點紀錄 */}
+        {/* 補點紀錄 */}
         {adjustments.length > 0 && (
           <div className="bg-[#1a3a28] border border-[#2d5a3d] rounded-2xl p-6 mt-6">
             <h2 className="text-[#89f5a2] font-bold text-lg mb-4">📋 補點紀錄</h2>
@@ -357,7 +347,6 @@ const handleBulkDelete = async () => {
             </div>
           </div>
         )}
-        {/* [DNA_PATCH_END] */}
 
       </div>
     </div>
