@@ -2298,7 +2298,7 @@ return (
       else setLockedCharacterId(null);
       setToastMessage("✅ 已自動鎖定此角色，後續生成將套用同一張臉");
       setShowToast(true);
-      setTimeout(() => setShowToast(false), 3000);
+      setTimeout(() => setShowToast(false), 8000);
     }
   });
   // [DNA_PATCH_END]
@@ -2506,8 +2506,9 @@ customAppearance={customAppearance}
         </main>
 {/* [DNA_PATCH_START] Toast 通知元件 */}
 {showToast && (
-  <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] px-6 py-3 rounded-2xl bg-[#1a3a25] border border-[#89f5a2]/40 text-[#89f5a2] text-sm font-black shadow-xl shadow-black/40 transition-all">
-    {toastMessage}
+  <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] px-6 py-3 rounded-2xl bg-[#1a3a25] border border-[#89f5a2]/40 text-[#89f5a2] text-sm font-black shadow-xl shadow-black/40 transition-all flex items-center gap-3">
+    <span>{toastMessage}</span>
+    <button onClick={() => setShowToast(false)} className="text-[#89f5a2]/60 hover:text-[#89f5a2] text-base leading-none">✕</button>
   </div>
 )}
 {/* [DNA_PATCH_END] */}
