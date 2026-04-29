@@ -100,6 +100,9 @@ const [lockedCharacterUrl, setLockedCharacterUrl] = useState<string | null>(null
 const [lockedCharacterId, setLockedCharacterId] = useState<number | null>(null);
 const [kontextRetryCount, setKontextRetryCount] = useState(0);
 const [retryMessage, setRetryMessage] = useState("");
+// [DNA_PATCH_START] Toast 通知狀態
+const [toastMessage, setToastMessage] = useState("");
+const [showToast, setShowToast] = useState(false);
 // [DNA_PATCH_END]
 const [referralCode, setReferralCode] = useState<string | null>(null);
 const [referralCredits, setReferralCredits] = useState<{ starter: string; standard: string; pro: string } | null>(null);
@@ -1732,8 +1735,10 @@ return (
       {/* 鎖定此角色 */}
       <button
         onClick={async () => {
+          // [DNA_PATCH_START] Toast 取代 alert
+          setToastMessage("🔄 上傳中，請稍候...");
+          setShowToast(true);
           try {
-            const btn = document.activeElement as HTMLButtonElement;
             const res = await fetch("/api/upload-image", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -1749,11 +1754,17 @@ return (
               setError('');
               localStorage.setItem('locked_character', data.url);
               setLockedCharacterUrl(data.url);
-              alert('✅ 角色已鎖定！');
+              setToastMessage("✅ 角色已鎖定！");
+              setTimeout(() => setShowToast(false), 2000);
             } else {
-              alert('鎖定失敗，請重試');
+              setToastMessage("❌ 鎖定失敗，請重試");
+              setTimeout(() => setShowToast(false), 2000);
             }
-          } catch { alert('鎖定失敗，請重試'); }
+          } catch {
+            setToastMessage("❌ 鎖定失敗，請重試");
+            setTimeout(() => setShowToast(false), 2000);
+          }
+          // [DNA_PATCH_END]
         }}
         className="flex flex-col items-center gap-1.5 py-3.5 bg-gradient-to-b from-[#89f5a2]/15 to-[#89f5a2]/5 border border-[#89f5a2]/40 text-[#89f5a2] rounded-2xl text-xs font-black hover:from-[#89f5a2]/25 hover:to-[#89f5a2]/10 hover:border-[#89f5a2]/60 transition-all active:scale-95 shadow-sm shadow-[#89f5a2]/10"
       >
@@ -2435,6 +2446,13 @@ customAppearance={customAppearance}
 )}
 {/* [DNA_PATCH_END] */}
         </main>
+{/* [DNA_PATCH_START] Toast 通知元件 */}
+{showToast && (
+  <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] px-6 py-3 rounded-2xl bg-[#1a3a25] border border-[#89f5a2]/40 text-[#89f5a2] text-sm font-black shadow-xl shadow-black/40 transition-all">
+    {toastMessage}
+  </div>
+)}
+{/* [DNA_PATCH_END] */}
   </>
   );
 }
