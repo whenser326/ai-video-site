@@ -1508,7 +1508,7 @@ return (
             {(() => {
               const isOpen = activeStep === 6;
               return (
-                <div className="border border-white/8 rounded-2xl overflow-hidden">
+                <div id="step6-section" className="border border-white/8 rounded-2xl overflow-hidden">
                   <button type="button" onClick={() => setActiveStep(isOpen ? 0 : 6)}
                     className="w-full flex items-center gap-3 px-4 py-3 bg-white/4 hover:bg-white/7 transition-all">
                     <span className="text-[10px] font-black text-white/30 w-12 flex-shrink-0">STEP 6</span>
@@ -2311,7 +2311,11 @@ onClick={() => {
   setTranslatedPrompt(null);
   setUseTranslated(false);
   setActiveStep(6);
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  setTimeout(() => {
+    const el = document.getElementById('step6-section');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    else window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, 100);
 }}
 // [DNA_PATCH_END]
               >

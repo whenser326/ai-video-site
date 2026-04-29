@@ -27,6 +27,7 @@ git 部署注意事項：
 - 出現第一個錯誤時，Claude 必須提醒是否需要換視窗
 - 換不換視窗由使用者自行決定，Claude 只負責提醒
 - 新視窗開始時必須貼入 PROJECT_DNA.md + 相關程式碼，否則 Claude 禁止開始開發
+DNA 更新防呆：每次新增規則前，必須先搜尋 DNA 是否有相關舊規則，有則直接修改舊規則，禁止新增重複或矛盾的條目。例如靈感畫廊防呆從四行改五行，必須修改第41行，不能另外新增一條。
 
 2. 代碼維護防禦機制 (Anti-Corruption Rules)
 
@@ -38,7 +39,7 @@ git 部署注意事項：
 禁止簡化：嚴格禁止刪除任何 useEffect、localStorage、Polling 或點數同步邏輯。
 防呆檢查：處理 history.map 前必須使用 Array.isArray(history) 進行強制檢查。
 貼上程式碼注意：從聊天介面複製含有 `<a` 標籤的程式碼時，`<a` 可能會被吃掉，貼上後需手動確認。
-靈感畫廊防呆：`galleryItems.map` 的 onClick 必須永遠包含 `setPrompt`、`setTranslatedPrompt(null)`、`setUseTranslated(false)`、`window.scrollTo({ top: 0, behavior: 'smooth' })` 四行，缺一不可
+靈感畫廊防呆：`galleryItems.map` 的 onClick 必須永遠包含 `setPrompt`、`setTranslatedPrompt(null)`、`setUseTranslated(false)`、`setActiveStep(6)`、捲動到 step6-section 共五個動作，缺一不可。捲動方式：getElementById('step6-section').scrollIntoView({ behavior:'smooth', block:'center' })，找不到元素才 fallback 用 window.scrollTo({ top:0 })
 TTS 試聽防呆：ttsCache、ttsPreviewCount、TTS_MAX_PREVIEW 三個變數禁止移除，切換聲音的 onClick 必須先查 ttsCache 再決定是否呼叫 API
 TTS 字數三層防護：
 - 前端 maxLength 依影片秒數動態調整（5秒=30字/10秒=55字）
@@ -103,6 +104,11 @@ page.tsx 已知 TypeScript 舊錯誤（4個，不理會）：
 - route.ts[Ln 171]: ')' expected
 - route.ts[Ln 27]: 'id' is declared here
 以上四個是舊錯誤，每次對話不需理會，不需排查
+鎖定角色防呆（2026/04/29）：
+- 鎖定角色按鈕 onClick 完成後，必須用 data.url 比對 savedCharacters，有符合者自動 setLockedCharacterId(matched.id)，無符合者 setLockedCharacterId(null)
+- lockedCharacterId 決定批次生成和單張生成是否歸類到角色相簿
+- 從歷史/結果區按鎖定角色，系統不會自動知道屬於哪個收藏角色，需靠比對 savedCharacters 來自動帶入
+- 想讓批次生成歸類相簿，必須確保 lockedCharacterId 有值（從收藏列表鎖定，或比對成功）
 
 3. 專案核心
 
@@ -136,7 +142,7 @@ profiles 新增欄位：checkin_last_date（date）、checkin_streak（int4, def
 5. 定價方案
 
 方案 | 點數 | 售價 | 圖片 | 影片 | 角色一致性 | 批次生成 | 語音合成 | Wav2Lip | 每日圖片 | 歷史紀錄
-🆓 免費 | 5點 | $0 | 1點 | 4-6點/支 | ✅ | ❌ | ❌ | ❌ | 2張/天 | 5筆
+🆓 免費 | 5點 | $0 | 1點 | 4-6點/支(僅Kling) | ✅ | ❌ | ❌ | ❌ | 2張/天,1影片/天 | 5筆
 🌱 入門包 | 30點 | $250 NTD | 1點 | 6點/支 | ✅ | 2張 | 8點/次 | 10點/次 | 無限 | 30天/5筆
 ⭐ 標準包 | 80點 | $450 NTD | 1點 | 5點/支 | ✅ | 4張 | 7點/次 | 9點/次 | 無限 | 30天/10筆
 🚀 專業包 | 200點 | $799 NTD | 1點 | 4點/支 | ✅ | 6張 | 6點/次 | 8點/次 | 無限 | 90天/30筆
@@ -204,6 +210,9 @@ GlobalHeader RWD 設計：
 Seedance 2.0 點數定價（越高方案越便宜）：入門 5秒/17點・10秒/27點，標準 5秒/15點・10秒/25點，專業 5秒/13點・10秒/21點
 Seedance 2.0 + Omni-Reference 點數定價（額外加費，API成本不變純利）：入門 5秒/23點・10秒/33點，標準 5秒/20點・10秒/30點，專業 5秒/17點・10秒/25點
 Omni-Reference 定價邏輯：入門+6點、標準+5點、專業+4點（固定加費，不管上傳幾張參考圖）
+Toast 通知：鎖定角色改用底部固定 Toast 取代 alert，state 為 showToast/toastMessage，z-index 9999
+免費用戶影片限制：每天最多1支，只能用 Kling，Seedance 按鈕用 {plan !== 'free' && (...)} 隱藏
+批次生成429錯誤：偵測到 429/throttled/Too Many 顯示「生成請求太頻繁，請等待5秒後重試」，原因是網站主 Replicate 帳戶餘額低於$10導致限流，非程式bug
 
 8. 金流
 
@@ -512,7 +521,7 @@ SubscribeStar 對帳單顯示「Subscribestar」，NexaPay 用戶收到穩定幣
 批次生成建議：同一套衣服+不同姿勢效果最穩，換衣服或換風格臉部可能飄移
 免費用戶每日影片限制邏輯：在點數檢查之前先攔截，有點數也只能生1支
 每日簽到實作時注意：需防多帳號濫用，建議加 IP + Google帳號雙重驗證
-靈感畫廊點擊無反應：onClick 必須包含 `window.scrollTo({ top: 0, behavior: 'smooth' })`，否則用戶不知道已套用，且此 bug 已出現兩次，禁止移除此行
+靈感畫廊點擊無反應：onClick 必須捲動到 step6-section，此 bug 已出現兩次，禁止移除捲動邏輯
 手機版自訂輸入框（Step 2-4）禁止用 <input type="text">，必須用 <textarea rows={2} className="...resize-none leading-relaxed">，否則手機版 placeholder 長文字會被截斷
 文字生成影片不帶 omniRefs，Seedance 費用使用無 Omni 基本定價（入門5秒17點/10秒27點・標準5秒15點/10秒25點・專業5秒13點/10秒21點）
 SEO keywords meta tag 對 Google 無效（2009年起），真正有效的是 og:title/og:description
