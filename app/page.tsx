@@ -1716,6 +1716,26 @@ return (
 </div>
 // [DNA_PATCH_END]
 )}
+{/* [DNA_PATCH_START] 影片結果區解除鎖定按鈕 */}
+{genType === 'video' && lockedCharacterUrl && (
+  <button
+    onClick={async () => {
+      if (!confirm('確定要解除鎖定角色嗎？')) return;
+      await fetch("/api/user/clear-locked-character", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: session?.user?.email }),
+      });
+      localStorage.removeItem('locked_character');
+      setLockedCharacterUrl(null);
+      setLockedCharacterId(null);
+    }}
+    className="col-span-2 w-full py-2.5 bg-white/3 border border-white/10 text-white/35 rounded-xl text-xs font-bold hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-400/60 transition-all active:scale-95"
+  >
+    🔓 解除鎖定角色
+  </button>
+)}
+{/* [DNA_PATCH_END] */}
 {/* [DNA_PATCH_START] TTS 語音合成按鈕（付費專屬，僅影片生成後顯示） */}
 {plan !== 'free' && genType === 'video' && (
   <button
@@ -2258,6 +2278,29 @@ return (
   const refs = videoModel === "seedance" ? [omniRef1, omniRef2, omniRef3] : [];
   handleGenerateVideo(uploadedImage, videoTranslatedPrompt || videoPrompt, videoRatio, videoDuration, videoModel, refs);
   setOmniRef1(null); setOmniRef2(null); setOmniRef3(null);
+  // [DNA_PATCH_END]
+  // [DNA_PATCH_START] 上傳照片自動鎖定角色
+  fetch("/api/upload-image", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ imageUrl: uploadedImage, email: session?.user?.email }),
+  }).then(r => r.json()).then(data => {
+    if (data.url) {
+      fetch("/api/user/save-locked-character", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: session?.user?.email ?? '', url: data.url }),
+      });
+      localStorage.setItem('locked_character', data.url);
+      setLockedCharacterUrl(data.url);
+      const matched = savedCharacters.find((c: any) => c.image_url === data.url);
+      if (matched) setLockedCharacterId(matched.id);
+      else setLockedCharacterId(null);
+      setToastMessage("✅ 已自動鎖定此角色，後續生成將套用同一張臉");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    }
+  });
   // [DNA_PATCH_END]
   setUploadedImage(null);
   setVideoPrompt("");
