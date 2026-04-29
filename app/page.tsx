@@ -2089,6 +2089,7 @@ return (
                 <p className="text-white/50 text-xs mt-1">4K畫質・角色一致性強・生成速度快</p>
                 <p className="text-[#89f5a2] text-xs font-bold mt-0.5">5秒 4–6點 ／ 10秒 8–12點</p>
               </button>
+              {plan !== 'free' && (
               <button
                 onClick={() => setVideoModel("seedance")}
                 className={`w-full px-4 py-3 rounded-xl text-left border transition-all ${
@@ -2109,6 +2110,7 @@ return (
                   　⚠️ 點數較高
                 </p>
               </button>
+              )}
             </div>
           </div>
 {/* [DNA_PATCH_END] */}
@@ -2286,6 +2288,7 @@ onClick={() => {
   setPrompt(item.prompt);
   setTranslatedPrompt(null);
   setUseTranslated(false);
+  setActiveStep(6);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }}
 // [DNA_PATCH_END]

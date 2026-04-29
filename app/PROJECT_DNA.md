@@ -74,7 +74,15 @@ TTS 試聽防呆更新：
 - 勾選後出現紅色操作列，顯示已選數量和批量刪除按鈕
 - 刪除範圍：profiles、user_generations、saved_characters、checkin_logs 四個表
 - 管理員權限驗證：只有 whenser@gmail.com 才能執行
-
+後台批量刪帳號補充說明：
+- app/admin/members/page.tsx 勾選框改用 profiles.id 作為唯一識別（避免重複 email 錯位問題）
+- MemberProfile interface 已加入 id: string 欄位
+- app/api/admin/members/route.ts select 已加入 id 欄位回傳
+- app/api/admin/delete-users/route.ts 目前仍用 email 刪除（同 email 全刪），[繼續觀察是否改用 id]
+- next.config.ts 已加入 turbopack: {} 解決 next-pwa webpack 衝突導致 Vercel build 失敗問題
+- Vercel build 失敗時先去 Vercel Deployments 看 Build Logs，不要猜測
+- git show HEAD --name-only 可確認本次 commit 包含哪些檔案
+- git log --all --full-history -- <檔案路徑> 可確認檔案是否在 git 歷史中
 Email 正規化防薅羊毛：
 - app/api/auth/[...nextauth]/route.ts 的 signIn callback 加入 Gmail +. 漏洞防護
 - 正規化邏輯：移除 + 後綴和所有點，比對是否已有相同正規化帳號
@@ -128,7 +136,7 @@ profiles 新增欄位：checkin_last_date（date）、checkin_streak（int4, def
 5. 定價方案
 
 方案 | 點數 | 售價 | 圖片 | 影片 | 角色一致性 | 批次生成 | 語音合成 | Wav2Lip | 每日圖片 | 歷史紀錄
-🆓 免費 | 5點 | $0 | 1點 | ❌ | ❌ | ❌ | ❌ | ❌ | 2張/天 | 5筆
+🆓 免費 | 5點 | $0 | 1點 | 4-6點/支 | ✅ | ❌ | ❌ | ❌ | 2張/天 | 5筆
 🌱 入門包 | 30點 | $250 NTD | 1點 | 6點/支 | ✅ | 2張 | 8點/次 | 10點/次 | 無限 | 30天/5筆
 ⭐ 標準包 | 80點 | $450 NTD | 1點 | 5點/支 | ✅ | 4張 | 7點/次 | 9點/次 | 無限 | 30天/10筆
 🚀 專業包 | 200點 | $799 NTD | 1點 | 4點/支 | ✅ | 6張 | 6點/次 | 8點/次 | 無限 | 90天/30筆
