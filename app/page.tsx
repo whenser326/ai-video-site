@@ -1760,6 +1760,11 @@ return (
               setError('');
               localStorage.setItem('locked_character', data.url);
               setLockedCharacterUrl(data.url);
+              // [DNA_PATCH_START] 比對 savedCharacters 自動帶入 character_id
+              const matched = savedCharacters.find((c: any) => c.image_url === data.url);
+              if (matched) setLockedCharacterId(matched.id);
+              else setLockedCharacterId(null);
+              // [DNA_PATCH_END]
               setToastMessage("✅ 角色已鎖定！");
               setTimeout(() => setShowToast(false), 2000);
             } else {
