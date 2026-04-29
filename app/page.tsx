@@ -548,7 +548,13 @@ const handleBatchGenerate = async () => {
   const data = await res.json();
 
   if (!data.batch || !data.predictions) {
-    alert(data.error || "批次生成啟動失敗");
+    // [DNA_PATCH_START] 429 錯誤中文化
+    const errMsg = data.error || "批次生成啟動失敗";
+    const friendlyMsg = errMsg.includes("429") || errMsg.includes("throttled") || errMsg.includes("Too Many")
+      ? "⚠️ 生成請求太頻繁，請等待 5 秒後重試"
+      : "⚠️ 批次生成啟動失敗，請重試";
+    alert(friendlyMsg);
+    // [DNA_PATCH_END]
     setIsBatchGenerating(false);
     return;
   }
