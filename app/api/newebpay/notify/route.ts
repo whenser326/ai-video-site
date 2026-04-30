@@ -22,6 +22,14 @@ const PLAN_CREDITS: Record<string, number> = {
   pro: 200,
 };
 
+// [DNA_PATCH_START] 今日限定加贈點數
+const PLAN_BONUS_CREDITS: Record<string, number> = {
+  starter: 5,
+  standard: 7,
+  pro: 10,
+};
+// [DNA_PATCH_END]
+
 function aesDecrypt(encrypted: string): string {
   const decipher = crypto.createDecipheriv("aes-256-cbc", HASH_KEY, HASH_IV);
   decipher.setAutoPadding(false);
@@ -66,7 +74,9 @@ export async function POST(req: NextRequest) {
       .eq("email", email)
       .single();
 
-    const addCredits = PLAN_CREDITS[plan] ?? 0;
+    // [DNA_PATCH_START] 今日限定加贈點數
+    const addCredits = (PLAN_CREDITS[plan] ?? 0) + (PLAN_BONUS_CREDITS[plan] ?? 0);
+    // [DNA_PATCH_END]
     const currentCredits = profile?.credits ?? 0;
 
     // 更新點數、方案、歷史上限

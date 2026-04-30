@@ -3,6 +3,52 @@ import { useSession, signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import React from "react";
 
+// [DNA_PATCH_START] 今日限定優惠倒數計時元件
+function CountdownBanner() {
+  const [timeLeft, setTimeLeft] = React.useState({ hours: 0, minutes: 0, seconds: 0 });
+
+  React.useEffect(() => {
+    const calc = () => {
+      const now = new Date();
+      const midnight = new Date();
+      midnight.setHours(23, 59, 59, 999);
+      const diff = midnight.getTime() - now.getTime();
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      setTimeLeft({ hours, minutes, seconds });
+    };
+    calc();
+    const interval = setInterval(calc, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const pad = (n: number) => String(n).padStart(2, '0');
+
+  return (
+    <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-2xl text-center">
+      <p className="text-red-300 font-black text-sm mb-1">🔥 今日限定優惠！購買任一方案加贈點數</p>
+      <p className="text-white/50 text-xs mb-3">入門+5點 ／ 標準+7點 ／ 專業+10點</p>
+      <div className="flex items-center justify-center gap-2">
+        <div className="bg-black/30 rounded-xl px-3 py-2 min-w-[52px]">
+          <p className="text-white font-black text-xl tabular-nums">{pad(timeLeft.hours)}</p>
+          <p className="text-white/30 text-[10px]">時</p>
+        </div>
+        <span className="text-white/40 font-black text-xl">:</span>
+        <div className="bg-black/30 rounded-xl px-3 py-2 min-w-[52px]">
+          <p className="text-white font-black text-xl tabular-nums">{pad(timeLeft.minutes)}</p>
+          <p className="text-white/30 text-[10px]">分</p>
+        </div>
+        <span className="text-white/40 font-black text-xl">:</span>
+        <div className="bg-black/30 rounded-xl px-3 py-2 min-w-[52px]">
+          <p className="text-white font-black text-xl tabular-nums">{pad(timeLeft.seconds)}</p>
+          <p className="text-white/30 text-[10px]">秒</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+// [DNA_PATCH_END]
 export default function PricingPage() {
   const { data: session } = useSession();
   const router = useRouter();
@@ -163,7 +209,9 @@ if (data.TradeInfo) {
         >
           <img src="/logo.png" alt="Consistent Flow" className="w-full h-full object-contain" />
         </div>
-
+{/* [DNA_PATCH_START] 今日限定優惠倒數計時 */}
+        <CountdownBanner />
+        {/* [DNA_PATCH_END] */}
         {/* [DNA_PATCH_START] 免費試用入口 */}
         {!session && (
           <div className="mb-6 p-5 bg-[#89f5a2]/10 border border-[#89f5a2]/30 rounded-2xl text-center">
