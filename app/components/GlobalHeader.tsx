@@ -71,23 +71,36 @@ if (!session) return (
           Consistent Flow
         </span>
       </button>
-      <button
-        onClick={() => {
-  const ua = navigator.userAgent;
-  const isInAppBrowser = ua.includes('Line/') || ua.includes('FBAN') || ua.includes('FBAV') || ua.includes('Instagram') || ua.includes('WhatsApp') || ua.includes('Twitter');
-if (isInAppBrowser) {
-    window.location.href = window.location.href +
-      (window.location.href.includes('?') ? '&' : '?') +
-      'openExternalBrowser=1';
-    return;
-  }
-  signIn("google", {}, { prompt: "select_account" });
-}}
-        className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold
-                   border border-[#89f5a2]/30 text-[#89f5a2] bg-[#89f5a2]/10 hover:bg-[#89f5a2]/20 transition-all"
-      >
-        使用 Google 登入
-      </button>
+      {/* [DNA_PATCH_START] 未登入Header加定價方案按鈕 */}
+      <div className="flex items-center gap-2">
+        {pathname !== '/pricing' && (
+          <button
+            onClick={() => router.push('/pricing#plans')}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold
+                       border border-white/20 text-white/60 bg-white/5 hover:bg-white/10 transition-all"
+          >
+            💳 定價方案
+          </button>
+        )}
+        <button
+          onClick={() => {
+            const ua = navigator.userAgent;
+            const isInAppBrowser = ua.includes('Line/') || ua.includes('FBAN') || ua.includes('FBAV') || ua.includes('Instagram') || ua.includes('WhatsApp') || ua.includes('Twitter');
+            if (isInAppBrowser) {
+              window.location.href = window.location.href +
+                (window.location.href.includes('?') ? '&' : '?') +
+                'openExternalBrowser=1';
+              return;
+            }
+            signIn("google", {}, { prompt: "select_account" });
+          }}
+          className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold
+                     border border-[#89f5a2]/30 text-[#89f5a2] bg-[#89f5a2]/10 hover:bg-[#89f5a2]/20 transition-all"
+        >
+          使用 Google 登入
+        </button>
+      </div>
+      {/* [DNA_PATCH_END] */}
     </div>
     <div className="h-12" />
   </>

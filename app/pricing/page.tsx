@@ -164,13 +164,28 @@ if (data.TradeInfo) {
           <img src="/logo.png" alt="Consistent Flow" className="w-full h-full object-contain" />
         </div>
 
+        {/* [DNA_PATCH_START] 免費試用入口 */}
+        {!session && (
+          <div className="mb-6 p-5 bg-[#89f5a2]/10 border border-[#89f5a2]/30 rounded-2xl text-center">
+            <p className="text-white font-black text-base mb-1">🎁 還沒有帳號？先免費試用</p>
+            <p className="text-white/50 text-xs mb-4">不需信用卡，立即獲得 5 點開始體驗</p>
+            <button
+              onClick={() => signIn("google")}
+              className="px-8 py-3 bg-[#89f5a2] text-[#0d2318] font-black rounded-xl text-sm hover:opacity-90 active:scale-95 transition-all"
+            >
+              用 Google 免費註冊 →
+            </button>
+          </div>
+        )}
+        {/* [DNA_PATCH_END] */}
+
         {/* 免費版 */}
         <div className="mb-6 p-4 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-2xl">🆓</span>
             <div>
               <p className="text-white font-bold text-sm">免費版</p>
-              <p className="text-white/40 text-xs">5 點體驗、僅圖片生成、無角色一致性</p>
+              <p className="text-white/60 text-xs">免費試用 5 點，立即體驗 AI 角色生成與鎖定功能</p>
             </div>
           </div>
           <span className="text-white/30 text-sm font-bold">$0</span>

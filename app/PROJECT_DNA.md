@@ -80,6 +80,7 @@ TTS 試聽防呆更新：
 - MemberProfile interface 已加入 id: string 欄位
 - app/api/admin/members/route.ts select 已加入 id 欄位回傳
 - app/api/admin/delete-users/route.ts 目前仍用 email 刪除（同 email 全刪），[繼續觀察是否改用 id]
+後台會員管理排序功能（2026/04/30）：生成次數和註冊日期表頭可點擊排序，state 為 sortField（'generations' | 'created_at' | null）和 sortDir（'asc' | 'desc'），點同一欄位切換升降序，箭頭 ↓↑ 顯示目前方向，↕ 表示未排序，搜尋和篩選方案後排序依然有效
 - next.config.ts 已加入 turbopack: {} 解決 next-pwa webpack 衝突導致 Vercel build 失敗問題
 - Vercel build 失敗時先去 Vercel Deployments 看 Build Logs，不要猜測
 - git show HEAD --name-only 可確認本次 commit 包含哪些檔案
