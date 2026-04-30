@@ -41,6 +41,10 @@ export default function AdminMembersPage() {
   const [adjusting, setAdjusting] = useState(false)
   const [adjustMsg, setAdjustMsg] = useState('')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  // [DNA_PATCH_START] 排序功能
+  const [sortField, setSortField] = useState<'generations' | 'created_at' | null>(null)
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  // [DNA_PATCH_END]
   const [deleting, setDeleting] = useState(false)
   const [deleteMsg, setDeleteMsg] = useState('')
 
@@ -134,11 +138,24 @@ export default function AdminMembersPage() {
     setAdjusting(false)
   }
 
-  const filtered = stats?.profiles.filter(p => {
+  // [DNA_PATCH_START] 排序功能
+  const filtered = (stats?.profiles.filter(p => {
     const matchSearch = p.email.toLowerCase().includes(search.toLowerCase())
     const matchPlan = filterPlan === 'all' || p.plan === filterPlan
     return matchSearch && matchPlan
-  }) || []
+  }) || []).sort((a, b) => {
+    if (!sortField) return 0
+    if (sortField === 'generations') {
+      return sortDir === 'desc' ? b.generations - a.generations : a.generations - b.generations
+    }
+    if (sortField === 'created_at') {
+      return sortDir === 'desc'
+        ? new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        : new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    }
+    return 0
+  })
+  // [DNA_PATCH_END]
 
   if (loading) return (
     <div className="min-h-screen bg-[#0d2318] flex items-center justify-center text-[#89f5a2]">載入中...</div>
@@ -220,8 +237,22 @@ export default function AdminMembersPage() {
                 <th className="text-left text-[#89f5a2] px-4 py-3">Email</th>
                 <th className="text-center text-[#89f5a2] px-4 py-3">方案</th>
                 <th className="text-center text-[#89f5a2] px-4 py-3">點數</th>
-                <th className="text-center text-[#89f5a2] px-4 py-3">生成次數</th>
-                <th className="text-center text-[#89f5a2] px-4 py-3">註冊日期</th>
+                {/* [DNA_PATCH_START] 可點擊排序表頭 */}
+                <th className="text-center text-[#89f5a2] px-4 py-3 cursor-pointer hover:text-white transition select-none"
+                  onClick={() => {
+                    if (sortField === 'generations') setSortDir(d => d === 'desc' ? 'asc' : 'desc')
+                    else { setSortField('generations'); setSortDir('desc') }
+                  }}>
+                  生成次數 {sortField === 'generations' ? (sortDir === 'desc' ? '↓' : '↑') : '↕'}
+                </th>
+                <th className="text-center text-[#89f5a2] px-4 py-3 cursor-pointer hover:text-white transition select-none"
+                  onClick={() => {
+                    if (sortField === 'created_at') setSortDir(d => d === 'desc' ? 'asc' : 'desc')
+                    else { setSortField('created_at'); setSortDir('desc') }
+                  }}>
+                  註冊日期 {sortField === 'created_at' ? (sortDir === 'desc' ? '↓' : '↑') : '↕'}
+                </th>
+                {/* [DNA_PATCH_END] */}
                 <th className="text-center text-[#89f5a2] px-4 py-3">操作</th>
               </tr>
             </thead>

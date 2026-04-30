@@ -170,6 +170,7 @@ localStorage (key: locked_character) 儲存鎖定角色的 Supabase 永久 URL
 批次生成：付費用戶專屬，必須鎖定角色，依方案限制張數，每張獨立 prompt + 備註，依序生成即時顯示，失敗自動 retry 最多2次，全部失敗退點，完成後自動儲存到角色相簿
 付費用戶結果區操作（一排三顆按鈕）：
 「🎯 鎖定角色」→ 上傳圖片到 Supabase Storage → 儲存永久 URL → localStorage 同步
+上傳照片生影片時自動鎖定：生成影片按鈕觸發時自動執行鎖定流程，無需用戶手動按鎖定按鈕
 「⭐ 收藏角色」→ 輸入名稱 → 存入 saved_characters 表（含 description 個性職業）
 「🎭 批次生成」→ 必須已鎖定角色，付費專屬，點擊開啟 Modal
 第二排按鈕：解除鎖定（有鎖定才顯示）+ 上傳照片轉影片
@@ -210,7 +211,7 @@ GlobalHeader RWD 設計：
 Seedance 2.0 點數定價（越高方案越便宜）：入門 5秒/17點・10秒/27點，標準 5秒/15點・10秒/25點，專業 5秒/13點・10秒/21點
 Seedance 2.0 + Omni-Reference 點數定價（額外加費，API成本不變純利）：入門 5秒/23點・10秒/33點，標準 5秒/20點・10秒/30點，專業 5秒/17點・10秒/25點
 Omni-Reference 定價邏輯：入門+6點、標準+5點、專業+4點（固定加費，不管上傳幾張參考圖）
-Toast 通知：鎖定角色改用底部固定 Toast 取代 alert，state 為 showToast/toastMessage，z-index 9999
+Toast 通知：鎖定角色/上傳照片生影片改用底部固定 Toast 取代 alert，state 為 showToast/toastMessage，z-index 9999，顯示 8 秒自動消失，含 ✕ 關閉按鈕，上傳照片生影片時自動鎖定角色並顯示 Toast「✅ 已自動鎖定此角色，後續生成將套用同一張臉」，影片結果區有鎖定時顯示「🔓 解除鎖定角色」按鈕
 免費用戶影片限制：每天最多1支，只能用 Kling，Seedance 按鈕用 {plan !== 'free' && (...)} 隱藏
 批次生成429錯誤：偵測到 429/throttled/Too Many 顯示「生成請求太頻繁，請等待5秒後重試」，原因是網站主 Replicate 帳戶餘額低於$10導致限流，非程式bug
 
