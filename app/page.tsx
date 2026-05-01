@@ -14,6 +14,45 @@ const ReferralModal = dynamic(() => import("./components/ReferralModal"), { ssr:
 const SaveCharacterModal = dynamic(() => import("./components/SaveCharacterModal"), { ssr: false });
 const VideoSettingsModal = dynamic(() => import("./components/VideoSettingsModal"), { ssr: false });
 const Text2VideoModal = dynamic(() => import("./components/Text2VideoModal"), { ssr: false });
+// [DNA_PATCH_START] promo-timer-component
+function PromoTimer() {
+  const [time, setTime] = useState({ h: '00', m: '00', s: '00' })
+  useEffect(() => {
+    function tick() {
+      const now = new Date()
+      const midnight = new Date()
+      midnight.setHours(24, 0, 0, 0)
+      const diff = Math.floor((midnight.getTime() - now.getTime()) / 1000)
+      setTime({
+        h: String(Math.floor(diff / 3600)).padStart(2, '0'),
+        m: String(Math.floor((diff % 3600) / 60)).padStart(2, '0'),
+        s: String(diff % 60).padStart(2, '0'),
+      })
+    }
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [])
+  return (
+    <div className="flex items-center gap-2">
+      <span style={{ fontSize: 11, color: 'rgba(184,255,200,0.5)', whiteSpace: 'nowrap' }}>剩餘時間</span>
+      <div className="flex items-center gap-1">
+        {(['h','m','s'] as const).map((unit, i) => (
+          <div key={unit} className="flex items-center gap-1">
+            <div className="flex flex-col items-center gap-0.5">
+              <div style={{ background: 'rgba(184,255,200,0.12)', border: '1px solid rgba(184,255,200,0.28)', borderRadius: 6, padding: '2px 6px', fontSize: 15, fontWeight: 700, color: '#c8ffd6', fontVariantNumeric: 'tabular-nums', minWidth: 32, textAlign: 'center' }}>
+                {time[unit]}
+              </div>
+              <div style={{ fontSize: 9, color: 'rgba(184,255,200,0.35)' }}>{['時','分','秒'][i]}</div>
+            </div>
+            {i < 2 && <div style={{ fontSize: 14, color: 'rgba(184,255,200,0.3)', marginBottom: 8 }}>:</div>}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+// [DNA_PATCH_END]
 export default function Home() {
   const hasLoadedFromStorage = useRef(false);
   const progressRef = useRef<HTMLDivElement>(null);
@@ -161,7 +200,10 @@ const [batchResults, setBatchResults] = useState<{ url: string; status: "waiting
 const [isBatchGenerating, setIsBatchGenerating] = useState(false);
 const [batchCurrentIndex, setBatchCurrentIndex] = useState(-1);
 // [DNA_PATCH_END]
-
+// [DNA_PATCH_START] promo-card-state
+const [showPromoCard, setShowPromoCard] = useState(false)
+const [promoCollapsed, setPromoCollapsed] = useState(false)
+// [DNA_PATCH_END]
   // 1. 初始化與點數同步
   useEffect(() => {
     if (!hasLoadedFromStorage.current && session?.user?.email) {
@@ -289,7 +331,17 @@ useEffect(() => {
   return () => clearTimeout(maxWait);
 }, [credits]);
 // [DNA_PATCH_END]
-
+// [DNA_PATCH_START] promo-card-trigger
+useEffect(() => {
+  if (credits === null) return // 還在載入，等點數確認
+  const isPaidUser = plan && plan !== 'free'
+  if (isPaidUser) return
+  const timer = setTimeout(() => {
+    setShowPromoCard(true)
+  }, 2500)
+  return () => clearTimeout(timer)
+}, [credits, plan])
+// [DNA_PATCH_END]
 // ✨ 修正後的下載功能
   const downloadFile = async (url: string) => {
     try {
@@ -2503,6 +2555,109 @@ customAppearance={customAppearance}
   />
 )}
 {/* [DNA_PATCH_END] */}
+{/* [DNA_PATCH_START] promo-floating-card */}
+      {showPromoCard && (
+        <div
+          className="fixed bottom-6 right-5 z-[9990]"
+          style={{
+            width: promoCollapsed ? '180px' : '300px',
+            transition: 'width 0.3s ease',
+            animation: 'promoSlideUp 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards',
+          }}
+        >
+          <div className="rounded-2xl overflow-hidden"
+            style={{ background: '#0f2318', border: '1px solid rgba(137,245,162,0.4)', boxShadow: '0 8px 40px rgba(0,0,0,0.65), 0 0 24px rgba(137,245,162,0.08)' }}>
+
+            {/* Header */}
+            <div className="flex items-center gap-2 px-3 py-2.5 cursor-pointer"
+              style={{ background: 'linear-gradient(90deg,#1a4d2a,#0f2318)', borderBottom: promoCollapsed ? 'none' : '1px solid rgba(137,245,162,0.15)' }}
+              onClick={() => setPromoCollapsed(c => !c)}
+            >
+              <span style={{ fontSize: 18, display: 'inline-block', animation: 'promoFlicker 1.3s ease-in-out infinite alternate' }}>🔥</span>
+              <div className="flex-1 min-w-0">
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#b8ffc8', letterSpacing: '0.03em' }}>今日限定優惠！</div>
+                {!promoCollapsed && (
+                  <div style={{ fontSize: 10, color: 'rgba(184,255,200,0.5)', marginTop: 1 }}>今天午夜前購買即享加贈點數</div>
+                )}
+              </div>
+              <button
+                onClick={e => { e.stopPropagation(); setPromoCollapsed(c => !c) }}
+                className="flex items-center justify-center rounded-full flex-shrink-0 mr-1.5"
+                style={{ width: 22, height: 22, border: '1px solid rgba(184,255,200,0.35)', background: 'rgba(184,255,200,0.08)', color: 'rgba(184,255,200,0.9)', fontSize: 14 }}
+              >
+                {promoCollapsed ? '+' : '−'}
+              </button>
+              <button
+                onClick={e => { e.stopPropagation(); setShowPromoCard(false) }}
+                className="flex items-center justify-center rounded-full flex-shrink-0"
+                style={{ width: 22, height: 22, border: '1px solid rgba(255,120,120,0.35)', background: 'rgba(255,100,100,0.08)', color: 'rgba(255,160,160,0.9)', fontSize: 11 }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Body */}
+            {!promoCollapsed && (
+              <>
+                <div className="px-3 pt-3 pb-2">
+                  <PromoTimer />
+                  <div className="flex flex-col gap-2 mt-3">
+
+                    <div className="rounded-xl px-3 py-2 flex items-center justify-between"
+                      style={{ background: 'rgba(137,245,162,0.06)', border: '1px solid rgba(137,245,162,0.18)' }}>
+                      <div>
+                        <div style={{ fontSize: 11, color: 'rgba(184,255,200,0.55)', marginBottom: 2 }}>🌱 入門包</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#d4ffe0' }}>30 點</div>
+                      </div>
+                      <div className="text-right">
+                        <div style={{ fontSize: 10, color: 'rgba(184,255,200,0.4)', marginBottom: 2 }}>今日額外贈送</div>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: '#89f5a2' }}>+5 點 🎁</div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl px-3 py-2 flex items-center justify-between"
+                      style={{ background: 'rgba(137,245,162,0.11)', border: '1px solid rgba(137,245,162,0.38)' }}>
+                      <div>
+                        <div className="flex items-center gap-1" style={{ marginBottom: 2 }}>
+                          <span style={{ fontSize: 11, color: 'rgba(184,255,200,0.6)' }}>⭐ 標準包</span>
+                          <span style={{ fontSize: 9, background: 'rgba(137,245,162,0.22)', color: '#89f5a2', borderRadius: 4, padding: '1px 5px', fontWeight: 700 }}>推薦</span>
+                        </div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#d4ffe0' }}>80 點</div>
+                      </div>
+                      <div className="text-right">
+                        <div style={{ fontSize: 10, color: 'rgba(184,255,200,0.4)', marginBottom: 2 }}>今日額外贈送</div>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: '#89f5a2' }}>+7 點 🎁</div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl px-3 py-2 flex items-center justify-between"
+                      style={{ background: 'rgba(137,245,162,0.06)', border: '1px solid rgba(137,245,162,0.18)' }}>
+                      <div>
+                        <div style={{ fontSize: 11, color: 'rgba(184,255,200,0.55)', marginBottom: 2 }}>🚀 專業包</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#d4ffe0' }}>200 點</div>
+                      </div>
+                      <div className="text-right">
+                        <div style={{ fontSize: 10, color: 'rgba(184,255,200,0.4)', marginBottom: 2 }}>今日額外贈送</div>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: '#89f5a2' }}>+10 點 🎁</div>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+                <div className="px-3 pb-3 pt-1">
+                  <a href="/pricing#plans"
+                    className="block w-full text-center rounded-xl py-2.5 font-bold text-white"
+                    style={{ fontSize: 13, background: 'linear-gradient(90deg,#2d8a42,#3db558)', letterSpacing: '0.04em', textDecoration: 'none', textShadow: '0 1px 2px rgba(0,0,0,0.25)' }}
+                  >
+                    立即搶購優惠 →
+                  </a>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+      {/* [DNA_PATCH_END] */}
         </main>
 {/* [DNA_PATCH_START] Toast 通知元件 */}
 {showToast && (

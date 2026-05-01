@@ -224,7 +224,7 @@ Toast 通知：鎖定角色/上傳照片生影片改用底部固定 Toast 取代
 藍新商店代號：MS1827821756
 藍新 HashKey/HashIV：已寫入 .env.local（變數名稱：NEWEBPAY_MERCHANT_ID / NEWEBPAY_HASH_KEY / NEWEBPAY_HASH_IV）
 Checkout API：app/api/newebpay/checkout/route.ts（藍新，已完成）
-Notify API：app/api/newebpay/notify/route.ts（付款成功自動加點數+更新plan+更新history_limit+分潤）
+Notify API：app/api/newebpay/notify/route.ts（付款成功自動加點數+更新plan+更新history_limit+分潤），PLAN_BONUS_CREDITS（starter:5, standard:7, pro:10）今日限定加贈點數，addCredits = PLAN_CREDITS + PLAN_BONUS_CREDITS，付款成功後自動入帳
 Return API：app/api/newebpay/return/route.ts（付款完成跳轉回/pricing?success=1）
 圖片上傳 API：app/api/upload-image/route.ts
 退點 API：POST /api/character 帶 { refundCredits, userEmail } 即退點
@@ -232,9 +232,12 @@ Return API：app/api/newebpay/return/route.ts（付款完成跳轉回/pricing?su
 - 架構前提：網站架設於海外伺服器、公司登記於海外（愛沙尼亞或賽普勒斯）、金流走海外帳戶，不受台灣法律管轄
 - 提領路線：NOWPayments → USDT → 幣安/MAX → 換台幣出金，或透過 Payoneer 收款後轉台灣帳戶
 - 絕對不能用：Stripe、PayPal（Mastercard/Visa 網路明確禁止成人內容）
-- 主力（立即可用）：NOWPayments（加密貨幣，0.5% 手續費，300+幣種，明確支援成人平台，無 Chargeback 風險，台灣主體即可申請）
-- 補充：SubscribeStar（個人可申請，信用卡訂閱制，約10%手續費）
-- 補充：NexaPay（免申請，信用卡付款收穩定幣，1-3%手續費）
+- 主力（立即可用）：NOWPayments（加密貨幣，0.5% 手續費，300+幣種，明確支援成人平台，無 Chargeback 風險，台灣主體即可申請）✅ 帳號已建立，待補 USDT TRC-20 錢包地址
+- 補充：SubscribeStar（個人可申請，信用卡訂閱制，約10%手續費）✅ 頁面建立（subscribestar.adult/consistentflow-ai），Email已驗證，審核中，Payout設定待找
+- 補充：NexaPay（免申請，信用卡付款收穩定幣，1-3%手續費）✅ 商家後台已建立（nexapay.one）
+- 出金路線：NOWPayments/NexaPay → USDT → MAX交易所（✅帳號已建立，待KYC）→ 換台幣出金
+- Crypto.com 不支援 USDT TRC-20，已排除
+- 明日待辦：MAX KYC → 取得 TRC-20 地址 → 填入 NOWPayments + NexaPay → 找 SubscribeStar Payout 設定
 - 中期目標：成立愛沙尼亞 e-Residency 公司（線上申請，數天完成，0%保留利潤企業稅），開通後申請 Segpay 或 Verotel 信用卡金流
 - 長期備用：CCBill（業界最穩定，需美國或歐洲公司主體）
 - Chargeback 控制：加密貨幣無 Chargeback，信用卡金流需控制在 0.75% 以下，超標即凍結帳戶，資金扣留 90-180 天
@@ -455,9 +458,9 @@ TURNSTILE_SECRET_KEY=（已設定於 Vercel Sensitive，備用，需要時去 Cl
 ✅ 首頁 Hero 循環影片上線（Supabase CDN，URL: https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/hero.mp4）
 ✅ downloadFile 改用 genType 判斷副檔名（genType === "video" → mp4，否則 png）
 ✅ 儲存成果提示文字：長按圖片可存相簿，影片請點儲存成果下載
+✅ pricing 頁面今日限定優惠倒數計時（CountdownBanner元件，倒數到午夜自動重設，未登入/已登入皆顯示，放在免費試用區塊前面，入門+5點／標準+7點／專業+10點）
 
 12. 待完成項目（下一步）
-
 
 ⬜ 藍新信用卡審核通過後實測付款流程
 ⬜ 審核通過後移除舊 Stripe 相關程式碼（app/api/stripe/）— 暫緩，短期不上架 App，此條等 PWA 方向確認後再決定
@@ -516,7 +519,7 @@ ttsSeconds / wav2lipSeconds 各自獨立計時，useEffect 監聽對應 loading 
 character_id 歸檔依賴 lockedCharacterId state，需在收藏角色列表載入後才能正確對應
 模型追蹤 route.ts 必須放在 app/api/admin/models/，不能放在 app/admin/models/
 authOptions 必須從 app/api/auth/[...nextauth]/route.ts export 才能給其他 API 使用
-成人專區按鈕已暫時隱藏（等綠界審核通過後再規劃）
+成人專區按鈕已暫時隱藏（等五月底再開放）
 綠界不支援成人內容，主站金流與成人站金流必須完全分離
 點數不能移轉（法律風險），但主站角色和資料可移轉到成人站
 SubscribeStar 對帳單顯示「Subscribestar」，NexaPay 用戶收到穩定幣需自行換台幣
@@ -634,7 +637,7 @@ Splash 入場動畫（2026/04/24）：
 注意：AI 生成人物圖片在 Apple 審核屬敏感領域，上架前需法律評估
 成人站上線優先順序：
 1. 法律評估（海外公司架構確認）
-2. NOWPayments 帳號申請，測試 USDT 收款流程
+2. NOWPayments ✅ 帳號已建立，待補 USDT TRC-20 錢包地址（等 MAX KYC 通過
 3. Atlas Cloud 申請，測試 Wan Spicy / Flux Dev 無審查 API 串接
 4. 成人站圖片功能先上，驗證用戶付費意願
 5. 影片功能等開源模型成熟後再上（預計 6-12 個月後，崩壞率需降至可接受水準）
@@ -665,3 +668,23 @@ Splash 入場動畫（2026/04/24）：
 - 次要：日文（消費力強，但 AI 生成成人內容法規仍在討論中）
 - 補充：中文（可做但行銷上低調，不主動推台灣市場）
 - 技術：Next.js i18n 內建支援，JSON 管理靜態翻譯，工程量不大
+成人站金流申請進度（2026/05/01）：
+- NOWPayments ✅ 帳號已建立 ⚠️ 待補 USDT TRC-20 錢包地址（等 MAX KYC 通過）
+- NexaPay ✅ 商家後台已建立（nexapay.one）⚠️ 待補 USDT TRC-20 錢包地址
+- SubscribeStar ✅ 頁面建立（subscribestar.adult/consistentflow-ai）Email已驗證，審核中 ⚠️ Payout待Paxum驗證完成後填入
+- MAX ✅ 帳號已建立 ⚠️ KYC審核中（Lv1審核中/Lv2已提交）→ 通過後取得TRC-20地址填入NOWPayments+NexaPay
+- Paxum ✅ 帳號已註冊（whenserjp@gmail.com）⚠️ 身份驗證待完成（需護照，台灣身分證不支援Jumio）
+- 出金路線：SubscribeStar → Paxum → 台灣銀行；NOWPayments/NexaPay → USDT → MAX → 台幣出金
+
+台灣法規確認（2026/05/01）：
+- AI生成成人內容目前無專法，處於法規空窗期（人工智慧基本法2025/12通過，細則12-18個月後才出）
+- 合法經營條件：年齡驗證（18歲確認）+ 付費驗證 + 禁止硬蕊內容（暴力/人獸交）
+- 最大風險來自伺服器所在國、金流公司、目標市場法規，德國市場法規最友善
+
+DNA分檔規劃（2026/05/01）：
+- PROJECT_DNA.md 保留改名為 DNA_ARCHIVE.md 備用
+- 拆分為四個新檔案：DNA_CORE.md / DNA_TECH.md / DNA_BIZ.md / DNA_ADULT.md
+- 修程式 → DNA_CORE.md + DNA_TECH.md
+- 談主站商業 → DNA_CORE.md + DNA_BIZ.md
+- 談成人站 → DNA_CORE.md + DNA_ADULT.md
+- DNA_CORE.md 每次必貼
