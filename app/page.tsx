@@ -333,14 +333,13 @@ useEffect(() => {
 // [DNA_PATCH_END]
 // [DNA_PATCH_START] promo-card-trigger
 useEffect(() => {
-  if (credits === null) return // 還在載入，等點數確認
-  const isPaidUser = plan && plan !== 'free'
-  if (isPaidUser) return
-  const timer = setTimeout(() => {
-    setShowPromoCard(true)
-  }, 2500)
+  if (session === undefined) return
+  if (session !== null && credits === null) return
+  const isPaid = session !== null && plan !== 'free'
+  if (isPaid) return
+  const timer = setTimeout(() => setShowPromoCard(true), 2500)
   return () => clearTimeout(timer)
-}, [credits, plan])
+}, [session === null ? 'loggedout' : plan, credits])
 // [DNA_PATCH_END]
 // ✨ 修正後的下載功能
   const downloadFile = async (url: string) => {
@@ -2620,7 +2619,7 @@ customAppearance={customAppearance}
                       <div>
                         <div className="flex items-center gap-1" style={{ marginBottom: 2 }}>
                           <span style={{ fontSize: 11, color: 'rgba(184,255,200,0.6)' }}>⭐ 標準包</span>
-                          <span style={{ fontSize: 9, background: 'rgba(137,245,162,0.22)', color: '#89f5a2', borderRadius: 4, padding: '1px 5px', fontWeight: 700 }}>推薦</span>
+                          <span style={{ fontSize: 9, background: 'linear-gradient(90deg,#ff6b2b,#ff3d3d)', color: '#fff', borderRadius: 4, padding: '1px 6px', fontWeight: 900, letterSpacing: '0.05em', textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>推薦</span>
                         </div>
                         <div style={{ fontSize: 13, fontWeight: 700, color: '#d4ffe0' }}>80 點</div>
                       </div>
