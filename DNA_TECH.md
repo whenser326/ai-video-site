@@ -209,6 +209,14 @@ IP 限流：
 - Turnstile Sensitive 變數無法套用 Development 環境，只能 Production + Preview
 - Flux Kontext Pro 失敗（E006）自動 retry 最多 2 次，顯示黃色提示訊息，全部失敗退還點數
 - 批次生成429錯誤：偵測到 429/throttled/Too Many 顯示「生成請求太頻繁，請等待5秒後重試」，原因是 Replicate 帳戶餘額低於$10導致限流
+浮動優惠卡片防呆（2026/05/01）：
+- 顯示對象：未登入用戶 + plan === 'free' 的免費用戶，付費用戶不顯示
+- 觸發時機：進首頁 2.5 秒後滑入（配合 Splash 動畫結束）
+- useEffect dependency array 必須固定長度：用 [session === null ? 'loggedout' : plan, credits] 寫法，禁止直接放 [session, credits, plan]，否則 React 報「array changed size between renders」錯誤
+- PromoTimer 子元件必須定義在 export default function Home() 之外（檔案上方）
+- globals.css 需加入 @keyframes promoFlicker 和 @keyframes promoSlideUp，加完記得 git add -f app/globals.css
+- 推薦 badge 用橘紅漸層：background: 'linear-gradient(90deg,#ff6b2b,#ff3d3d)'，白字
+- 關閉後不再出現（當次 session，重新整理會再跑）
 - 鎖定按鈕解除後殘留「🔄 鎖定中...」：刪除 `if (btn) btn.textContent = '🔄 鎖定中...'` 這行即可修復
 - 藍新 MerchantOrderNo 長度上限 30 字元，禁止把 email 編碼塞入，改用 pending_orders 資料表暫存
 - 藍新 notify 用 POST formData 傳送，不是 JSON，必須用 req.formData() 解析
@@ -229,6 +237,44 @@ IP 限流：
 - 蓋板淡出：opacity transition 0.7s，onTransitionEnd 後 setSplashDone(true) 從 DOM 移除
 
 ---
+
+## UI/UX 架構（2026/05/01 定案）
+
+頁面結構：
+- / 創作工作室（現有主頁優化）
+- /characters 我的角色（新建）
+- /chat/[characterId] 單人聊天（新建）
+- /chat/group 群組聊天（新建）
+- /guide 使用指南（新建）
+- /pricing 定價（優化）
+
+Header 結構（已登入）：
+- 左：Logo
+- 中：🎨創作 / 💬我的角色（兩個主導航）
+- 右：點數 / 升級按鈕 / ☰收合選單
+- 收合選單內容：每日簽到、推薦賺點、意見回饋、使用指南、登出
+
+Header 結構（未登入）：
+- 左：Logo
+- 右：定價方案 / 使用Google登入
+
+未登入首頁新增 Landing 區塊：
+- Hero + 三亮點（生成角色/即時對話/說話影片）+ CTA
+
+首次登入 Onboarding：
+- 彈窗選三條主線（創作/聊天/快速產出）
+- 選完帶到對應功能
+- 可跳過
+
+/characters 頁面：
+- 收藏角色列表（卡片點擊展開B2選單）
+- B2選單：生成/聊天/鎖定
+- 群組聊天入口（選角色→開始）
+
+/guide 使用指南：
+- 三條主線流程圖
+- 每步驟顯示點數成本
+- 底部補充說明聊天計費規則
 
 ## .env.local 必要欄位
 

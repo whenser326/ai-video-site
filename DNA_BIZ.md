@@ -78,6 +78,33 @@ Apple Pay：網域驗證已完成（public/.well-known + API route + next.config
 
 ## 待完成項目
 
+## AI 聊天功能規格（2026/05/01 定案）
+
+對話次數（終身累計，單人+群組共用同一計數器）：
+- 免費：100次
+- 入門包：2,000次
+- 標準包：5,000次
+- 專業包：10,000次
+- 次數用完後改用點數扣（1點/次），UI顯示提示
+- 計費模型：claude-haiku-4-5
+
+群組聊天上限：
+- 免費：不開放
+- 入門/標準：最多3個角色
+- 專業：最多5個角色
+- 計費方式：幾個角色回覆算幾次（方案B）
+- 回覆順序：隨機
+- 角色間可互相回應
+
+AI 自拍：扣1點，在聊天中要求角色傳照片，Flux Kontext Pro 生成
+
+後台需新增 admin_settings key：
+- chat_cost_per_extra（次數用完後每次扣點，預設1）
+
+Supabase 需新增：
+- profiles 表新增 chat_count 欄位（已使用次數）
+- chat_messages 表（對話記錄+記憶）
+- chat_sessions 表（群組設定、角色清單、背景故事）
 - ⬜ 藍新信用卡/Google Pay/Samsung Pay/WebATM/ATM 審核通過後實測付款流程
 - ⬜ 購買自訂域名（建議 consistentflow.com，約 NT$400-600/年）
 - ⬜ Vercel 綁定自訂域名

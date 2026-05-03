@@ -23,16 +23,15 @@ export const authOptions = {
         const [localPart, domain] = user.email.split('@');
         if (domain === 'gmail.com') {
           const normalized = localPart.split('+')[0].replace(/\./g, '') + '@' + domain;
-          if (normalized !== user.email) {
-            const { data: existing } = await supabase
-              .from('profiles')
-              .select('email')
-              .eq('email', normalized)
-              .maybeSingle();
-            if (existing) {
-              console.log(`❌ 拒絕重複帳號: ${user.email} → 已存在 ${normalized}`);
-              return false;
-            }
+          // 無論是否正規化，都查一次重複（防止完全相同email重複註冊）
+          const { data: existing } = await supabase
+            .from('profiles')
+            .select('email')
+            .eq('email', normalized)
+            .maybeSingle();
+          if (existing && existing.email !== user.email) {
+            console.log(`❌ 拒絕重複帳號: ${user.email} → 已存在 ${normalized}`);
+            return false;
           }
         }
       }
