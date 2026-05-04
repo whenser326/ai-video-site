@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 
 // app/components/TtsModal.tsx
 // Code Splitting — TTS 語音合成 + Wav2Lip Modal（兩者整合在同一元件）
@@ -28,10 +29,12 @@ interface TtsModalProps {
   setWav2lipResult: (r: string | null) => void;
   wav2lipSeconds: number;
   prediction: any;
+  mediaUrl?: string;
   userEmail: string | null | undefined;
   setCredits: (fn: (prev: number | null) => number | null) => void;
   onClose: () => void;
   downloadFile: (url: string) => void;
+  lockedCharacterUrl?: string | null;
 }
 
 export default function TtsModal({
@@ -57,16 +60,23 @@ export default function TtsModal({
   setIsWav2lipLoading,
   wav2lipResult,
   setWav2lipResult,
-  wav2lipSeconds,
-  prediction,
-  userEmail,
+wav2lipSeconds,
+prediction,
+mediaUrl,
+userEmail,
   setCredits,
   onClose,
   downloadFile,
+  lockedCharacterUrl,
 }: TtsModalProps) {
   const maxChars = videoDuration === 5 ? 30 : 55;
   const planCredits = plan === "starter" ? 8 : plan === "standard" ? 7 : 6;
   const wav2lipCredits = plan === "starter" ? 10 : plan === "standard" ? 9 : 8;
+  const avatarCredits = plan === "starter" ? 10 : plan === "standard" ? 9 : 8;
+
+  const [isAvatarLoading, setIsAvatarLoading] = useState(false);
+  const [avatarResult, setAvatarResult] = useState<string | null>(null);
+  const [avatarStatus, setAvatarStatus] = useState("");
 
   const handlePreview = async () => {
     // 已 cache 直接播放
@@ -119,8 +129,9 @@ export default function TtsModal({
   };
 
   const handleWav2lip = async () => {
-    if (!prediction?.output) {
-      alert("找不到影片，請重新生成影片後再試");
+    const finalMediaUrl = mediaUrl || prediction?.output;
+    if (!finalMediaUrl) {
+      alert("找不到圖片或影片，請先選擇後再試");
       return;
     }
     setIsWav2lipLoading(true);
@@ -130,7 +141,7 @@ export default function TtsModal({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          videoUrl: prediction.output,
+          mediaUrl: finalMediaUrl,
           audioBase64: ttsAudio,
           userEmail,
           plan,
@@ -254,6 +265,9 @@ export default function TtsModal({
             {/* Wav2Lip 區塊 */}
             <div className="border border-orange-400/30 bg-orange-400/5 rounded-xl p-3 space-y-2">
               <p className="text-orange-300 font-black text-sm">🎬 合成到影片（讓角色開口說話）</p>
+              {!mediaUrl && !prediction?.output && (
+                <p className="text-white/40 text-xs">⚠️ 需要先有圖片或影片才能合成</p>
+              )}
 
               {/* Wav2Lip 進度條 */}
               {isWav2lipLoading && (
@@ -312,6 +326,83 @@ export default function TtsModal({
                     : `🎬 合成到影片（扣 ${wav2lipCredits} 點）`}
                 </button>
               )}
+              {/* Kling Avatar 區塊 */}
+            {lockedCharacterUrl && (
+              <div className="border border-purple-400/30 bg-purple-400/5 rounded-xl p-3 space-y-2 mt-2">
+                <p className="text-purple-300 font-black text-sm">🎭 Kling Avatar 說話影片（更自然）</p>
+                <p className="text-white/40 text-xs">用鎖定角色的照片直接生成說話影片，無需影片素材</p>
+                <p className="text-white/40 text-xs">扣 {avatarCredits} 點，失敗自動退點</p>
+
+                {avatarStatus && (
+                  <p className="text-purple-300/70 text-xs text-center">{avatarStatus}</p>
+                )}
+
+                {avatarResult ? (
+                  <div className="space-y-2">
+                    <video controls className="w-full rounded-lg" src={avatarResult} />
+                    <button
+                      onClick={() => downloadFile(avatarResult!)}
+                      className="w-full py-2 rounded-xl bg-gradient-to-r from-purple-500 to-blue-500 text-white text-sm font-black hover:opacity-90 transition-all"
+                    >
+                      ⬇️ 下載說話影片
+                    </button>
+                    <button
+                      onClick={() => { setAvatarResult(null); setAvatarStatus(""); onClose(); }}
+                      className="w-full py-2 rounded-xl border border-white/10 text-white/50 text-sm font-bold hover:bg-white/5 transition-all"
+                    >
+                      ✅ 完成，關閉視窗
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    disabled={isAvatarLoading}
+                    onClick={async () => {
+                      if (!ttsAudio || !userEmail || !lockedCharacterUrl) return;
+                      setIsAvatarLoading(true);
+                      setAvatarStatus("🎬 合成說話影片中...");
+                      try {
+                        const avatarRes = await fetch("/api/kling-avatar", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            imageUrl: lockedCharacterUrl,
+                            audioBase64: ttsAudio,
+                            prompt: "natural talking",
+                            mode: "std",
+                            userEmail,
+                            plan,
+                          }),
+                        });
+                        const avatarData = await avatarRes.json();
+                        if (!avatarData.id) throw new Error(avatarData.error || "生成失敗");
+                        setAvatarStatus("⏳ 生成中，請稍候約 3-5 分鐘...");
+                        setCredits(prev => prev !== null ? prev - avatarData.creditCost : prev);
+                        for (let i = 0; i < 60; i++) {
+                          await new Promise(r => setTimeout(r, 5000));
+                          const poll = await fetch(`/api/kling-avatar?id=${avatarData.id}`);
+                          const pollData = await poll.json();
+                          if (pollData.status === "succeeded") {
+                            const url = Array.isArray(pollData.output) ? pollData.output[0] : pollData.output;
+                            setAvatarResult(url);
+                            setAvatarStatus("");
+                            setIsAvatarLoading(false);
+                            return;
+                          }
+                          if (pollData.status === "failed") throw new Error("影片生成失敗");
+                        }
+                        throw new Error("生成逾時");
+                      } catch (err: any) {
+                        setAvatarStatus(`❌ ${err.message}`);
+                        setIsAvatarLoading(false);
+                      }
+                    }}
+                    className="w-full py-2 rounded-xl bg-gradient-to-r from-purple-500 to-blue-500 text-white text-sm font-black hover:opacity-90 transition-all disabled:opacity-40"
+                  >
+                    {isAvatarLoading ? "⏳ 生成中..." : `🎭 生成說話影片（扣 ${avatarCredits} 點）`}
+                  </button>
+                )}
+              </div>
+            )}
             </div>
           </div>
         )}

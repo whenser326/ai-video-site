@@ -55,6 +55,9 @@ export default function RootLayout({
   return (
     <html lang="zh-TW">
       <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet" />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#0d2318" />
         <meta name="apple-mobile-web-app-capable" content="yes" />

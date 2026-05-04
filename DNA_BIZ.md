@@ -4,12 +4,12 @@
 
 ## 定價方案
 
-| 方案 | 點數 | 售價 | 圖片 | 影片 | 角色一致性 | 批次生成 | 語音合成 | Wav2Lip | 每日圖片 | 歷史紀錄 |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 🆓 免費 | 5點 | $0 | 1點 | 4-6點/支(僅Kling) | ✅ | ❌ | ❌ | ❌ | 2張/天,1影片/天 | 5筆 |
-| 🌱 入門包 | 30點 | $250 NTD | 1點 | 6點/支 | ✅ | 2張 | 8點/次 | 10點/次 | 無限 | 30天/5筆 |
-| ⭐ 標準包 | 80點 | $450 NTD | 1點 | 5點/支 | ✅ | 4張 | 7點/次 | 9點/次 | 無限 | 30天/10筆 |
-| 🚀 專業包 | 200點 | $799 NTD | 1點 | 4點/支 | ✅ | 6張 | 6點/次 | 8點/次 | 無限 | 90天/30筆 |
+| 方案 | 點數 | 售價 | 圖片 | 影片 | 角色一致性 | 批次生成 | 語音合成 | Wav2Lip | Kling Avatar | 每日圖片 | 歷史紀錄 |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 🆓 免費 | 5點 | $0 | 1點 | 4-6點/支(僅Kling) | ✅ | ❌ | ❌ | ❌ | ❌ | 2張/天,1影片/天 | 5筆 |
+| 🌱 入門包 | 30點 | $250 NTD | 1點 | 6點/支 | ✅ | 2張 | 8點/次 | 10點/次 | 10點/次 | 無限 | 30天/5筆 |
+| ⭐ 標準包 | 80點 | $450 NTD | 1點 | 5點/支 | ✅ | 4張 | 7點/次 | 9點/次 | 9點/次 | 無限 | 30天/10筆 |
+| 🚀 專業包 | 200點 | $799 NTD | 1點 | 4點/支 | ✅ | 6張 | 6點/次 | 8點/次 | 8點/次 | 無限 | 90天/30筆 |
 
 Seedance 2.0 點數定價（越高方案越便宜）：
 - 入門：5秒/17點・10秒/27點
@@ -97,14 +97,49 @@ Apple Pay：網域驗證已完成（public/.well-known + API route + next.config
 - 角色間可互相回應
 
 AI 自拍：扣1點，在聊天中要求角色傳照片，Flux Kontext Pro 生成
+AI 自拍實作：/api/chat/route.ts 的 detectSelfieIntent 函式負責偵測，回傳 selfieIntent("photo"|"video"|null) 和 selfiePrompt（根據聊天紀錄推斷場景）
+照片生成：/api/generate-image → Flux 1.1 Pro，扣1點
+影片生成：先生成照片 → /api/upload-image 上傳 Supabase → /api/character mode:video Kling，依方案扣點
+AI 自拍場景：用戶可在對話中指定場景（例如「在海邊自拍」），生成時帶入場景描述
+
+AI 自拍媒體類型與扣點：
+- 照片：Flux Kontext Pro 生成，扣1點
+- 影片（5秒）：Kling 生成，入門6點・標準5點・專業4點
+- 用戶可指定類型，例如「拍張照片」vs「錄一段影片給我」
+- 生成時在聊天室顯示文字提示「📸 生成中，扣X點」，完成後直接回傳圖片/影片，不需確認
+
+用戶上傳媒體：
+- ✅ 輸入列旁📎按鈕，支援上傳圖片（已完成）
+- ✅ 上傳後存入 Supabase Storage character-images bucket（已完成，API：/api/upload-chat-image）
+- ✅ 圖片傳給 Claude vision 功能，角色可看圖回應（已完成，chat route 支援 imageUrl 參數）
+- 影片暫不支援 vision，僅顯示在聊天室
 
 後台需新增 admin_settings key：
+新增 API：
+- /api/upload-chat-image：接收 FormData（file+email），上傳到 character-images bucket，回傳永久 URL
+- /api/user/save-generation：存作品到 user_generations 表（image_url、character_id、status:'done'）
 - chat_cost_per_extra（次數用完後每次扣點，預設1）
 
-Supabase 需新增：
-- profiles 表新增 chat_count 欄位（已使用次數）
-- chat_messages 表（對話記錄+記憶）
-- chat_sessions 表（群組設定、角色清單、背景故事）
+角色個性：saved_characters 表需新增 description 欄位（角色個性描述），建角色時填寫，聊天時帶入 system prompt
+
+聊天體驗優化（待實作）：
+- ✅ 打字延遲：收到 API 回應後延遲 2-5 秒（隨機）再顯示訊息，模擬真人打字（已完成）
+- ✅ 打字中動畫：延遲期間顯示三點跳動動畫（已完成）
+- ✅ 群組回覆順序：一次只有一個角色回覆，每個角色之間間隔 2-5 秒隨機延遲，順序隨機（已完成）
+
+競品參考（鴨答鴨答）：
+- 長期記憶系統（向量資料庫，pgvector 或 Pinecone）
+- 公開角色市場
+- 創作者獎勵計畫
+- 成人模式解鎖機制
+- 以上功能技術上均可實作，列入中長期規劃
+
+✅ /api/history DELETE method（已完成，query string: id+email）
+✅ /api/saved-characters：POST 新增名稱重複檢查、description 欄位寫入；DELETE 改為 query string
+✅ saved_characters 表新增 voice_id 欄位（角色預設聲音，建角色時設定）
+✅ /api/kling-avatar/route.ts：Kling Avatar V2 說話影片 API（POST 生成・GET polling）
+✅ 說話影片全站整合：單人聊天室・群組聊天室・主站 TtsModal・角色作品頁・主頁圖片結果區
+✅ 群組聊天 AI 自拍圖片/影片存入相簿時跳出角色選擇器（AI 自拍自動歸屬發言角色）
 - ⬜ 藍新信用卡/Google Pay/Samsung Pay/WebATM/ATM 審核通過後實測付款流程
 - ⬜ 購買自訂域名（建議 consistentflow.com，約 NT$400-600/年）
 - ⬜ Vercel 綁定自訂域名

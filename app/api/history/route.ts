@@ -100,4 +100,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: '伺服器錯誤' }, { status: 500 });
   }
 }
+export async function DELETE(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
+    const email = searchParams.get('email');
+    if (!id || !email) return NextResponse.json({ error: '缺少必要欄位' }, { status: 400 });
+    await supabase
+      .from('user_generations')
+      .delete()
+      .eq('id', id)
+      .eq('user_email', email);
+    return NextResponse.json({ success: true });
+  } catch {
+    return NextResponse.json({ error: '刪除失敗' }, { status: 500 });
+  }
+}
 // [DNA_PATCH_END]

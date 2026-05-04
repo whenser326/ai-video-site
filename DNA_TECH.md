@@ -6,7 +6,7 @@
 
 表格：profiles（欄位：id, created_at, email, credits, plan, daily_image_count, daily_image_date, daily_video_count, daily_video_date, history_limit, referral_code, referred_by, referral_credits_earned, locked_character, checkin_last_date, checkin_streak）
 表格：user_generations（欄位：id, user_email, image_url, video_url, prompt, status, created_at, character_id）
-表格：saved_characters（欄位：id, user_email, name, image_url, description, created_at）
+表格：saved_characters（欄位：id, user_email, name, image_url, description, voice_id, created_at）
 表格：admin_settings（欄位：key, value, updated_at）
 表格：referral_logs（欄位：id, referrer_email, referred_email, plan, credits_awarded, created_at）
 表格：model_tracker（欄位：id, model_id, model_name, status, note, created_at, updated_at）
@@ -18,6 +18,9 @@ RLS：已停用，用 Service Role Key
 plan 預設值：free
 新用戶自動建立 profiles 並給 5 點
 Storage bucket：character-images（Public，已設定 allow all policy）
+表格：chat_messages（欄位：id, session_id, user_email, role, character_id, content, created_at）
+表格：chat_sessions（欄位：id, user_email, character_ids, background_story, is_group, created_at, updated_at）
+profiles 表新增欄位：chat_count（已使用對話次數，預設0）
 
 ---
 
@@ -30,6 +33,7 @@ Storage bucket：character-images（Public，已設定 allow all policy）
 影片生成第三選擇（快速版）：bytedance/seedance-2.0-fast
 TTS 語音合成：ElevenLabs Multilingual v2（已串接，Starter 方案，60,000字/月）
 嘴型同步：kwaivgi/kling-lip-sync（$0.014/秒輸出影片）
+說話影片（Avatar）：kwaivgi/kling-avatar-v2（Standard $0.056/秒・Pro $0.115/秒，圖片+音頻直接生成說話影片）
 
 Seedance 2.0 費用對照：5秒約$1.26 USD，10秒約$2.00 USD（比 Kling 貴約4.5倍）
 Kling 3.0 的 mode 必須用 "standard" 不能用 "std"
@@ -48,6 +52,8 @@ TTS Voice IDs：
 - female-3: r6qgCCGI7RWKXCagm158（清晰）
 - female-4: 9DMBSOAnMDPiFAsz1ZGK（活潑）
 - female-5: GgmlugwQ4LYXBbEXENWm（溫柔）
+
+聊天模型：claude-haiku-4-5（透過 Anthropic API 直接呼叫）
 
 ---
 
@@ -106,7 +112,7 @@ localStorage (key: locked_character) 儲存鎖定角色的 Supabase 永久 URL
 ## 後台 admin_settings key 清單
 
 影片點數 key（共15個，後台沒設定時 route.ts 有 fallback 預設值）：
-`kling_5s/10s_starter/standard/pro`、`seedance_5s/10s_starter/standard/pro`、`omni_extra_starter/standard/pro`
+`kling_5s/10s_starter/standard/pro`、`seedance_5s/10s_starter/standard/pro`、`omni_extra_starter/standard/pro`、`kling_avatar_credits_starter/standard/pro`（Avatar 說話影片點數，預設 10/9/8）
 
 ---
 
@@ -167,11 +173,15 @@ Email 正規化防薅羊毛：
 - app/api/auth/[...nextauth]/route.ts 的 signIn callback 加入 Gmail +. 漏洞防護
 - 正規化邏輯：移除 + 後綴和所有點，比對是否已有相同正規化帳號
 - 有重複則拒絕登入（return false）
+- 注意：查重複時不能加 if (normalized !== user.email) 判斷，否則沒有 . 或 + 的 email 會直接跳過查重複，導致同一個 email 可重複註冊
+- Supabase profiles 表已加 UNIQUE constraint on email（2026/05/03），資料庫層雙重防護
+- 加 constraint 前需先清理重複資料：DELETE FROM profiles WHERE id IN (SELECT id FROM (SELECT id, ROW_NUMBER() OVER (PARTITION BY email ORDER BY created_at ASC) AS rn FROM profiles) t WHERE rn > 1)
 
 IP 限流：
 - middleware.ts 在根目錄（與 app、package.json 同層）
 - 攔截 /api/auth/callback 路徑
-- 同一 IP 24小時內最多建立 3 個帳號
+- IP 帳號建立限制已移除（2026/05/03），middleware 現在只做 pass-through
+- 防重複帳號改由 auth/[...nextauth]/route.ts 的 signIn callback 處理（Gmail normalize 檢查）
 
 簽到防呆：同帳號每天只能簽一次（比對 checkin_last_date）、同 IP 每天只能一個帳號簽到（比對 checkin_logs）
 簽到獎勵：每日+1點，連續第7天+3點，第14天+5點，第21天+5點，第30天+10點
@@ -225,6 +235,9 @@ IP 限流：
 - page.tsx dynamic import 只能寫一次，不能重複貼入
 - SEO keywords meta tag 對 Google 無效（2009年起），真正有效的是 og:title/og:description
 - 換域名後必須同步更新：NEXTAUTH_URL、Google OAuth 授權URI、藍新金流 Notify URL / Return URL
+聊天頁面（/chat/[characterId]、/chat/group）必須用 h-screen + overflow-hidden，否則 Footer 會撐破畫面
+wav2lip/route.ts 支援 mediaUrl 參數（圖片或影片皆可），向下相容舊的 videoUrl 參數
+TtsModal 新增 mediaUrl prop，優先用 mediaUrl，沒有才用 prediction?.output
 
 ---
 
@@ -276,6 +289,10 @@ Header 結構（未登入）：
 - 每步驟顯示點數成本
 - 底部補充說明聊天計費規則
 
+/chat/[characterId]：單人聊天頁（已建立）
+/chat/group：群組聊天頁（已建立）
+/guide：使用指南頁（已建立）
+
 ## .env.local 必要欄位
 
 ```
@@ -294,3 +311,4 @@ NEWEBPAY_HASH_IV=PCf...
 NEXT_PUBLIC_TURNSTILE_SITE_KEY=0x4AAAAAC-_FUGtx2UlyaYF
 TURNSTILE_SECRET_KEY=（已設定於 Vercel Sensitive）
 ```
+ANTHROPIC_API_KEY=sk-ant-你的金鑰

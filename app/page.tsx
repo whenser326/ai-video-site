@@ -56,7 +56,8 @@ function PromoTimer() {
 export default function Home() {
   const hasLoadedFromStorage = useRef(false);
   const progressRef = useRef<HTMLDivElement>(null);
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const [prompt, setPrompt] = useState("");
   const [selectedStyle, setSelectedStyle] = useState("");
   const [prediction, setPrediction] = useState<any>(null);
@@ -203,6 +204,10 @@ const [batchCurrentIndex, setBatchCurrentIndex] = useState(-1);
 // [DNA_PATCH_START] promo-card-state
 const [showPromoCard, setShowPromoCard] = useState(false)
 const [promoCollapsed, setPromoCollapsed] = useState(false)
+// [DNA_PATCH_START] Onboarding 引導狀態
+const [showOnboarding, setShowOnboarding] = useState(false);
+const [onboardingDismissed, setOnboardingDismissed] = useState(false);
+// [DNA_PATCH_END]
 // [DNA_PATCH_END]
   // 1. 初始化與點數同步
   useEffect(() => {
@@ -331,15 +336,37 @@ useEffect(() => {
   return () => clearTimeout(maxWait);
 }, [credits]);
 // [DNA_PATCH_END]
-// [DNA_PATCH_START] promo-card-trigger
+// [DNA_PATCH_START] promo-card-trigger：等 Onboarding 關掉後才顯示
 useEffect(() => {
   if (session === undefined) return
   if (session !== null && credits === null) return
   const isPaid = session !== null && plan !== 'free'
   if (isPaid) return
+  if (showOnboarding) return  // Onboarding 還開著就不觸發
   const timer = setTimeout(() => setShowPromoCard(true), 2500)
   return () => clearTimeout(timer)
-}, [session === null ? 'loggedout' : plan, credits])
+}, [session === null ? 'loggedout' : plan, credits, showOnboarding])
+// [DNA_PATCH_END]
+// [DNA_PATCH_START] 首次登入引導：只對免費新用戶顯示，付費帳號跳過
+useEffect(() => {
+  if (!session?.user?.email) return;
+  if (credits === null) return;
+  const key = `onboarding_done_${session.user.email}`;
+  if (!localStorage.getItem(key) && plan === 'free') {
+    setShowOnboarding(true);
+  } else if (plan !== 'free') {
+    localStorage.setItem(key, '1');
+  }
+}, [session?.user?.email, plan, credits]);
+
+useEffect(() => {
+  const handler = () => {
+    setShowOnboarding(true);
+    setOnboardingDismissed(false);
+  };
+  window.addEventListener('open-onboarding', handler);
+  return () => window.removeEventListener('open-onboarding', handler);
+}, []);
 // [DNA_PATCH_END]
 // ✨ 修正後的下載功能
   const downloadFile = async (url: string) => {
@@ -793,6 +820,169 @@ const handleGenerateVideo = async (imageUrl: string, prompt?: string, ratio?: st
     } catch (err) { setError("影片連線失敗"); setLoading(false); }
   };
 
+  // [DNA_PATCH_START] 未登入直接 return Landing Page，不渲染主工作室
+// [DNA_PATCH_START] 未登入 Landing Page — 美化版
+if (status === 'loading') return null;
+if (!session) return (
+  <>
+    <div style={{
+      minHeight: '100vh',
+      background: '#0a1f10',
+      display: 'flex',
+      flexDirection: 'column',
+      fontFamily: "'Noto Sans TC', sans-serif",
+    }}>
+      {/* Hero */}
+      <div style={{
+        padding: '72px 24px 40px',
+        textAlign: 'center',
+        position: 'relative',
+        overflow: 'hidden',
+        background: 'linear-gradient(160deg, #0d2318 0%, #1a3a25 50%, #0d2318 100%)',
+      }}>
+        {/* 背景光暈 */}
+        <div style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none',
+          background: 'radial-gradient(ellipse 80% 50% at 50% 0%, rgba(137,245,162,0.10) 0%, transparent 70%)',
+        }} />
+        <div style={{
+          position: 'absolute', top: -60, left: '50%', transform: 'translateX(-50%)',
+          width: 400, height: 400, borderRadius: '50%', pointerEvents: 'none',
+          background: 'radial-gradient(circle, rgba(137,245,162,0.06) 0%, transparent 65%)',
+        }} />
+
+        {/* Badge */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          background: 'rgba(137,245,162,0.08)',
+          border: '1px solid rgba(137,245,162,0.22)',
+          borderRadius: 20, padding: '5px 14px',
+          fontSize: 10, fontWeight: 600, color: '#89f5a2',
+          letterSpacing: '0.15em',
+          position: 'relative',
+          whiteSpace: 'nowrap',
+          width: 'fit-content',
+          margin: '0 auto 24px',
+        }}>
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#89f5a2', display: 'inline-block', boxShadow: '0 0 8px #89f5a2' }} />
+          ✨ AI CHARACTER STUDIO
+        </div>
+
+        {/* 標題 */}
+        <h1 style={{
+          fontSize: 'clamp(24px, 8vw, 38px)',
+          fontWeight: 500,
+          color: '#fff',
+          lineHeight: 1.2,
+          marginBottom: 14,
+          position: 'relative',
+          letterSpacing: '0.01em',
+        }}>
+          打造專屬 AI 角色
+          <br />
+          <span style={{
+            color: '#89f5a2',
+            fontWeight: 400,
+            letterSpacing: '0.06em',
+            textShadow: '0 0 20px rgba(137,245,162,0.6), 0 0 40px rgba(137,245,162,0.25)',
+            display: 'inline-block',
+            marginTop: 6,
+            fontSize: '0.85em',
+            opacity: 0.92,
+          }}>創作・對話・影片</span>
+        </h1>
+
+        {/* 副標 */}
+        <p style={{
+          fontSize: 13,
+          color: 'rgba(255,255,255,0.5)',
+          marginBottom: 32,
+          position: 'relative',
+          lineHeight: 1.9,
+          maxWidth: 300,
+          margin: '0 auto 32px',
+          letterSpacing: '0.03em',
+        }}>
+          生成角色、和他們聊天、製作說話影片<br />一個平台，三種體驗
+        </p>
+
+        {/* CTA 按鈕 */}
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'center', position: 'relative', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => signIn("google")}
+            style={{
+              background: 'linear-gradient(135deg, #2d8a42, #3db558)',
+              border: 'none',
+              borderRadius: 12,
+              padding: '12px 28px',
+              fontSize: 14,
+              fontWeight: 800,
+              color: '#fff',
+              cursor: 'pointer',
+              boxShadow: '0 4px 20px rgba(61,181,88,0.35)',
+              letterSpacing: '0.02em',
+            }}
+          >🚀 免費開始試用</button>
+          <button
+            onClick={() => { window.location.href = '/pricing'; }}
+            style={{
+              background: 'rgba(137,245,162,0.06)',
+              border: '1px solid rgba(137,245,162,0.22)',
+              borderRadius: 12,
+              padding: '12px 24px',
+              fontSize: 14,
+              fontWeight: 600,
+              color: '#89f5a2',
+              cursor: 'pointer',
+            }}
+          >查看定價</button>
+        </div>
+      </div>
+
+      {/* 功能卡片 */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: 10,
+        padding: '24px 16px',
+        maxWidth: 560,
+        margin: '0 auto',
+        width: '100%',
+      }}>
+        {[
+          { icon: '🎨', title: '生成 AI 角色', desc: '高精度圖片與影片，角色外貌高度一致' },
+          { icon: '💬', title: '即時對話', desc: '和角色聊天、群組聊天、AI 自拍' },
+          { icon: '🎬', title: '說話影片', desc: '語音合成 + 嘴型同步，栩栩如生' },
+        ].map((f) => (
+          <div key={f.title} style={{
+            background: 'rgba(137,245,162,0.04)',
+            border: '1px solid rgba(137,245,162,0.10)',
+            borderRadius: 12,
+            padding: '14px 8px',
+            textAlign: 'center',
+          }}>
+            <div style={{ fontSize: 22, marginBottom: 8 }}>{f.icon}</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#b8ffc8', marginBottom: 4, lineHeight: 1.4 }}>{f.title}</div>
+            <div style={{ fontSize: 9.5, color: 'rgba(184,255,200,0.4)', lineHeight: 1.6 }}>{f.desc}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* 底部提示 */}
+      <div style={{ textAlign: 'center', paddingBottom: 32, marginTop: 4 }}>
+        <div style={{
+          display: 'inline-block',
+          fontSize: 11, color: 'rgba(184,255,200,0.28)',
+          borderTop: '1px solid rgba(137,245,162,0.08)',
+          paddingTop: 16,
+        }}>
+          ↓ 免費獲得 5 點，登入即可使用
+        </div>
+      </div>
+    </div>
+  </>
+);
+// [DNA_PATCH_END]
 return (
   <>
 {/* [DNA_PATCH_START] Splash 入場動畫蓋板 */}
@@ -919,6 +1109,143 @@ return (
   </div>
 )}
 {/* [DNA_PATCH_END] */}
+{/* [DNA_PATCH_START] 已登入 Onboarding 引導（第一次登入，半透明遮罩） */}
+{session && showOnboarding && !onboardingDismissed && (
+  <div style={{
+    position: 'fixed',
+    inset: 0,
+    background: 'rgba(0,0,0,0.7)',
+    zIndex: 500,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  }}>
+    <div style={{
+  background: '#0f2318',
+  border: '1px solid rgba(137,245,162,0.28)',
+  borderRadius: 18,
+  padding: '28px 22px',
+  width: '100%',
+  maxWidth: 360,
+  boxShadow: '0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(137,245,162,0.05)',
+}}>
+      <div style={{ textAlign: 'center', marginBottom: 4 }}>
+        <p style={{ fontSize: 12, color: 'rgba(184,255,200,0.4)' }}>
+          歡迎！你有{' '}
+          <span style={{ color: '#89f5a2', fontWeight: 700 }}>5 點</span>
+          {' '}免費點數
+        </p>
+      </div>
+      <div style={{ fontSize: 16, fontWeight: 900, color: '#d4ffe0', textAlign: 'center', marginBottom: 4, marginTop: 8, letterSpacing: '-0.01em' }}>
+  👋 你想先做什麼？
+</div>
+      <div style={{ fontSize: 11, color: 'rgba(184,255,200,0.4)', textAlign: 'center', marginBottom: 22, lineHeight: 1.6 }}>
+        選擇你的第一個任務，我帶你一步步完成
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {[
+          { icon: '🌟', title: '生成我的第一個角色', sub: '選風格 → 設定外觀 → 生成圖片', href: null },
+      { icon: '💬', title: '和 AI 角色聊天或製作說話影片', sub: '選角色 → 設定個性 → 開始對話', href: '/characters' },
+      { icon: '📁', title: '上傳自己的照片轉影片', sub: '上傳照片 → 輸入提示詞 → 生成影片', href: null, openUpload: true },
+        ].map((opt) => (
+          <div
+            key={opt.title}
+              onClick={() => {
+                const key = `onboarding_done_${session?.user?.email}`;
+                localStorage.setItem(key, '1');
+                setShowOnboarding(false);
+                setOnboardingDismissed(true);
+                if ((opt as any).openUpload) {
+                setShowUploadModal(true);
+              } else if (opt.href) {
+                router.push(opt.href);
+              }
+              }}
+              style={{
+                background: 'rgba(137,245,162,0.06)',
+              border: '1px solid rgba(137,245,162,0.2)',
+              borderRadius: 12,
+              padding: '14px 16px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLDivElement).style.background = 'rgba(137,245,162,0.12)';
+              (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(137,245,162,0.4)';
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLDivElement).style.background = 'rgba(137,245,162,0.06)';
+              (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(137,245,162,0.2)';
+            }}
+          >
+            <span style={{ fontSize: 22, flexShrink: 0 }}>{opt.icon}</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#d4ffe0' }}>{opt.title}</div>
+              <div style={{ fontSize: 10, color: 'rgba(184,255,200,0.45)', marginTop: 2 }}>{opt.sub}</div>
+            </div>
+            <span style={{ color: 'rgba(137,245,162,0.4)', fontSize: 14 }}>→</span>
+          </div>
+        ))}
+      </div>
+      <div style={{ textAlign: 'center', marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {/* [DNA_PATCH_START] 查看完整指南按鈕 */}
+          <div
+            onClick={() => {
+              const key = `onboarding_done_${session?.user?.email}`;
+              localStorage.setItem(key, '1');
+              setShowOnboarding(false);
+              setOnboardingDismissed(true);
+              window.location.href = '/guide';
+            }}
+            style={{
+              background: 'rgba(137,245,162,0.06)',
+              border: '1px solid rgba(137,245,162,0.2)',
+              borderRadius: 12,
+              padding: '14px 16px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLDivElement).style.background = 'rgba(137,245,162,0.12)';
+              (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(137,245,162,0.4)';
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLDivElement).style.background = 'rgba(137,245,162,0.06)';
+              (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(137,245,162,0.2)';
+            }}
+          >
+            <span style={{ fontSize: 22, flexShrink: 0 }}>📖</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#d4ffe0', textAlign: 'left' }}>查看完整指南</div>
+            <div style={{ fontSize: 10, color: 'rgba(184,255,200,0.45)', marginTop: 2, textAlign: 'left' }}>三條主線・點數說明・完整功能介紹</div>
+            </div>
+            <span style={{ color: 'rgba(137,245,162,0.4)', fontSize: 14 }}>→</span>
+          </div>
+          {/* [DNA_PATCH_END] */}
+          <span
+            onClick={() => {
+              const key = `onboarding_done_${session?.user?.email}`;
+              localStorage.setItem(key, '1');
+              setShowOnboarding(false);
+              setOnboardingDismissed(true);
+            }}
+            style={{ fontSize: 10, color: 'rgba(184,255,200,0.25)', cursor: 'pointer' }}
+          >
+            跳過，直接進入 →
+          </span>
+        </div>
+    </div>
+  </div>
+)}
+{/* [DNA_PATCH_END] */}
     <main className="flex min-h-screen flex-col items-center px-3 sm:px-4 pt-2 pb-4 bg-gradient-to-br from-[#0d2318] via-[#1a3a25] to-[#2d5a3d] relative overflow-y-auto">
       
       {/* 背景裝飾光暈 */}
@@ -962,9 +1289,9 @@ return (
 {(() => {
   const modes = [
     { key: "image",        label: "🎨 生成角色圖片",   desc: "1點" },
-    { key: "video",        label: "🎬 圖片轉影片",     desc: "4-6點" },
-    { key: "upload",       label: "📁 上傳照片轉影片", desc: "4-6點" },
-{ key: "text2video",   label: "✨ 文字生成影片",   desc: "Kling 4-6點 / Seedance 13-27點" },
+    { key: "video",        label: "🎬 圖片轉影片",     desc: "Kling 4-6點 / Seedance ?" },
+    { key: "upload",       label: "📁 上傳照片轉影片", desc: "Kling 4-6點 / Seedance ?" },
+{ key: "text2video",   label: "✨ 文字生成影片",   desc: "Kling 4-6點 / Seedance ?" },
   ] as const;
   return (
     <div className="mb-4">
@@ -1706,6 +2033,18 @@ return (
                 ) : (
                   <img src={prediction.output} alt="Result" className="rounded-2xl w-full shadow-xl" />
                 )}
+          {genType === "image" && (
+  <button
+    onClick={() => {
+      setTtsText("");
+      setTtsAudio(null);
+      setShowTtsModal(true);
+    }}
+    className="w-full mt-2 py-2.5 rounded-xl bg-gradient-to-r from-purple-500/20 to-blue-500/20 border border-purple-500/30 text-purple-300 text-xs font-black hover:from-purple-500/30 transition-all"
+  >
+    🎙️ 讓她說話
+  </button>
+)}
           <p className="text-white/25 text-[10px] text-center mt-1">
   📱 長按上方圖片可直接儲存到相簿｜影片請點「儲存成果」下載
 </p>
@@ -1807,8 +2146,8 @@ return (
 {prediction?.output && !genType.includes('video') && (
   <div className="mt-4 px-4 space-y-2.5">
 
-    {/* 主要操作：一排三顆 */}
-    <div className="grid grid-cols-3 gap-2">
+    {/* 主要操作：一排五顆 */}
+    <div className="grid grid-cols-5 gap-2">
       {/* 鎖定此角色 */}
       <button
         onClick={async () => {
@@ -1863,7 +2202,7 @@ return (
         <span>收藏角色</span>
       </button>
 
-      {/* 批次生成（付費+已鎖定才亮） */}
+      {/* 批次生成 */}
       <button
         onClick={() => {
           if (plan === 'free') { alert('⚠️ 批次生成為付費功能，請先升級方案'); return; }
@@ -1880,37 +2219,42 @@ return (
         <span>批次生成</span>
         {(plan === 'free' || !lockedCharacterUrl) && (
           <span className="text-[9px] text-white/20 font-normal -mt-0.5">
-            {plan === 'free' ? '付費限定' : '需鎖定角色'}
+            {plan === 'free' ? '付費限定' : '需鎖定'}
           </span>
         )}
       </button>
-    </div>
 
-    {/* 次要操作：解除鎖定 + 上傳轉影片 */}
-    <div className={`grid gap-2 ${lockedCharacterUrl ? 'grid-cols-2' : 'grid-cols-1'}`}>
-      {lockedCharacterUrl && (
-        <button
-          onClick={async () => {
-            if (!confirm('確定要解除鎖定角色嗎？')) return;
-            await fetch("/api/user/clear-locked-character", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ email: session?.user?.email }),
-            });
-            localStorage.removeItem('locked_character');
-            setLockedCharacterUrl(null);
-            setLockedCharacterId(null);
-          }}
-          className="py-2.5 bg-white/3 border border-white/10 text-white/35 rounded-xl text-xs font-bold hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-400/60 transition-all active:scale-95"
-        >
-          🔓 解除鎖定
-        </button>
-      )}
+      {/* 上傳轉影片 */}
       <button
         onClick={() => setShowUploadModal(true)}
-        className="py-2.5 bg-[#89f5a2]/6 border border-[#89f5a2]/20 text-[#89f5a2]/55 rounded-xl text-xs font-bold hover:bg-[#89f5a2]/12 hover:border-[#89f5a2]/35 hover:text-[#89f5a2]/80 transition-all active:scale-95"
+        className="flex flex-col items-center gap-1.5 py-3.5 bg-gradient-to-b from-[#89f5a2]/10 to-[#89f5a2]/4 border border-[#89f5a2]/25 text-[#89f5a2]/65 rounded-2xl text-xs font-black hover:from-[#89f5a2]/18 hover:border-[#89f5a2]/40 hover:text-[#89f5a2]/90 transition-all active:scale-95"
       >
-        📁 上傳照片轉影片
+        <span className="text-lg">📁</span>
+        <span>上傳轉影片</span>
+      </button>
+
+      {/* 解除鎖定 */}
+      <button
+        onClick={async () => {
+          if (!confirm('確定要解除鎖定角色嗎？')) return;
+          await fetch("/api/user/clear-locked-character", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: session?.user?.email }),
+          });
+          localStorage.removeItem('locked_character');
+          setLockedCharacterUrl(null);
+          setLockedCharacterId(null);
+        }}
+        className={`flex flex-col items-center gap-1.5 py-3.5 rounded-2xl text-xs font-black border transition-all active:scale-95 ${
+          lockedCharacterUrl
+            ? 'bg-red-500/5 border-red-500/15 text-red-400/55 hover:bg-red-500/12 hover:border-red-500/30 hover:text-red-400/80'
+            : 'bg-white/2 border-white/6 text-white/15 cursor-not-allowed'
+        }`}
+        disabled={!lockedCharacterUrl}
+      >
+        <span className="text-lg">🔓</span>
+        <span>解除鎖定</span>
       </button>
     </div>
 
@@ -2494,6 +2838,7 @@ onClick={() => {
     setWav2lipResult={setWav2lipResult}
     wav2lipSeconds={wav2lipSeconds}
     prediction={prediction}
+    lockedCharacterUrl={lockedCharacterUrl}
     userEmail={session?.user?.email}
     setCredits={(fn) => setCredits(fn as any)}
     onClose={() => setShowTtsModal(false)}

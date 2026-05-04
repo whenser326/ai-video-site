@@ -1,7 +1,7 @@
 // [DNA_PATCH_START] 我的角色列表頁
 "use client";
 import { useSession, signIn } from "next-auth/react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 export default function CharactersPage() {
@@ -9,6 +9,28 @@ export default function CharactersPage() {
   const router = useRouter();
   const [characters, setCharacters] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDelete = async (charId: string) => {
+    if (!confirm('確定要刪除這個角色嗎？此操作無法復原。')) return;
+    setDeletingId(charId);
+    try {
+      const res = await fetch(`/api/saved-characters?id=${charId}&email=${session?.user?.email}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setCharacters(prev => prev.filter(c => c.id !== charId));
+        setOpenMenuId(null);
+      } else {
+        alert('刪除失敗，請重試');
+      }
+    } catch {
+      alert('刪除失敗，請重試');
+    }
+    setDeletingId(null);
+  };
 
   useEffect(() => {
     if (!session?.user?.email) return;
@@ -20,20 +42,31 @@ export default function CharactersPage() {
       });
   }, [session]);
 
+  // 點外部關閉 B2 選單
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenuId(null);
+      }
+    };
+    if (openMenuId) document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [openMenuId]);
+
   if (!session) return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-[#0d2318] via-[#1a3a25] to-[#2d5a3d]">
       <p className="text-white/50 text-sm mb-4">請先登入才能查看角色</p>
-      <button onClick={() => signIn("google")} className="px-6 py-3 bg-[#89f5a2] text-[#0d2318] rounded-full font-black text-sm">
+      <button onClick={() => signIn("google", {}, { prompt: "select_account" })} className="px-6 py-3 bg-[#89f5a2] text-[#0d2318] rounded-full font-black text-sm">
         🔑 Google 登入
       </button>
     </main>
   );
 
   return (
-    <main className="flex min-h-screen flex-col items-center px-4 pt-24 sm:pt-16 pb-10 bg-gradient-to-br from-[#0d2318] via-[#1a3a25] to-[#2d5a3d]">
+    <main className="flex min-h-screen flex-col items-center px-4 pt-6 pb-10 bg-gradient-to-br from-[#0d2318] via-[#1a3a25] to-[#2d5a3d]">
       <div className="w-full max-w-lg">
 
-        {/* 頂部返回 */}
+        {/* 頂部標題 */}
         <div className="flex items-center gap-3 mb-6 mt-2">
           <button
             onClick={() => router.push('/')}
@@ -41,7 +74,7 @@ export default function CharactersPage() {
           >
             ← 返回首頁
           </button>
-          <h1 className="text-white font-black text-xl">🎭 我的角色</h1>
+          <p className="text-white font-black text-xl">🎭 我的角色</p>
         </div>
 
         {/* 載入中 */}
@@ -72,11 +105,13 @@ export default function CharactersPage() {
             {characters.map((char) => (
               <div
                 key={char.id}
-                onClick={() => router.push(`/characters/${char.id}`)}
-                className="group cursor-pointer bg-black/25 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden hover:border-purple-400/40 hover:shadow-[0_0_20px_rgba(167,139,250,0.15)] transition-all duration-200"
+                className="relative group bg-black/25 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden hover:border-purple-400/40 hover:shadow-[0_0_20px_rgba(167,139,250,0.15)] transition-all duration-200"
               >
-                {/* 角色圖片 */}
-                <div className="relative w-full aspect-square overflow-hidden">
+                {/* 角色圖片（點擊展開 B2） */}
+                <div
+                  className="relative w-full aspect-square overflow-hidden cursor-pointer"
+                  onClick={() => setOpenMenuId(openMenuId === char.id ? null : char.id)}
+                >
                   <img
                     src={char.image_url}
                     alt={char.name}
@@ -92,10 +127,79 @@ export default function CharactersPage() {
                     {new Date(char.created_at).toLocaleDateString('zh-TW')} 建立
                   </p>
                 </div>
+
+                {/* B2 選單 overlay */}
+                {openMenuId === char.id && (
+                  <div
+                    ref={menuRef}
+                    className="absolute inset-0 bg-black/65 flex items-end p-2 z-10"
+                    onClick={() => setOpenMenuId(null)}
+                  >
+                    <div
+                      className="w-full bg-[#0f2318] border border-[#89f5a2]/30 rounded-xl overflow-hidden"
+                      onClick={e => e.stopPropagation()}
+                    >
+                      <button
+                        onClick={() => router.push(`/characters/${char.id}`)}
+                        className="w-full flex items-center gap-2 px-3 py-3 text-xs font-bold text-[rgba(184,255,200,0.8)] border-b border-[rgba(137,245,162,0.08)] hover:bg-[rgba(137,245,162,0.08)] transition-all"
+                      >
+                        📁 查看作品
+                      </button>
+                      <button
+                        onClick={() => router.push(`/chat/${char.id}`)}
+                        className="w-full flex items-center gap-2 px-3 py-3 text-xs font-bold text-[rgba(184,255,200,0.8)] border-b border-[rgba(137,245,162,0.08)] hover:bg-[rgba(137,245,162,0.08)] transition-all"
+                      >
+                        💬 互動聊天
+                      </button>
+                      <button
+                        onClick={() => handleDelete(char.id)}
+                        disabled={deletingId === char.id}
+                        className="w-full flex items-center gap-2 px-3 py-3 text-xs font-bold text-red-400/70 hover:bg-red-500/10 transition-all disabled:opacity-40"
+                      >
+                        🗑️ {deletingId === char.id ? '刪除中...' : '刪除角色'}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
         )}
+
+        {/* 群組聊天區塊 */}
+        {!loading && characters.length >= 2 && (
+          <div className="mt-8 bg-black/20 border border-white/10 rounded-2xl p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-white/70 text-sm font-bold">🎭 群組聊天</p>
+              <span className="text-[10px] bg-[#89f5a2]/10 border border-[#89f5a2]/20 rounded-full px-2 py-0.5 text-[#89f5a2]">
+                入門/標準 最多3人・專業 最多5人
+              </span>
+            </div>
+            <p className="text-white/30 text-xs">選擇 2 個以上角色，一起開聊</p>
+            <div className="flex gap-2 items-center">
+              {characters.slice(0, 3).map((c, i) => (
+                <img
+                  key={c.id}
+                  src={c.image_url}
+                  alt={c.name}
+                  className="w-11 h-11 rounded-full object-cover border-2 border-[#89f5a2]/30"
+                />
+              ))}
+              {characters.length > 3 && (
+                <div className="w-11 h-11 rounded-full bg-white/5 border-2 border-dashed border-white/20 flex items-center justify-center text-white/30 text-xs font-bold">
+                  +{characters.length - 3}
+                </div>
+              )}
+              <button
+                onClick={() => router.push('/chat/group')}
+                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#2d8a42] to-[#3db558] text-white text-xs font-black hover:opacity-90 transition-all"
+              >
+                開始群組聊天 →
+              </button>
+            </div>
+          </div>
+        )}
+
       </div>
     </main>
   );

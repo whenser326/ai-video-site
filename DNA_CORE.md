@@ -15,6 +15,12 @@
 用白話說明每個修改，把使用者當程式白癡。
 若使用者有網站功能上的問題，須以高階顧問的角色反問以避免思考誤區。
 
+### 鉚接點規則（2026/05/03 新增）
+- 每次給程式碼修改，必須提供完整可搜尋的鉚接點（找到 XXX 改成 XXX）
+- 鉚接點必須包含足夠上下文讓使用者能唯一定位，禁止只說「找到這行」而不給完整內容
+- 若修改範圍跨多行，鉚接點必須包含起始行和結束行的完整內容
+- 每次修改必須明確說明是哪個檔案
+
 ### 緊急排查順序（出現任何錯誤必須先做）
 1. 先讀錯誤訊息，找根本原因，禁止猜測
 2. Turbopack FATAL error → 先執行 `type C:\Users\123\AppData\Local\Temp\next-panic-*.log` 讀 panic log
@@ -39,7 +45,10 @@ git push
 - 貼入完整大型檔案（如整個 page.tsx）算 5 個來回
 - 出現第一個錯誤時，Claude 必須提醒是否需要換視窗
 - 換不換視窗由使用者自行決定，Claude 只負責提醒
-- 新視窗開始時必須貼入 DNA_CORE.md + 相關 DNA 分檔 + 相關程式碼，否則 Claude 禁止開始開發
+- 新視窗開始時必須貼入 DNA_CORE.md + DNA_TECH.md + DNA_BIZ.md（三份全貼，缺一不可），否則 Claude 禁止開始開發
+- 修改任何涉及 middleware.ts、auth route、防濫用機制、API 路由、資料庫、AI 模型的程式碼前，Claude 必須先確認已讀取 DNA_TECH.md，未讀取則拒絕動手並要求使用者補貼
+- 修改 GlobalHeader.tsx 前，必須先確認已讀取 DNA_TECH.md 的「GlobalHeader 規範」章節
+- 修改任何聊天相關檔案（/chat/[characterId]/page.tsx、/chat/group/page.tsx、/api/chat/route.ts）前，必須先確認已讀取 DNA_BIZ.md 的「AI 聊天功能規格」章節
 
 ### DNA 更新防呆
 每次新增規則前，必須先搜尋 DNA 是否有相關舊規則，有則直接修改舊規則，禁止新增重複或矛盾的條目。
@@ -90,3 +99,40 @@ page.tsx 已知 TypeScript 舊錯誤（4個）：
 - route.ts[Ln 170]: Unterminated string literal
 - route.ts[Ln 171]: ')' expected
 - route.ts[Ln 27]: 'id' is declared here
+
+---
+
+## 5. UI/UX 架構（2026/05/03 重構完成）
+
+### GlobalHeader.tsx 已完成功能
+- 未登入：Logo + 定價方案按鈕 + Google 登入按鈕（含 InApp 瀏覽器偵測 Line/FB/IG）
+- 已登入桌面版：Logo + 主導覽（🎨 創作 / 💬 我的角色）+ 點數徽章 + 按鈕列 + 登出
+- 已登入手機版：Logo + 點數徽章 + 漢堡按鈕 → Drawer 展開
+- pricing 頁面：return null（不顯示 Header）
+- 漢堡 Drawer menuItems 順序：📖 使用指南 / 🎭 我的角色 / 📅 每日簽到 / 💳 儲值點數 / 🎁 推薦賺點 / 💬 意見回饋 / 🚪 登出
+- 「使用指南」onClick：清除 localStorage onboarding_done_ key → dispatch CustomEvent('open-onboarding') → page.tsx 的 useEffect 監聽後重新顯示引導框
+- FeedbackModal + unreadCount 60秒輪詢
+
+### page.tsx 未登入 Landing Page
+- `useSession()` 需解構 `status`：`const { data: session, status } = useSession()`
+- early return 順序：`if (status === 'loading') return null;` → `if (!session) return (...)`
+- Landing 字型：layout.tsx `<head>` 已載入 Google Fonts Noto Sans TC（300/400/500/700/900）
+- Landing 最外層 fontFamily：`"'Noto Sans TC', sans-serif"`
+- 大標題 fontWeight: 300（細體）
+
+### page.tsx Onboarding 引導框
+- 只對 `plan === 'free'` 的新用戶顯示（付費帳號直接寫入 localStorage 標記）
+- 條件：`credits` 載入完才判斷（避免 race condition）
+- localStorage key：`onboarding_done_${session.user.email}`
+- 監聽 CustomEvent('open-onboarding') 重新觸發：`setShowOnboarding(true); setOnboardingDismissed(false)`
+- 優惠框（PromoCard）等 `showOnboarding` 為 false 後才啟動 2.5 秒計時器
+
+### middleware.ts
+- IP 限制邏輯已完全移除（原本每 IP 每天最多 3 個帳號的限制會誤傷正常用戶）
+- 現在只做 pass-through：`return NextResponse.next()`
+- 防重複帳號改由 auth/[...nextauth]/route.ts 的 signIn callback 處理（Gmail normalize 檢查）
+
+/chat/[characterId] 聊天頁：h-screen + overflow-hidden，底部輸入列有「離開聊天室」紅色按鈕，📎上傳圖片按鈕，打字延遲2-5秒，AI自拍觸發，🎬轉成影片Modal
+/chat/group 群組聊天頁：免費用戶封鎖，入門/標準最多3角色，專業最多5角色，群組回覆隨機順序+逐一顯示間隔2-5秒
+/guide 使用指南頁：三條主線可展開，點數對照表，底部「開始創作」按鈕
+Onboarding 三選項：生成角色→null（留首頁）、和AI角色聊天或製作說話影片→/characters、上傳自己的照片轉影片→setShowUploadModal(true)

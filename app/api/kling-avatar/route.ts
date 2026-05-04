@@ -1,4 +1,4 @@
-// [DNA_PATCH_START] Wav2Lip 影片語音合成 API
+// [DNA_PATCH_START] Kling Avatar V2 說話影片 API
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
@@ -8,10 +8,9 @@ const supabase = createClient(
 );
 
 export async function POST(req: NextRequest) {
-  const { videoUrl, mediaUrl, audioBase64, userEmail, plan } = await req.json();
-  const finalMediaUrl = mediaUrl || videoUrl;
+  const { imageUrl, audioBase64, prompt, mode, userEmail, plan } = await req.json();
 
-  if (!finalMediaUrl || !audioBase64 || !userEmail) {
+  if (!imageUrl || !audioBase64 || !userEmail) {
     return NextResponse.json({ error: "缺少必要參數" }, { status: 400 });
   }
 
@@ -19,15 +18,16 @@ export async function POST(req: NextRequest) {
   const { data: settings } = await supabase
     .from("admin_settings")
     .select("key, value")
-    .in("key", ["wav2lip_credits_starter", "wav2lip_credits_standard", "wav2lip_credits_pro"]);
+    .in("key", ["kling_avatar_credits_starter", "kling_avatar_credits_standard", "kling_avatar_credits_pro"]);
 
   const settingsMap: Record<string, number> = {};
   (settings || []).forEach((s: any) => { settingsMap[s.key] = parseInt(s.value); });
 
+  // 預設點數：入門10、標準9、專業8（與 Wav2Lip 相同）
   const creditCost =
-    plan === "starter" ? (settingsMap["wav2lip_credits_starter"] || 10) :
-    plan === "standard" ? (settingsMap["wav2lip_credits_standard"] || 9) :
-    (settingsMap["wav2lip_credits_pro"] || 8);
+    plan === "starter" ? (settingsMap["kling_avatar_credits_starter"] || 10) :
+    plan === "standard" ? (settingsMap["kling_avatar_credits_standard"] || 9) :
+    (settingsMap["kling_avatar_credits_pro"] || 8);
 
   // 2. 檢查點數
   const { data: profile } = await supabase
@@ -46,33 +46,32 @@ export async function POST(req: NextRequest) {
     .update({ credits: profile.credits - creditCost })
     .eq("email", userEmail);
 
-  // 4. 把 base64 音訊上傳到 Supabase Storage（Wav2Lip 需要公開 URL）
+  // 4. 把 base64 音頻上傳到 Supabase Storage
   let audioPublicUrl = "";
   try {
     const audioBuffer = Buffer.from(audioBase64, "base64");
-    const audioFileName = `${userEmail}-tts-${Date.now()}.mp3`;
+    const audioFileName = `${userEmail}-avatar-tts-${Date.now()}.mp3`;
     const { error: uploadError } = await supabase.storage
       .from("character-images")
       .upload(audioFileName, audioBuffer, { contentType: "audio/mpeg", upsert: true });
 
-    if (uploadError) throw new Error("音訊上傳失敗");
+    if (uploadError) throw new Error("音頻上傳失敗");
 
     const { data: urlData } = supabase.storage
       .from("character-images")
       .getPublicUrl(audioFileName);
     audioPublicUrl = urlData.publicUrl;
-  } catch (err) {
-    // 音訊上傳失敗，退點
+  } catch {
     await supabase
       .from("profiles")
       .update({ credits: profile.credits })
       .eq("email", userEmail);
-    return NextResponse.json({ error: "音訊處理失敗，點數已退還" }, { status: 500 });
+    return NextResponse.json({ error: "音頻處理失敗，點數已退還" }, { status: 500 });
   }
 
-  // 5. 呼叫 Replicate Wav2Lip
+  // 5. 呼叫 Replicate Kling Avatar V2
   try {
-    const replicateRes = await fetch("https://api.replicate.com/v1/models/kwaivgi/kling-lip-sync/predictions", {
+    const replicateRes = await fetch("https://api.replicate.com/v1/models/kwaivgi/kling-avatar-v2/predictions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${process.env.REPLICATE_API_TOKEN}`,
@@ -81,38 +80,32 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify({
         input: {
-          video_url: finalMediaUrl,
-          audio_file: audioPublicUrl,
+          image: imageUrl,
+          audio: audioPublicUrl,
+          prompt: prompt || "natural talking",
+          mode: mode || "std",
         },
       }),
     });
 
     const prediction = await replicateRes.json();
 
-    if (!prediction.id) {
-      throw new Error("Replicate 啟動失敗");
-    }
+    if (!prediction.id) throw new Error("Replicate 啟動失敗");
 
     return NextResponse.json({ id: prediction.id, creditCost });
-  } catch (err) {
-    // Replicate 啟動失敗，退點
+  } catch {
     await supabase
       .from("profiles")
       .update({ credits: profile.credits })
       .eq("email", userEmail);
-    return NextResponse.json({ error: "合成啟動失敗，點數已退還" }, { status: 500 });
+    return NextResponse.json({ error: "生成啟動失敗，點數已退還" }, { status: 500 });
   }
 }
 
-// Wav2Lip polling 狀態檢查
+// Polling 狀態檢查
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const id = searchParams.get("id");
-  const userEmail = searchParams.get("email");
-
-  if (!id || !userEmail) {
-    return NextResponse.json({ error: "缺少參數" }, { status: 400 });
-  }
+  const id = req.nextUrl.searchParams.get("id");
+  if (!id) return NextResponse.json({ error: "缺少參數" }, { status: 400 });
 
   const res = await fetch(`https://api.replicate.com/v1/predictions/${id}`, {
     headers: { Authorization: `Token ${process.env.REPLICATE_API_TOKEN}` },

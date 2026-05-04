@@ -113,6 +113,16 @@ if (!session) return (
 
   const menuItems = [
     {
+      label: '📖 使用指南',
+      onClick: () => {
+        const key = `onboarding_done_${session?.user?.email}`;
+        localStorage.removeItem(key);
+        window.dispatchEvent(new CustomEvent('open-onboarding'));
+        setMenuOpen(false);
+      },
+      className: 'text-emerald-300 border-emerald-400/30 bg-emerald-400/10 hover:bg-emerald-400/20',
+    },
+    {      
       label: '🎭 我的角色',
       onClick: () => { router.push('/characters'); setMenuOpen(false); },
       className: 'text-purple-300 border-purple-400/30 bg-purple-400/10 hover:bg-purple-400/20',
@@ -156,8 +166,10 @@ if (!session) return (
             Consistent Flow
           </span>
         </button>
-
-        <div className="flex-1" />
+<div className="flex-1 sm:hidden" />
+        {/* [DNA_PATCH_START] 主導覽（桌面版，登入後才顯示） */}
+        <div className="hidden sm:flex items-center gap-1 mx-3 flex-1 min-w-0" />
+        {/* [DNA_PATCH_END] */}
 
         {/* 右：點數 + 電腦版按鈕 + 漢堡 */}
         <div className="flex items-center gap-2">
@@ -226,7 +238,7 @@ if (!session) return (
           ref={drawerRef}
           className="sm:hidden fixed top-12 left-0 right-0 z-40
                      bg-[#0d2318]/98 backdrop-blur-md border-b border-white/10
-                     px-4 py-3 flex flex-col gap-2 animate-in slide-in-from-top-2 duration-150"
+                     px-4 py-3 flex flex-col gap-2"
         >
           {menuItems.map((item) => (
             <button
