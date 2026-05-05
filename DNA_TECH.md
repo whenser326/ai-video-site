@@ -118,10 +118,16 @@ localStorage (key: locked_character) 儲存鎖定角色的 Supabase 永久 URL
 ---
 
 ## 自拍生成規範
-- 使用 flux-kontext-pro，帶入 char.image_url 鎖定臉孔
+
+- 使用 flux-kontext-pro，帶入角色 image_url 鎖定臉孔
 - 走 /api/character，不走 /api/generate-image
+- 前端傳參數用 selfieCharacterImage（不是 lockedCharacter，避免與首頁鎖定角色混用）
 - triggerSelfie 用 msgId 定位，不用 index
-- 場景從 message + aiReply 抽取
+- 場景從 message + aiReply 同時抽取
+- 群組自拍：只隨機選一個有意圖的角色觸發，延遲 30秒~3分鐘，不全員同時觸發
+- /api/character 參數職責：
+  - lockedCharacter = 首頁用戶手動鎖定的角色
+  - selfieCharacterImage = 聊天室自拍專用，優先權高於 lockedCharacter
 
 ---
 
