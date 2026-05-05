@@ -151,7 +151,7 @@ localStorage (key: locked_character) 儲存鎖定角色的 Supabase 永久 URL
 ### 待實作：長期記憶摘要系統（優先度高）
 所有競品（Crushie、Floze、MiraiMind、ParadiseAI）最大共同痛點是「對話超過一定數量後記憶崩壞」。
 實作方案：
-- 觸發條件：當 chat_messages 該 session 累計超過 30 筆時，自動觸發摘要
+- 觸發條件：當 chat_messages 該 session 累計超過 50 筆時，自動觸發摘要
 - 摘要邏輯：呼叫 Claude Haiku，將最舊的 20 筆訊息壓縮成摘要文字，存入 chat_sessions.background_story 欄位
 - 使用方式：/api/chat/route.ts 在組裝 messages 前，先讀取 background_story，若有值則插入 system prompt 最前面：「【對話背景摘要】${background_story}」
 - 摘要後刪除：壓縮過的舊訊息從 chat_messages 刪除，只保留最近 10 筆 + background_story
@@ -268,6 +268,7 @@ IP 限流：
 
 簽到防呆：同帳號每天只能簽一次（比對 checkin_last_date）、同 IP 每天只能一個帳號簽到（比對 checkin_logs）
 簽到獎勵：每日+1點，連續第7天+3點，第14天+5點，第21天+5點，第30天+10點
+簽到額外獎勵（待實作）：免費用戶簽到當日影片額度 +1（從1支→2支），不累積、不轉點數，當日有效
 簽到時區：台灣時區（Asia/Taipei），用 toLocaleDateString("en-CA") 取得 YYYY-MM-DD 格式
 
 ---

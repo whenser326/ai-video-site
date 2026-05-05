@@ -64,14 +64,32 @@ export async function POST(req: NextRequest) {
   if (newStreak === 30) bonusCredits = 10;
   const totalCredits = 1 + bonusCredits;
 
-  // 更新 profiles
+  // 更新 profiles（免費用戶簽到後重設當日影片計數，額度+1）
+  const { data: planData } = await supabase
+    .from("profiles")
+    .select("plan, daily_video_count, daily_video_date")
+    .eq("email", email)
+    .single();
+
+  const isFreeUser = !planData?.plan || planData.plan === "free";
+  const isVideoToday = planData?.daily_video_date === todayTW;
+  const hasUsedVideo = isVideoToday && (planData?.daily_video_count || 0) >= 1;
+
+  const updatePayload: Record<string, any> = {
+    credits: profile.credits + totalCredits,
+    checkin_last_date: todayTW,
+    checkin_streak: newStreak,
+  };
+
+  // 免費用戶且今日已用過影片額度 → 重設計數讓可再生成1支
+  if (isFreeUser && hasUsedVideo) {
+    updatePayload.daily_video_count = 0;
+    updatePayload.daily_video_date = todayTW;
+  }
+
   await supabase
     .from("profiles")
-    .update({
-      credits: profile.credits + totalCredits,
-      checkin_last_date: todayTW,
-      checkin_streak: newStreak,
-    })
+    .update(updatePayload)
     .eq("email", email);
 
   // 寫入 checkin_logs
@@ -88,6 +106,7 @@ export async function POST(req: NextRequest) {
     streak: newStreak,
     creditsEarned: totalCredits,
     bonusCredits,
+    bonusVideo: isFreeUser && hasUsedVideo, // 有重設影片額度才回傳 true
   });
 }
 

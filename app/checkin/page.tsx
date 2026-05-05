@@ -11,7 +11,7 @@ export default function CheckinPage() {
   const [streak, setStreak] = useState(0);
   const [already, setAlready] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{ creditsEarned: number; bonusCredits: number } | null>(null);
+  const [result, setResult] = useState<{ creditsEarned: number; bonusCredits: number; bonusVideo: boolean } | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -42,7 +42,7 @@ export default function CheckinPage() {
     } else {
       setAlready(true);
       setStreak(data.streak);
-      setResult({ creditsEarned: data.creditsEarned, bonusCredits: data.bonusCredits });
+      setResult({ creditsEarned: data.creditsEarned, bonusCredits: data.bonusCredits, bonusVideo: !!data.bonusVideo });
     }
   };
 
@@ -108,6 +108,9 @@ export default function CheckinPage() {
                 <span className="text-yellow-300 font-black">（含連續獎勵 +{result.bonusCredits}點 🎉）</span>
               )}
             </p>
+            {result.bonusVideo && (
+              <p className="text-purple-300 font-black text-sm mt-2">🎬 今日影片額度已重置，可再生成 1 支！</p>
+            )}
           </div>
         )}
 
@@ -166,6 +169,7 @@ export default function CheckinPage() {
           <p className="text-white/50 text-xs">🏆 連續簽到第30天 → 額外 +10點</p>
           <p className="text-white/50 text-xs">⚠️ 中斷一天後連續天數重新計算</p>
           <p className="text-white/50 text-xs">📱 每個網路每日限一個帳號簽到</p>
+          <p className="text-white/50 text-xs">🎬 免費用戶簽到後可額外生成 1 支影片（當日有效）</p>
         </div>
 
       </div>

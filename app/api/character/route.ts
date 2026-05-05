@@ -147,7 +147,8 @@ export async function POST(req: Request) {
       const dailyVideoCount = lastVideoDate === today ? (userProfile.daily_video_count || 0) : 0;
       if (dailyVideoCount >= 1) {
         return NextResponse.json({
-          error: `免費用戶每天最多生成 1 支影片，明天 00:00（台灣時間）重置，或升級方案繼續使用！`
+          error: `免費用戶每天最多生成 1 支影片。📅 前往每日簽到可額外獲得 1 次生成機會，或升級方案無限使用！`,
+          showCheckinHint: true,
         }, { status: 403 });
       }
       await supabase

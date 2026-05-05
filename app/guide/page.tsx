@@ -229,7 +229,7 @@ export default function GuidePage() {
           <p style={{ fontSize: 13, fontWeight: 900, color: '#d4ffe0', marginBottom: 14 }}>💎 點數方案對照</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {[
-              { name: "🆓 免費", credits: "5點", price: "$0", limit: "每日2圖/1影片" },
+              { name: "🆓 免費", credits: "5點", price: "$0", limit: "每日2圖/1影片(簽到+1)" },
               { name: "🌱 入門包", credits: "30點", price: "$250", limit: "無限生成" },
               { name: "⭐ 標準包", credits: "80點", price: "$450", limit: "無限生成" },
               { name: "🚀 專業包", credits: "200點", price: "$799", limit: "無限生成" },
