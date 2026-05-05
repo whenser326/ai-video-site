@@ -144,23 +144,42 @@ const VOICE_OPTIONS = [
 
   const selectedChars = characters.filter(c => selectedIds.includes(c.id));
 
-  const triggerSelfie = async (intent: "photo" | "video", selfiePrompt: string, msgId: string) => {
-  const photoCost = 1;
-  const videoCost = plan === 'pro' ? 4 : plan === 'standard' ? 5 : 6;
+  const triggerSelfie = async (intent: "photo" | "video", selfiePrompt: string, msgId: string, charImageUrl?: string) => {
+    const photoCost = 1;
+    const videoCost = plan === 'pro' ? 4 : plan === 'standard' ? 5 : 6;
 
-  setMessages(prev => prev.map(m =>
-    m.id === msgId ? { ...m, selfieLoading: true, selfieType: intent } : m
-  ));
+    setMessages(prev => prev.map(m =>
+      m.id === msgId ? { ...m, selfieLoading: true, selfieType: intent } : m
+    ));
 
-  try {
-    const imgRes = await fetch("/api/generate-image", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: selfiePrompt, gender: "", style: "", userEmail: session?.user?.email }),
-    });
-    const imgData = await imgRes.json();
-    const imageUrl = typeof imgData.output === "string" ? imgData.output : Array.isArray(imgData.output) ? imgData.output[0] : null;
-    if (!imageUrl) throw new Error("照片生成失敗");
+    try {
+      // 用 flux-kontext-pro 鎖定角色臉孔
+      const charRes = await fetch("/api/character", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: selfiePrompt,
+          lockedCharacter: charImageUrl || null,
+          userEmail: session?.user?.email,
+          imageRatio: "1:1",
+        }),
+      });
+      const charData = await charRes.json();
+      if (!charData.id) throw new Error("照片生成啟動失敗");
+
+      // Polling
+      let imageUrl: string | null = null;
+      for (let i = 0; i < 30; i++) {
+        await new Promise(r => setTimeout(r, 3000));
+        const poll = await fetch(`/api/character?id=${charData.id}`);
+        const pollData = await poll.json();
+        if (pollData.status === "succeeded") {
+          imageUrl = Array.isArray(pollData.output) ? pollData.output[0] : pollData.output;
+          break;
+        }
+        if (pollData.status === "failed") throw new Error("照片生成失敗");
+      }
+      if (!imageUrl) throw new Error("照片生成逾時");
 
     if (intent === "photo") {
       setMessages(prev => prev.map(m =>
@@ -296,8 +315,9 @@ const VOICE_OPTIONS = [
           if ((r.selfieIntent === "photo" || r.selfieIntent === "video") && r.selfiePrompt) {
             const intent = r.selfieIntent as "photo" | "video";
             const prompt = r.selfiePrompt as string;
+            const charImgUrl = r.characterImageUrl as string | undefined;
             setTimeout(() => {
-              triggerSelfie(intent, prompt, msgId);
+              triggerSelfie(intent, prompt, msgId, charImgUrl);
             }, randomDelay());
           }
           return updated;
@@ -532,7 +552,7 @@ const VOICE_OPTIONS = [
         </div>
 
         {/* 輸入列 */}
-        <div className="flex-shrink-0 px-4 py-3 bg-[#0d2318]/90 backdrop-blur-md border-t border-white/10">
+        <div className="flex-shrink-0 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-[#0d2318]/90 backdrop-blur-md border-t border-white/10">
           <div className="flex gap-2 items-end">
             <label className="flex-shrink-0 w-11 h-11 rounded-2xl bg-white/5 border border-white/15 flex items-center justify-center cursor-pointer hover:bg-white/10 transition-all">
               <span className="text-base">📎</span>

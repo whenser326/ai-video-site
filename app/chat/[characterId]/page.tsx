@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 
 interface Message {
+  id?: string;
   role: "user" | "assistant";
   content: string;
   characterName?: string;
@@ -117,37 +118,54 @@ export default function ChatPage() {
     startTimer();
     return () => { if (autoMessageTimerRef.current) clearTimeout(autoMessageTimerRef.current); };
   }, [character, session, characterId, sessionId, loading]);
-  const triggerSelfie = async (intent: "photo" | "video", selfiePrompt: string, targetIndex: number) => {
+  const triggerSelfie = async (intent: "photo" | "video", selfiePrompt: string, msgId: string, charImageUrl?: string) => {
     const photoCost = 1;
     const videoCost = plan === 'pro' ? 4 : plan === 'standard' ? 5 : 6;
 
-    setMessages(prev => prev.map((m, i) =>
-      i === targetIndex ? { ...m, selfieLoading: true, selfieType: intent } : m
+    setMessages(prev => prev.map(m =>
+      m.id === msgId ? { ...m, selfieLoading: true, selfieType: intent } : m
     ));
 
     try {
-      // Step 1: 先生成照片
-      const imgRes = await fetch("/api/generate-image", {
+      // Step 1: 用 flux-kontext-pro 鎖定角色臉孔生成照片
+      const charRes = await fetch("/api/character", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: selfiePrompt, gender: "", style: "", userEmail: session?.user?.email }),
+        body: JSON.stringify({
+          prompt: selfiePrompt,
+          lockedCharacter: charImageUrl || character?.image_url || null,
+          userEmail: session?.user?.email,
+          imageRatio: "1:1",
+        }),
       });
-      const imgData = await imgRes.json();
-      const imageUrl = Array.isArray(imgData.output) ? imgData.output[0] : imgData.output;
+      const charData = await charRes.json();
+      if (!charData.id) throw new Error("照片生成啟動失敗");
 
-      if (!imageUrl) throw new Error("照片生成失敗");
+      // Polling
+      let imageUrl: string | null = null;
+      for (let i = 0; i < 30; i++) {
+        await new Promise(r => setTimeout(r, 3000));
+        const poll = await fetch(`/api/character?id=${charData.id}`);
+        const pollData = await poll.json();
+        if (pollData.status === "succeeded") {
+          imageUrl = Array.isArray(pollData.output) ? pollData.output[0] : pollData.output;
+          break;
+        }
+        if (pollData.status === "failed") throw new Error("照片生成失敗");
+      }
+      if (!imageUrl) throw new Error("照片生成逾時");
 
       if (intent === "photo") {
-        setMessages(prev => prev.map((m, i) =>
-          i === targetIndex ? { ...m, selfieLoading: false, imageUrl } : m
+        setMessages(prev => prev.map(m =>
+          m.id === msgId ? { ...m, selfieLoading: false, imageUrl } : m
         ));
         setCredits(prev => prev !== null ? prev - photoCost : prev);
         return;
       }
 
       // Step 2: 影片 — 先上傳照片到 Supabase，再丟給 Kling
-      setMessages(prev => prev.map((m, i) =>
-        i === targetIndex ? { ...m, selfieType: "video" } : m
+      setMessages(prev => prev.map(m =>
+        m.id === msgId ? { ...m, selfieType: "video" } : m
       ));
 
       const uploadRes = await fetch("/api/upload-image", {
@@ -159,7 +177,7 @@ export default function ChatPage() {
       const storedUrl = uploadData.url;
       if (!storedUrl) throw new Error("上傳失敗");
 
-      // Step 3: Kling 生成影片（polling）
+      // Step 3: Kling 生成影片
       const videoRes = await fetch("/api/character", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -176,7 +194,6 @@ export default function ChatPage() {
       const videoPred = await videoRes.json();
       if (!videoPred.id) throw new Error("影片啟動失敗");
 
-      // Step 4: Polling 等結果
       let videoUrl: string | null = null;
       for (let i = 0; i < 60; i++) {
         await new Promise(r => setTimeout(r, 3000));
@@ -189,14 +206,14 @@ export default function ChatPage() {
         if (pollData.status === "failed") throw new Error("影片生成失敗");
       }
 
-      setMessages(prev => prev.map((m, i) =>
-        i === targetIndex ? { ...m, selfieLoading: false, videoUrl: videoUrl || undefined } : m
+      setMessages(prev => prev.map(m =>
+        m.id === msgId ? { ...m, selfieLoading: false, videoUrl: videoUrl || undefined } : m
       ));
       setCredits(prev => prev !== null ? prev - photoCost - videoCost : prev);
 
     } catch {
-      setMessages(prev => prev.map((m, i) =>
-        i === targetIndex ? { ...m, selfieLoading: false } : m
+      setMessages(prev => prev.map(m =>
+        m.id === msgId ? { ...m, selfieLoading: false } : m
       ));
     }
   };
@@ -243,7 +260,9 @@ export default function ChatPage() {
       if (Array.isArray(data.responses)) {
         for (const r of data.responses) {
           await new Promise(resolve => setTimeout(resolve, randomDelay()));
+          const msgId = `msg-${Date.now()}-${Math.random().toString(36).slice(2)}`;
           const newMsg: Message = {
+            id: msgId,
             role: "assistant",
             content: r.content,
             characterName: r.characterName,
@@ -251,8 +270,7 @@ export default function ChatPage() {
           setMessages(prev => {
             const updated = [...prev, newMsg];
             if (r.selfieIntent && r.selfiePrompt) {
-              const idx = updated.length - 1;
-              setTimeout(() => triggerSelfie(r.selfieIntent, r.selfiePrompt, idx), randomDelay());
+              setTimeout(() => triggerSelfie(r.selfieIntent, r.selfiePrompt, msgId, r.characterImageUrl), randomDelay());
             }
             return updated;
           });
@@ -427,7 +445,7 @@ export default function ChatPage() {
         </div>
 
         {/* 輸入列 */}
-        <div className="flex-shrink-0 px-4 py-3 bg-[#0d2318]/90 backdrop-blur-md border-t border-white/10">
+        <div className="flex-shrink-0 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-[#0d2318]/90 backdrop-blur-md border-t border-white/10">
           <div className="flex gap-2 items-end">
           <label className="flex-shrink-0 w-11 h-11 rounded-2xl bg-white/5 border border-white/15 flex items-center justify-center cursor-pointer hover:bg-white/10 transition-all">
             <span className="text-base">📎</span>

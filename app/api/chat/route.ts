@@ -14,22 +14,74 @@ const PLAN_CHAT_QUOTA: Record<string, number> = {
   pro: 10000,
 };
 
-// 偵測自拍意圖 + 組場景 prompt
-function detectSelfieIntent(message: string, characterName: string, characterDesc: string): { intent: "photo" | "video" | null; selfiePrompt: string | null } {
-  const photoKeywords = ["拍照", "自拍", "拍張", "傳照片", "照片給我", "看看你", "看看妳", "拍一張", "傳圖", "傳個圖"];
+// 從訊息抽取場景關鍵字
+function extractSceneFromMessage(message: string): string {
+  const sceneMap: Record<string, string> = {
+    "海邊": "at the beach, ocean background",
+    "沙灘": "at the beach, sandy shore",
+    "咖啡廳": "in a cozy cafe, warm lighting",
+    "咖啡店": "in a cafe, warm lighting",
+    "健身房": "in a gym, workout environment",
+    "公園": "in a park, nature background",
+    "辦公室": "in an office environment",
+    "臥室": "in a bedroom, cozy setting",
+    "廚房": "in a kitchen",
+    "浴室": "in a bathroom",
+    "街道": "on a city street",
+    "夜晚": "at night, evening lighting",
+    "戶外": "outdoors, natural lighting",
+    "室內": "indoors",
+    "鏡子": "in front of a mirror, mirror selfie",
+    "車上": "in a car",
+    "學校": "at school",
+  };
+
+  for (const [key, value] of Object.entries(sceneMap)) {
+    if (message.includes(key)) return value;
+  }
+  return "casual indoor setting, natural lighting";
+}
+
+// 從訊息抽取表情/動作關鍵字
+function extractMoodFromMessage(message: string): string {
+  if (message.includes("開心") || message.includes("笑")) return "smiling happily";
+  if (message.includes("生氣") || message.includes("兇")) return "serious expression";
+  if (message.includes("害羞")) return "shy expression, blushing";
+  if (message.includes("性感") || message.includes("撩")) return "confident sexy pose";
+  if (message.includes("可愛")) return "cute expression";
+  if (message.includes("運動") || message.includes("跑步")) return "athletic pose, sporty";
+  return "natural expression, relaxed";
+}
+
+// 偵測自拍意圖 + 從對話組場景 prompt
+function detectSelfieIntent(
+  message: string,
+  aiReply: string,
+  characterName: string,
+  characterDesc: string,
+  characterImageUrl: string
+): { intent: "photo" | "video" | null; selfiePrompt: string | null; characterImageUrl: string } {
+  const photoKeywords = ["拍照", "自拍", "拍張", "傳照片", "照片給我", "看看你", "看看妳", "拍一張", "傳圖", "傳個圖", "照片"];
   const videoKeywords = ["錄影", "錄一段", "拍影片", "傳影片", "影片給我", "錄個", "錄段"];
 
-  const msg = message.toLowerCase();
-  
+  const combinedText = message + aiReply; // 同時看用戶說的和AI回應的
+
   let intent: "photo" | "video" | null = null;
-  if (videoKeywords.some(k => msg.includes(k))) {
+  if (videoKeywords.some(k => combinedText.includes(k))) {
     intent = "video";
-  } else if (photoKeywords.some(k => msg.includes(k))) {
+  } else if (photoKeywords.some(k => combinedText.includes(k))) {
     intent = "photo";
   }
 
-  const selfiePrompt = intent ? `${characterName}, ${characterDesc || "attractive person"}, natural selfie, casual setting` : null;
-  return { intent, selfiePrompt };
+  if (!intent) return { intent: null, selfiePrompt: null, characterImageUrl };
+
+  const scene = extractSceneFromMessage(combinedText);
+  const mood = extractMoodFromMessage(combinedText);
+  const desc = characterDesc || "attractive person";
+
+  const selfiePrompt = `${desc}, ${mood}, selfie photo, ${scene}, high quality, realistic`;
+
+  return { intent, selfiePrompt, characterImageUrl };
 }
 
 export async function POST(req: NextRequest) {
@@ -92,12 +144,11 @@ export async function POST(req: NextRequest) {
 
   const isGroup = characterList.length > 1;
 
-  // 群組時打亂順序
   const shuffledChars = isGroup
     ? [...characterList].sort(() => Math.random() - 0.5)
     : characterList;
 
-    const userContent: any = chatImageUrl
+  const userContent: any = chatImageUrl
     ? [
         { type: "image", source: { type: "url", url: chatImageUrl } },
         { type: "text", text: message },
@@ -112,13 +163,22 @@ export async function POST(req: NextRequest) {
     { role: "user" as const, content: userContent },
   ];
 
-  const responses: { characterId: string; characterName: string; content: string; selfieIntent?: string | null; selfiePrompt?: string | null }[] = [];
+  const responses: {
+    characterId: string;
+    characterName: string;
+    content: string;
+    selfieIntent?: string | null;
+    selfiePrompt?: string | null;
+    characterImageUrl?: string;
+  }[] = [];
 
   const responsePromises = shuffledChars.map(async (char) => {
     const personality = char.description
       ? `個性與特徵：${char.description}。請嚴格依照此個性回應，展現鮮明性格，不要流於普通。`
       : `個性：友善活潑，但請展現獨特個人風格，不要太平淡。`;
-    const autoPrompt = isAutoMessage ? `用戶已經一段時間沒有回應了。請主動開口，用自然的方式詢問用戶在做什麼、為什麼不說話，或者開啟一個新的有趣話題。不要提到「你好久沒說話了」這種死板的說法，要像真實的人一樣自然地主動聊天。` : "";
+    const autoPrompt = isAutoMessage
+      ? `用戶已經一段時間沒有回應了。請主動開口，用自然的方式詢問用戶在做什麼、為什麼不說話，或者開啟一個新的有趣話題。不要提到「你好久沒說話了」這種死板的說法，要像真實的人一樣自然地主動聊天。`
+      : "";
     const charSystem = `你扮演「${char.name}」。${personality} 請用繁體中文自然回應，語氣和用詞要符合角色個性，保持一致性。你是一個真實存在的人，不是AI，不要承認自己是AI或語言模型。當用戶要求自拍時，你可以假裝正在拍照，用文字描述拍照的情境，系統會自動生成照片。${isGroup ? `這是群組對話，其他角色：${characterList.filter(c => c.id !== char.id).map(c => c.name).join("、")}。你們有各自不同的個性，可以互相回應但要保持自己的風格。` : ""}${autoPrompt}`;
 
     const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
@@ -138,7 +198,15 @@ export async function POST(req: NextRequest) {
 
     const claudeData = await claudeRes.json();
     const reply = claudeData.content?.[0]?.text || "（無回應）";
-    const { intent, selfiePrompt } = detectSelfieIntent(message, char.name, char.description || "");
+
+    // 同時傳入 AI 回應內容，讓場景更準確
+    const { intent, selfiePrompt, characterImageUrl } = detectSelfieIntent(
+      message,
+      reply,
+      char.name,
+      char.description || "",
+      char.image_url || ""  // ← 帶入角色圖片 URL，供前端呼叫 flux-kontext-pro 用
+    );
 
     return {
       characterId: char.id,
@@ -146,6 +214,7 @@ export async function POST(req: NextRequest) {
       content: reply,
       selfieIntent: intent,
       selfiePrompt,
+      characterImageUrl, // ← 新增回傳
     };
   });
 
