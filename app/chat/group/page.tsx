@@ -42,6 +42,7 @@ export default function GroupChatPage() {
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [plan, setPlan] = useState("free");
+  const [planLoaded, setPlanLoaded] = useState(false);
   const [credits, setCredits] = useState<number | null>(null);
   const [remainingQuota, setRemainingQuota] = useState<number | null>(null);
   const [isOverQuota, setIsOverQuota] = useState(false);
@@ -79,6 +80,7 @@ const VOICE_OPTIONS = [
       .then(d => {
         if (d.credits !== undefined) setCredits(d.credits);
         if (d.plan !== undefined) setPlan(d.plan);
+        setPlanLoaded(true);
       });
   }, [session]);
 
@@ -264,6 +266,8 @@ const VOICE_OPTIONS = [
       <p className="text-white/50 text-sm">請先登入</p>
     </main>
   );
+
+  if (!planLoaded) return null;
 
   if (plan === "free") return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-[#0d2318] via-[#1a3a25] to-[#2d5a3d] px-4">

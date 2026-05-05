@@ -115,9 +115,7 @@ if (!session) return (
     {
       label: '📖 使用指南',
       onClick: () => {
-        const key = `onboarding_done_${session?.user?.email}`;
-        localStorage.removeItem(key);
-        window.dispatchEvent(new CustomEvent('open-onboarding'));
+        router.push('/guide');
         setMenuOpen(false);
       },
       className: 'text-emerald-300 border-emerald-400/30 bg-emerald-400/10 hover:bg-emerald-400/20',
