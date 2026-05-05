@@ -133,7 +133,7 @@ export default function ChatPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt: selfiePrompt,
-          lockedCharacter: charImageUrl || character?.image_url || null,
+          selfieCharacterImage: charImageUrl || character?.image_url || null,
           userEmail: session?.user?.email,
           imageRatio: "1:1",
         }),

@@ -37,7 +37,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "請求過於頻繁，請稍後再試" }, { status: 429 });
     }
 
-    const { prompt, image, mode, userEmail, videoPrompt, aspectRatio, duration, videoModel, refundCredits, batchPrompts, omniRefs, imageRatio } = await req.json();
+    const { prompt, image, mode, userEmail, videoPrompt, aspectRatio, duration, videoModel, refundCredits, batchPrompts, omniRefs, imageRatio, selfieCharacterImage } = await req.json();
 
     // [DNA_PATCH_START] 退點功能
     if (refundCredits && userEmail) {
@@ -243,7 +243,8 @@ export async function POST(req: Request) {
         });
       }
     } else {
-      const lockedCharacter = userProfile.locked_character || null;
+      // 聊天自拍優先用 selfieCharacterImage，其次才是用戶鎖定的角色
+      const lockedCharacter = selfieCharacterImage || userProfile.locked_character || null;
       if (lockedCharacter) {
         let imageValid = false;
         try {

@@ -117,6 +117,14 @@ localStorage (key: locked_character) 儲存鎖定角色的 Supabase 永久 URL
 
 ---
 
+## 自拍生成規範
+- 使用 flux-kontext-pro，帶入 char.image_url 鎖定臉孔
+- 走 /api/character，不走 /api/generate-image
+- triggerSelfie 用 msgId 定位，不用 index
+- 場景從 message + aiReply 抽取
+
+---
+
 ## globals.css 規範（血淚教訓）
 
 globals.css 從未被 git 追蹤，需要用 `git add -f app/globals.css` 才能強制加入。

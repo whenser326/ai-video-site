@@ -159,7 +159,7 @@ const VOICE_OPTIONS = [
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt: selfiePrompt,
-          lockedCharacter: charImageUrl || null,
+          selfieCharacterImage: charImageUrl || null,
           userEmail: session?.user?.email,
           imageRatio: "1:1",
         }),
@@ -255,6 +255,7 @@ const VOICE_OPTIONS = [
   const handleSend = async (overrideMessage?: string, imageUrl?: string) => {
     const userMsg = overrideMessage || input.trim();
     if (!userMsg || loading || !session?.user?.email) return;
+    const selfieQueue: { intent: "photo" | "video"; prompt: string; msgId: string; charImgUrl?: string }[] = [];
     // 用戶發話，重置 timer
     lastUserMessageTime.current = Date.now();
     if (autoMessageTimerRef.current) clearTimeout(autoMessageTimerRef.current);
@@ -313,16 +314,25 @@ const VOICE_OPTIONS = [
           };
           const updated = [...prev, newMsg];
           if ((r.selfieIntent === "photo" || r.selfieIntent === "video") && r.selfiePrompt) {
-            const intent = r.selfieIntent as "photo" | "video";
-            const prompt = r.selfiePrompt as string;
-            const charImgUrl = r.characterImageUrl as string | undefined;
-            setTimeout(() => {
-              triggerSelfie(intent, prompt, msgId, charImgUrl);
-            }, randomDelay());
+            selfieQueue.push({
+              intent: r.selfieIntent as "photo" | "video",
+              prompt: r.selfiePrompt as string,
+              msgId,
+              charImgUrl: r.characterImageUrl as string | undefined,
+            });
           }
           return updated;
-          });
-        }
+        });
+      }
+
+      // 群組自拍：從有意圖的角色中隨機選一個，延遲30秒到3分鐘
+      if (selfieQueue.length > 0) {
+        const chosen = selfieQueue[Math.floor(Math.random() * selfieQueue.length)];
+        const delay = Math.floor(Math.random() * (180000 - 30000)) + 30000;
+        setTimeout(() => {
+          triggerSelfie(chosen.intent, chosen.prompt, chosen.msgId, chosen.charImgUrl);
+        }, delay);
+      }
       }
     } catch {
       setMessages(prev => [...prev, { role: "assistant", content: "⚠️ 網路錯誤，請重試" }]);
