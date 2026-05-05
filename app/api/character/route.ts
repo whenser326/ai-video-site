@@ -135,9 +135,16 @@ export async function POST(req: Request) {
     }
     // [DNA_PATCH_END]
 
-    const requiredCredits = (mode === 'video' || mode === 'text2video') ? 4 : 1;
-    if (currentCredits < requiredCredits) {
-      return NextResponse.json({ error: (mode === 'video' || mode === 'text2video') ? "點數不足！影片生成需要至少 4 點" : "點數不足！請前往購買點數" }, { status: 403 });
+    if (currentCredits < creditCost) {
+      const upgradeHint = userPlan === 'free'
+        ? `升級入門包獲得 30 點（$250 NTD）`
+        : userPlan === 'starter'
+        ? `升級標準包獲得 80 點（$450 NTD）`
+        : `升級專業包獲得 200 點（$799 NTD）`;
+      return NextResponse.json({
+        error: `點數不足！此操作需要 ${creditCost} 點，你目前有 ${currentCredits} 點。💳 ${upgradeHint}`,
+        showUpgradeHint: true,
+      }, { status: 403 });
     }
 
     // [DNA_PATCH_START] 免費用戶每日影片限制
