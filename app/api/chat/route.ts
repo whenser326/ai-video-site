@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
 
   const responses: { characterId: string; characterName: string; content: string; selfieIntent?: string | null; selfiePrompt?: string | null }[] = [];
 
-  for (const char of shuffledChars) {
+  const responsePromises = shuffledChars.map(async (char) => {
     const personality = char.description
       ? `個性與特徵：${char.description}。請嚴格依照此個性回應，展現鮮明性格，不要流於普通。`
       : `個性：友善活潑，但請展現獨特個人風格，不要太平淡。`;
@@ -153,7 +153,6 @@ export async function POST(req: NextRequest) {
       }),
     });
 
-    // Claude 回應和自拍偵測並行執行
     const [claudeData, selfieResult] = await Promise.all([
       claudeRes.json(),
       detectSelfieIntent(message, history, char.name, char.description || ""),
@@ -161,14 +160,17 @@ export async function POST(req: NextRequest) {
     const reply = claudeData.content?.[0]?.text || "（無回應）";
     const { intent, selfiePrompt } = selfieResult;
 
-    responses.push({
+    return {
       characterId: char.id,
       characterName: char.name,
       content: reply,
       selfieIntent: intent,
       selfiePrompt,
-    });
-  }
+    };
+  });
+
+  const results = await Promise.all(responsePromises);
+  responses.push(...results);
 
   let finalSessionId = sessionId;
   if (!finalSessionId) {
