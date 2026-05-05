@@ -15,39 +15,21 @@ const PLAN_CHAT_QUOTA: Record<string, number> = {
 };
 
 // 偵測自拍意圖 + 組場景 prompt
-async function detectSelfieIntent(message: string, history: any[], characterName: string, characterDesc: string): Promise<{ intent: "photo" | "video" | null; selfiePrompt: string | null }> {
-  const historyText = history.slice(-10).map((m: any) => m.content).join("\n");
-  const detection = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": process.env.ANTHROPIC_API_KEY!,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: "claude-haiku-4-5",
-      max_tokens: 200,
-      system: `你是意圖分析器。分析用戶訊息是否在要求角色自拍照片或影片。
-只回傳JSON，格式：{"intent":"photo"|"video"|null,"scene":"場景描述（英文）"}
-- photo：要求照片、自拍、傳圖
-- video：要求影片、錄影、錄一段
-- null：不是自拍請求
-scene：根據聊天紀錄推斷角色當前位置、服裝、氛圍，組成英文場景描述`,
-      messages: [
-        { role: "user", content: `角色：${characterName}，個性：${characterDesc}\n近期對話：\n${historyText}\n\n用戶最新訊息：${message}` }
-      ],
-    }),
-  });
-  const detectionData = await detection.json();
-  try {
-    const text = detectionData.content?.[0]?.text || "{}";
-    const parsed = JSON.parse(text);
-    const intent = parsed.intent === "photo" ? "photo" : parsed.intent === "video" ? "video" : null;
-    const selfiePrompt = intent ? `${characterName}, ${characterDesc}, ${parsed.scene || "natural setting, casual"}` : null;
-    return { intent, selfiePrompt };
-  } catch {
-    return { intent: null, selfiePrompt: null };
+function detectSelfieIntent(message: string, characterName: string, characterDesc: string): { intent: "photo" | "video" | null; selfiePrompt: string | null } {
+  const photoKeywords = ["拍照", "自拍", "拍張", "傳照片", "照片給我", "看看你", "看看妳", "拍一張", "傳圖", "傳個圖"];
+  const videoKeywords = ["錄影", "錄一段", "拍影片", "傳影片", "影片給我", "錄個", "錄段"];
+
+  const msg = message.toLowerCase();
+  
+  let intent: "photo" | "video" | null = null;
+  if (videoKeywords.some(k => msg.includes(k))) {
+    intent = "video";
+  } else if (photoKeywords.some(k => msg.includes(k))) {
+    intent = "photo";
   }
+
+  const selfiePrompt = intent ? `${characterName}, ${characterDesc || "attractive person"}, natural selfie, casual setting` : null;
+  return { intent, selfiePrompt };
 }
 
 export async function POST(req: NextRequest) {
@@ -154,12 +136,9 @@ export async function POST(req: NextRequest) {
       }),
     });
 
-    const [claudeData, selfieResult] = await Promise.all([
-      claudeRes.json(),
-      detectSelfieIntent(message, history, char.name, char.description || ""),
-    ]);
+    const claudeData = await claudeRes.json();
     const reply = claudeData.content?.[0]?.text || "（無回應）";
-    const { intent, selfiePrompt } = selfieResult;
+    const { intent, selfiePrompt } = detectSelfieIntent(message, char.name, char.description || "");
 
     return {
       characterId: char.id,
