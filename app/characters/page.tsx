@@ -4,6 +4,19 @@ import { useSession, signIn } from "next-auth/react";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
+const VOICE_OPTIONS = [
+  { id: "female-1", label: "Jane（女）低沉" },
+  { id: "female-2", label: "Stacy（女）甜美" },
+  { id: "female-3", label: "Anna（女）清晰" },
+  { id: "female-4", label: "Xiaoxi（女）活潑" },
+  { id: "female-5", label: "Maya（女）溫柔" },
+  { id: "male-1", label: "Aliby（男）專業" },
+  { id: "male-2", label: "Evan（男）溫暖" },
+  { id: "male-3", label: "Liu（男）成熟" },
+  { id: "male-4", label: "Adrian（男）旁白" },
+  { id: "male-5", label: "Wilson（男）深沉" },
+];
+
 export default function CharactersPage() {
   const { data: session } = useSession();
   const router = useRouter();
@@ -12,6 +25,11 @@ export default function CharactersPage() {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // 編輯聲音 Modal 狀態
+  const [editVoiceChar, setEditVoiceChar] = useState<any | null>(null);
+  const [editVoiceId, setEditVoiceId] = useState("female-2");
+  const [isSavingVoice, setIsSavingVoice] = useState(false);
 
   const handleDelete = async (charId: string) => {
     if (!confirm('確定要刪除這個角色嗎？此操作無法復原。')) return;
@@ -32,6 +50,35 @@ export default function CharactersPage() {
     setDeletingId(null);
   };
 
+  const handleSaveVoice = async () => {
+    if (!editVoiceChar || !session?.user?.email) return;
+    setIsSavingVoice(true);
+    try {
+      const res = await fetch("/api/saved-characters", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: editVoiceChar.id,
+          email: session.user.email,
+          voice_id: editVoiceId,
+        }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        alert(data.error);
+      } else {
+        setCharacters(prev => prev.map(c =>
+          c.id === editVoiceChar.id ? { ...c, voice_id: editVoiceId } : c
+        ));
+        setEditVoiceChar(null);
+        alert("✅ 聲音已更新！");
+      }
+    } catch {
+      alert("更新失敗，請重試");
+    }
+    setIsSavingVoice(false);
+  };
+
   useEffect(() => {
     if (!session?.user?.email) return;
     fetch(`/api/saved-characters?email=${session.user.email}`)
@@ -42,7 +89,6 @@ export default function CharactersPage() {
       });
   }, [session]);
 
-  // 點外部關閉 B2 選單
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -63,10 +109,10 @@ export default function CharactersPage() {
   );
 
   return (
+    <>
     <main className="flex min-h-screen flex-col items-center px-4 pt-6 pb-10 bg-gradient-to-br from-[#0d2318] via-[#1a3a25] to-[#2d5a3d]">
       <div className="w-full max-w-lg">
 
-        {/* 頂部標題 */}
         <div className="flex items-center gap-3 mb-6 mt-2">
           <button
             onClick={() => router.push('/')}
@@ -77,14 +123,12 @@ export default function CharactersPage() {
           <p className="text-white font-black text-xl">🎭 我的角色</p>
         </div>
 
-        {/* 載入中 */}
         {loading && (
           <div className="text-center py-16">
             <p className="text-white/30 text-sm">載入中...</p>
           </div>
         )}
 
-        {/* 空狀態 */}
         {!loading && characters.length === 0 && (
           <div className="text-center py-16 space-y-3">
             <p className="text-4xl">🎭</p>
@@ -99,7 +143,6 @@ export default function CharactersPage() {
           </div>
         )}
 
-        {/* 角色列表 */}
         {!loading && characters.length > 0 && (
           <div className="grid grid-cols-2 gap-4">
             {characters.map((char) => (
@@ -107,7 +150,6 @@ export default function CharactersPage() {
                 key={char.id}
                 className="relative group bg-black/25 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden hover:border-purple-400/40 hover:shadow-[0_0_20px_rgba(167,139,250,0.15)] transition-all duration-200"
               >
-                {/* 角色圖片（點擊展開 B2） */}
                 <div
                   className="relative w-full aspect-square overflow-hidden cursor-pointer"
                   onClick={() => setOpenMenuId(openMenuId === char.id ? null : char.id)}
@@ -120,15 +162,16 @@ export default function CharactersPage() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 </div>
 
-                {/* 角色資訊 */}
                 <div className="p-3 space-y-1">
                   <p className="text-white font-black text-sm truncate">{char.name}</p>
-                  <p className="text-white/30 text-[10px]">
-                    {new Date(char.created_at).toLocaleDateString('zh-TW')} 建立
-                  </p>
+                  <div className="flex items-center gap-1">
+                    <span className="text-white/20 text-[10px]">🎙️</span>
+                    <span className="text-white/25 text-[10px] truncate">
+                      {VOICE_OPTIONS.find(v => v.id === char.voice_id)?.label || "未設定"}
+                    </span>
+                  </div>
                 </div>
 
-                {/* B2 選單 overlay */}
                 {openMenuId === char.id && (
                   <div
                     ref={menuRef}
@@ -152,6 +195,16 @@ export default function CharactersPage() {
                         💬 互動聊天
                       </button>
                       <button
+                        onClick={() => {
+                          setEditVoiceChar(char);
+                          setEditVoiceId(char.voice_id || "female-2");
+                          setOpenMenuId(null);
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-3 text-xs font-bold text-[rgba(184,255,200,0.8)] border-b border-[rgba(137,245,162,0.08)] hover:bg-[rgba(137,245,162,0.08)] transition-all"
+                      >
+                        🎙️ 編輯聲音
+                      </button>
+                      <button
                         onClick={() => handleDelete(char.id)}
                         disabled={deletingId === char.id}
                         className="w-full flex items-center gap-2 px-3 py-3 text-xs font-bold text-red-400/70 hover:bg-red-500/10 transition-all disabled:opacity-40"
@@ -166,7 +219,6 @@ export default function CharactersPage() {
           </div>
         )}
 
-        {/* 群組聊天區塊 */}
         {!loading && characters.length >= 2 && (
           <div className="mt-8 bg-black/20 border border-white/10 rounded-2xl p-4 space-y-3">
             <div className="flex items-center justify-between">
@@ -177,7 +229,7 @@ export default function CharactersPage() {
             </div>
             <p className="text-white/30 text-xs">選擇 2 個以上角色，一起開聊</p>
             <div className="flex gap-2 items-center">
-              {characters.slice(0, 3).map((c, i) => (
+              {characters.slice(0, 3).map((c) => (
                 <img
                   key={c.id}
                   src={c.image_url}
@@ -202,6 +254,49 @@ export default function CharactersPage() {
 
       </div>
     </main>
+
+    {/* 編輯聲音 Modal */}
+    {editVoiceChar && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+        <div className="w-full max-w-sm bg-[#0d2318] border border-[#89f5a2]/20 rounded-3xl p-6 space-y-4 shadow-2xl">
+          <div className="flex items-center gap-3">
+            <img src={editVoiceChar.image_url} className="w-12 h-12 rounded-full object-cover border border-white/20" />
+            <div>
+              <p className="text-white font-black text-base">{editVoiceChar.name}</p>
+              <p className="text-white/30 text-xs">設定聊天室預設聲音</p>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <p className="text-white/40 text-xs">🎙️ 選擇聲音</p>
+            <select
+              value={editVoiceId}
+              onChange={e => setEditVoiceId(e.target.value)}
+              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-[#89f5a2]/50 appearance-none"
+            >
+              {VOICE_OPTIONS.map(v => (
+                <option key={v.id} value={v.id} className="bg-[#0d2318]">{v.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => setEditVoiceChar(null)}
+              className="py-3 rounded-xl border border-white/10 text-white/50 text-sm font-bold hover:bg-white/5 transition-all"
+            >
+              取消
+            </button>
+            <button
+              disabled={isSavingVoice}
+              onClick={handleSaveVoice}
+              className="py-3 rounded-xl bg-gradient-to-r from-[#89f5a2] to-[#4ade80] text-[#0d2318] text-sm font-black disabled:opacity-40 hover:opacity-90 transition-all"
+            >
+              {isSavingVoice ? "儲存中..." : "✅ 確認更新"}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 // [DNA_PATCH_END]

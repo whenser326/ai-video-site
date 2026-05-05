@@ -75,6 +75,19 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ success: true, data });
 }
 
+// PATCH：更新角色聲音
+export async function PATCH(req: NextRequest) {
+  const { id, email, voice_id } = await req.json();
+  if (!id || !email) return NextResponse.json({ error: "缺少必要欄位" }, { status: 400 });
+  const { error } = await supabase
+    .from("saved_characters")
+    .update({ voice_id })
+    .eq("id", id)
+    .eq("user_email", email);
+  if (error) return NextResponse.json({ error: "更新失敗" }, { status: 500 });
+  return NextResponse.json({ success: true });
+}
+
 // DELETE：刪除收藏（支援 query string）
 export async function DELETE(req: NextRequest) {
   const id = req.nextUrl.searchParams.get("id");

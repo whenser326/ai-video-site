@@ -48,13 +48,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "此網路今日已有帳號簽到，請使用手機網路簽到", ipBlocked: true }, { status: 400 });
   }
 
-  // 計算連續天數
+  // 計算連續天數（用 en-CA + timeZone 確保格式一致為 YYYY-MM-DD）
   const lastDate = profile.checkin_last_date;
-  const yesterdayTW = new Date(
-    new Date().toLocaleString("en-US", { timeZone: "Asia/Taipei" })
-  );
-  yesterdayTW.setDate(yesterdayTW.getDate() - 1);
-  const yesterdayStr = yesterdayTW.toLocaleDateString("en-CA");
+  const yesterdayStr = new Date(
+    Date.now() - 86400000
+  ).toLocaleDateString("en-CA", { timeZone: "Asia/Taipei" });
 
   let newStreak = lastDate === yesterdayStr ? (profile.checkin_streak || 0) + 1 : 1;
 
