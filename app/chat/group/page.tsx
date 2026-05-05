@@ -72,6 +72,7 @@ const VOICE_OPTIONS = [
 
   const maxChars = GROUP_LIMITS[plan] || 0;
   const randomDelay = () => Math.floor(Math.random() * 3000) + 2000;
+  const selfieDelay = () => Math.floor(Math.random() * 150000) + 30000; // 群組：30秒~3分鐘
 
   useEffect(() => {
     if (!session?.user?.email) return;
@@ -85,6 +86,9 @@ const VOICE_OPTIONS = [
         if (d.plan !== undefined) setPlan(d.plan);
         setPlanLoaded(true);
       });
+    // 從 localStorage 恢復群組 sessionId
+    const savedSession = localStorage.getItem(`chat_session_group_${session.user.email}`);
+    if (savedSession) setSessionId(savedSession);
   }, [session]);
 
   useEffect(() => {
@@ -287,7 +291,12 @@ const VOICE_OPTIONS = [
         return;
       }
 
-      if (data.sessionId) setSessionId(data.sessionId);
+      if (data.sessionId) {
+            setSessionId(data.sessionId);
+            if (session?.user?.email) {
+              localStorage.setItem(`chat_session_group_${session.user.email}`, data.sessionId);
+            }
+          }
       if (data.remainingQuota !== undefined) setRemainingQuota(data.remainingQuota);
       if (data.isOverQuota) {
         setIsOverQuota(true);

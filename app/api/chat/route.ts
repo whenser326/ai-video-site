@@ -35,11 +35,10 @@ function extractSceneFromMessage(message: string): string {
     "車上": "in a car",
     "學校": "at school",
   };
-
   for (const [key, value] of Object.entries(sceneMap)) {
     if (message.includes(key)) return value;
   }
-  return "casual indoor setting, natural lighting";
+  return "";
 }
 
 // 從訊息抽取表情/動作關鍵字
@@ -50,7 +49,17 @@ function extractMoodFromMessage(message: string): string {
   if (message.includes("性感") || message.includes("撩")) return "confident sexy pose";
   if (message.includes("可愛")) return "cute expression";
   if (message.includes("運動") || message.includes("跑步")) return "athletic pose, sporty";
-  return "natural expression, relaxed";
+  return "";
+}
+
+// 從歷史訊息抽取場景（前50筆）
+function extractSceneFromHistory(history: any[]): string {
+  const recent = history.slice(-50);
+  const combined = recent.map((m: any) => m.content || "").join(" ");
+  const scene = extractSceneFromMessage(combined);
+  const mood = extractMoodFromMessage(combined);
+  const parts = [scene, mood].filter(Boolean);
+  return parts.length > 0 ? parts.join(", ") : "";
 }
 
 // 偵測自拍意圖 + 從對話組場景 prompt
@@ -59,12 +68,13 @@ function detectSelfieIntent(
   aiReply: string,
   characterName: string,
   characterDesc: string,
-  characterImageUrl: string
+  characterImageUrl: string,
+  history: any[]
 ): { intent: "photo" | "video" | null; selfiePrompt: string | null; characterImageUrl: string } {
   const photoKeywords = ["拍照", "自拍", "拍張", "傳照片", "照片給我", "看看你", "看看妳", "拍一張", "傳圖", "傳個圖", "照片"];
   const videoKeywords = ["錄影", "錄一段", "拍影片", "傳影片", "影片給我", "錄個", "錄段"];
 
-  const combinedText = message + aiReply; // 同時看用戶說的和AI回應的
+  const combinedText = message + aiReply;
 
   let intent: "photo" | "video" | null = null;
   if (videoKeywords.some(k => combinedText.includes(k))) {
@@ -75,11 +85,16 @@ function detectSelfieIntent(
 
   if (!intent) return { intent: null, selfiePrompt: null, characterImageUrl };
 
-  const scene = extractSceneFromMessage(combinedText);
-  const mood = extractMoodFromMessage(combinedText);
+  // 優先從當前訊息抓場景，找不到才從歷史抓
+  const currentScene = extractSceneFromMessage(combinedText);
+  const currentMood = extractMoodFromMessage(combinedText);
+  const historyContext = extractSceneFromHistory(history);
+
+  const scenePart = currentScene || (historyContext ? historyContext : "casual indoor setting, natural lighting");
+  const moodPart = currentMood || "natural expression, relaxed";
   const desc = characterDesc || "attractive person";
 
-  const selfiePrompt = `${desc}, ${mood}, selfie photo, ${scene}, high quality, realistic`;
+  const selfiePrompt = `${desc}, ${moodPart}, selfie photo, ${scenePart}, high quality, realistic`;
 
   return { intent, selfiePrompt, characterImageUrl };
 }
@@ -208,7 +223,8 @@ export async function POST(req: NextRequest) {
       reply,
       char.name,
       char.description || "",
-      char.image_url || ""  // ← 帶入角色圖片 URL，供前端呼叫 flux-kontext-pro 用
+      char.image_url || "",
+      history
     );
 
     return {

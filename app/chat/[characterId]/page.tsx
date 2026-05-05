@@ -59,6 +59,7 @@ export default function ChatPage() {
   ];
 
   const randomDelay = () => Math.floor(Math.random() * 3000) + 2000;
+  const selfieDelay = () => Math.floor(Math.random() * 7000) + 3000; // 單人：3~10秒
 
   useEffect(() => {
     if (!session?.user?.email || !characterId) return;
@@ -76,6 +77,9 @@ export default function ChatPage() {
         if (d.credits !== undefined) setCredits(d.credits);
         if (d.plan !== undefined) setPlan(d.plan);
       });
+    // 從 localStorage 恢復上次 sessionId
+    const savedSession = localStorage.getItem(`chat_session_${session.user.email}_${characterId}`);
+    if (savedSession) setSessionId(savedSession);
   }, [session, characterId]);
 
   useEffect(() => {
@@ -246,7 +250,12 @@ export default function ChatPage() {
         return;
       }
 
-      if (data.sessionId) setSessionId(data.sessionId);
+      if (data.sessionId) {
+            setSessionId(data.sessionId);
+            if (session?.user?.email && characterId) {
+              localStorage.setItem(`chat_session_${session.user.email}_${characterId}`, data.sessionId);
+            }
+          }
       if (data.remainingQuota !== undefined) setRemainingQuota(data.remainingQuota);
       if (data.isOverQuota) {
         setIsOverQuota(true);
@@ -270,7 +279,7 @@ export default function ChatPage() {
           setMessages(prev => {
             const updated = [...prev, newMsg];
             if (r.selfieIntent && r.selfiePrompt) {
-              setTimeout(() => triggerSelfie(r.selfieIntent, r.selfiePrompt, msgId, r.characterImageUrl), randomDelay());
+  setTimeout(() => triggerSelfie(r.selfieIntent, r.selfiePrompt, msgId, r.characterImageUrl), selfieDelay());
             }
             return updated;
           });
@@ -483,7 +492,12 @@ export default function ChatPage() {
                         imageUrl: data.url,
                       }),
                     }).then(r => r.json()).then(async data => {
-                      if (data.sessionId) setSessionId(data.sessionId);
+                      if (data.sessionId) {
+            setSessionId(data.sessionId);
+            if (session?.user?.email && characterId) {
+              localStorage.setItem(`chat_session_${session.user.email}_${characterId}`, data.sessionId);
+            }
+          }
                       if (Array.isArray(data.responses)) {
                         for (const r of data.responses) {
                           await new Promise(resolve => setTimeout(resolve, randomDelay()));

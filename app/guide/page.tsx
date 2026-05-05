@@ -92,10 +92,16 @@ export default function GuidePage() {
         {/* 頂部返回 */}
         <div className="flex items-center gap-3 mt-2 mb-2">
           <button
-            onClick={() => router.back()}
+            onClick={() => {
+              if (window.history.length > 1) {
+                router.back();
+              } else {
+                router.push('/');
+              }
+            }}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 rounded-full text-white/50 text-xs font-bold hover:bg-white/10 hover:text-white/70 transition-all"
           >
-            ← 返回
+            ← 返回首頁
           </button>
           <p className="text-white font-black text-xl">📖 使用指南</p>
         </div>
