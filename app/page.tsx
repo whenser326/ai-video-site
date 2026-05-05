@@ -2878,6 +2878,8 @@ customAppearance={customAppearance}
     predictionOutput={prediction?.output ?? null}
     userEmail={session?.user?.email}
     plan={plan}
+    lockedCharacterId={lockedCharacterId}
+    savedCharacters={savedCharacters}
     onSaveSuccess={(data) => {
       setSavedCharacters(prev => [data, ...prev]);
       setShowSaveModal(false);
