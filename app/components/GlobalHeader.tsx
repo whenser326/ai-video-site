@@ -115,7 +115,11 @@ if (!session) return (
     {
       label: '📖 使用指南',
       onClick: () => {
-        router.push('/guide');
+        if (pathname === '/') {
+          window.dispatchEvent(new CustomEvent('open-onboarding'));
+        } else {
+          router.push('/guide');
+        }
         setMenuOpen(false);
       },
       className: 'text-emerald-300 border-emerald-400/30 bg-emerald-400/10 hover:bg-emerald-400/20',

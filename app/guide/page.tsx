@@ -14,6 +14,7 @@ const lines = [
     colorText: "#89f5a2",
     steps: [
       { icon: "🖼️", label: "生成圖片", cost: "1點/張", detail: "選風格、設定外觀、輸入描述，支援 1:1/16:9 等多種比例" },
+      { icon: "⚡", label: "批次生成", cost: "1點/張", detail: "生成第一張圖後，可一次批次產出多張（入門2張・標準4張・專業6張），快速取得素材，付費方案限定" },
       { icon: "🎬", label: "轉成影片", cost: "4-6點/支", detail: "鎖定角色後生成影片，Kling 3.0 或 Seedance 2.0 兩種引擎可選" },
       { icon: "🎙️", label: "加語音", cost: "6-8點/次", detail: "10種聲音、中英文TTS合成，5秒影片限30字，10秒限55字" },
       { icon: "👄", label: "嘴型同步", cost: "8-10點/次", detail: "Wav2Lip 技術讓角色嘴型對應語音（需先有影片），或用 Kling Avatar V2 直接從靜態照片生成說話影片，合計扣點依方案不同" },
@@ -31,6 +32,7 @@ const lines = [
     colorText: "#a78bfa",
     steps: [
       { icon: "🎭", label: "建立角色", cost: "1點/張", detail: "生成圖片後點「⭐ 收藏此角色」，設定名字與個性描述" },
+      { icon: "⚡", label: "批次生成", cost: "1點/張", detail: "收藏角色後可批次產出多張一致性圖片（入門2張・標準4張・專業6張），快速累積角色素材" },
       { icon: "⚙️", label: "設定個性", cost: "免費", detail: "選擇個性標籤、職業，角色會依設定風格回應你" },
       { icon: "💬", label: "互動聊天", cost: "次數制", detail: "免費100次・入門2,000次・標準5,000次・專業10,000次，用完後1點/次，聊天內容可一鍵轉成說話影片" },
       { icon: "📸", label: "AI 自拍", cost: "照片1點・影片4-6點", detail: "自然說出「拍張照片」或「錄段影片」，角色自動生成回傳，也可指定場景" },
@@ -72,7 +74,7 @@ const lines = [
     colorText: "#fbbf24",
     steps: [
       { icon: "✍️", label: "文字生影片", cost: "13-17點/支", detail: "直接輸入文字描述，跳過生圖步驟，Seedance 2.0 引擎生成" },
-      { icon: "⚡", label: "批次生成", cost: "1點/張", detail: "一次生成多張圖片，付費方案限定功能，快速取得素材" },
+      { icon: "⚡", label: "批次生成", cost: "1點/張", detail: "一次生成多張圖片，付費方案限定功能，快速取得素材。" },
     ],
     note: "💡 文字生影片不支援角色一致性（Omni-Reference），適合快速測試場景",
     billing: null,
@@ -92,13 +94,7 @@ export default function GuidePage() {
         {/* 頂部返回 */}
         <div className="flex items-center gap-3 mt-2 mb-2">
           <button
-            onClick={() => {
-              if (window.history.length > 1) {
-                router.back();
-              } else {
-                router.push('/');
-              }
-            }}
+            onClick={() => router.push('/')}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 rounded-full text-white/50 text-xs font-bold hover:bg-white/10 hover:text-white/70 transition-all"
           >
             ← 返回首頁
