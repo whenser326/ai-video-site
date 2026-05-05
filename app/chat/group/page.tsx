@@ -290,9 +290,11 @@ const VOICE_OPTIONS = [
               characterId: r.characterId,
             };
             const updated = [...prev, newMsg];
-            if (r.selfieIntent && r.selfiePrompt) {
+            if ((r.selfieIntent === "photo" || r.selfieIntent === "video") && r.selfiePrompt) {
+              const intent = r.selfieIntent as "photo" | "video";
+              const prompt = r.selfiePrompt as string;
               setTimeout(() => {
-                triggerSelfie(r.selfieIntent, r.selfiePrompt, updated.length - 1);
+                triggerSelfie(intent, prompt, updated.length - 1);
               }, randomDelay());
             }
             return updated;
