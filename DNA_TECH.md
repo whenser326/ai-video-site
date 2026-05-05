@@ -33,6 +33,7 @@ profiles 表新增欄位：chat_count（已使用對話次數，預設0）
 影片生成第三選擇（快速版）：bytedance/seedance-2.0-fast
 TTS 語音合成：ElevenLabs Multilingual v2（已串接，Starter 方案，60,000字/月）
 嘴型同步：kwaivgi/kling-lip-sync（$0.014/秒輸出影片）
+說話影片（Avatar）：kwaivgi/kling-avatar-v2（Standard $0.056/秒・Pro $0.115/秒，圖片+音頻直接生成說話影片，不需先有影片）
 說話影片（Avatar）：kwaivgi/kling-avatar-v2（Standard $0.056/秒・Pro $0.115/秒，圖片+音頻直接生成說話影片）
 
 Seedance 2.0 費用對照：5秒約$1.26 USD，10秒約$2.00 USD（比 Kling 貴約4.5倍）
@@ -238,6 +239,15 @@ IP 限流：
 聊天頁面（/chat/[characterId]、/chat/group）必須用 h-screen + overflow-hidden，否則 Footer 會撐破畫面
 wav2lip/route.ts 支援 mediaUrl 參數（圖片或影片皆可），向下相容舊的 videoUrl 參數
 TtsModal 新增 mediaUrl prop，優先用 mediaUrl，沒有才用 prediction?.output
+聊天室 triggerSelfie 呼叫 /api/generate-image 必須帶 userEmail 參數，否則 output 回傳空物件 {}
+聊天室 triggerSelfie 的 selfieIntent 型別必須用 `r.selfieIntent === "photo" || r.selfieIntent === "video"` 做判斷，再 as "photo" | "video" 轉型，才能正確呼叫 triggerSelfie
+/api/chat/route.ts 的自拍偵測改為關鍵字比對（detectSelfieIntent 為同步函式），不再呼叫 Claude API，避免 timeout
+群組聊天多角色 Claude 呼叫改為 Promise.all 並行，大幅降低 timeout 風險
+Vercel 已升級為 Pro 方案（$20 USD/月，timeout 60 秒）（2026/05/05）
+ANTHROPIC_API_KEY 必須在 Vercel Environment Variables 設定，否則聊天 API 回傳「（無回應）」
+GlobalHeader 「使用指南」改為直接跳 /guide，不再觸發 open-onboarding 事件（open-onboarding 只有首頁 page.tsx 有監聽）
+群組聊天 plan 判斷必須等 API 回傳後才執行（planLoaded state），否則付費用戶會被短暫顯示封鎖畫面
+聊天室停聊 60 秒後，隨機選一個角色主動發話（autoMessageTimerRef），用戶發話後重置 timer
 
 ---
 

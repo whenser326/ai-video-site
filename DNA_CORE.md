@@ -67,6 +67,7 @@ git push
 **禁止簡化**：嚴格禁止刪除任何 useEffect、localStorage、Polling 或點數同步邏輯。
 
 **防呆檢查**：處理 history.map 前必須使用 `Array.isArray(history)` 進行強制檢查。
+**API 參數檢查**：每次新增呼叫 API 的程式碼前，必須先確認該 API 需要哪些必要參數（如 userEmail、plan 等），禁止在沒確認的情況下直接呼叫，避免因漏帶參數導致 API 回傳空值或錯誤。
 
 **貼上程式碼注意**：從聊天介面複製含有 `<a` 標籤的程式碼時，`<a` 可能會被吃掉，貼上後需手動確認。
 

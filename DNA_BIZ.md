@@ -140,13 +140,16 @@ AI 自拍媒體類型與扣點：
 ✅ /api/kling-avatar/route.ts：Kling Avatar V2 說話影片 API（POST 生成・GET polling）
 ✅ 說話影片全站整合：單人聊天室・群組聊天室・主站 TtsModal・角色作品頁・主頁圖片結果區
 ✅ 群組聊天 AI 自拍圖片/影片存入相簿時跳出角色選擇器（AI 自拍自動歸屬發言角色）
+✅ 建角色時可設定預設聲音（voice_id），聊天室說話影片自動帶入
+✅ 聊天室停聊 60 秒後角色主動發話（單人+群組）
+✅ Vercel 升級 Pro（$20 USD/月）（2026/05/05）
 - ⬜ 藍新信用卡/Google Pay/Samsung Pay/WebATM/ATM 審核通過後實測付款流程
 - ⬜ 購買自訂域名（建議 consistentflow.com，約 NT$400-600/年）
 - ⬜ Vercel 綁定自訂域名
 - ⬜ NEXTAUTH_URL 環境變數改為正式域名
 - ⬜ Google OAuth 授權網址加入正式域名
 - ⬜ 等待藍新回覆 Apple Pay 幕後支付授權串接文件
-- ⬜ Vercel 升級為付費版 Pro（$20 USD/月）— 預計 2026 年 5 月底前完成（Hobby 條款禁止商業用途）
+- ✅ Vercel 升級為付費版 Pro（$20 USD/月）— 已完成（2026/05/05）
 
 ---
 

@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 interface Message {
+  id?: string;
   role: "user" | "assistant";
   content: string;
   characterName?: string;
@@ -143,35 +144,35 @@ const VOICE_OPTIONS = [
 
   const selectedChars = characters.filter(c => selectedIds.includes(c.id));
 
-  const triggerSelfie = async (intent: "photo" | "video", selfiePrompt: string, targetIndex: number) => {
-    const photoCost = 1;
-    const videoCost = plan === 'pro' ? 4 : plan === 'standard' ? 5 : 6;
+  const triggerSelfie = async (intent: "photo" | "video", selfiePrompt: string, msgId: string) => {
+  const photoCost = 1;
+  const videoCost = plan === 'pro' ? 4 : plan === 'standard' ? 5 : 6;
 
-    setMessages(prev => prev.map((m, i) =>
-      i === targetIndex ? { ...m, selfieLoading: true, selfieType: intent } : m
-    ));
+  setMessages(prev => prev.map(m =>
+    m.id === msgId ? { ...m, selfieLoading: true, selfieType: intent } : m
+  ));
 
-    try {
-      const imgRes = await fetch("/api/generate-image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: selfiePrompt, gender: "", style: "", userEmail: session?.user?.email }),
-      });
-      const imgData = await imgRes.json();
-      const imageUrl = Array.isArray(imgData.output) ? imgData.output[0] : imgData.output;
-      if (!imageUrl) throw new Error("照片生成失敗");
+  try {
+    const imgRes = await fetch("/api/generate-image", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: selfiePrompt, gender: "", style: "", userEmail: session?.user?.email }),
+    });
+    const imgData = await imgRes.json();
+    const imageUrl = typeof imgData.output === "string" ? imgData.output : Array.isArray(imgData.output) ? imgData.output[0] : null;
+    if (!imageUrl) throw new Error("照片生成失敗");
 
-      if (intent === "photo") {
-        setMessages(prev => prev.map((m, i) =>
-          i === targetIndex ? { ...m, selfieLoading: false, imageUrl } : m
-        ));
-        setCredits(prev => prev !== null ? prev - photoCost : prev);
-        return;
-      }
-
-      setMessages(prev => prev.map((m, i) =>
-        i === targetIndex ? { ...m, selfieType: "video" } : m
+    if (intent === "photo") {
+      setMessages(prev => prev.map(m =>
+        m.id === msgId ? { ...m, selfieLoading: false, imageUrl } : m
       ));
+      setCredits(prev => prev !== null ? prev - photoCost : prev);
+      return;
+    }
+
+    setMessages(prev => prev.map(m =>
+      m.id === msgId ? { ...m, selfieType: "video" } : m
+    ));
 
       const uploadRes = await fetch("/api/upload-image", {
         method: "POST",
@@ -210,14 +211,14 @@ const VOICE_OPTIONS = [
         if (pollData.status === "failed") throw new Error("影片生成失敗");
       }
 
-      setMessages(prev => prev.map((m, i) =>
-        i === targetIndex ? { ...m, selfieLoading: false, videoUrl: videoUrl || undefined } : m
+      setMessages(prev => prev.map(m =>
+        m.id === msgId ? { ...m, selfieLoading: false, videoUrl: videoUrl || undefined } : m
       ));
       setCredits(prev => prev !== null ? prev - photoCost - videoCost : prev);
 
     } catch {
-      setMessages(prev => prev.map((m, i) =>
-        i === targetIndex ? { ...m, selfieLoading: false } : m
+      setMessages(prev => prev.map(m =>
+        m.id === msgId ? { ...m, selfieLoading: false } : m
       ));
     }
   };
@@ -282,22 +283,24 @@ const VOICE_OPTIONS = [
           await new Promise(resolve => setTimeout(resolve, randomDelay()));
           const char = characters.find(c => c.id === r.characterId);
           setMessages(prev => {
-            const newMsg: Message = {
-              role: "assistant",
-              content: r.content,
-              characterName: r.characterName,
-              characterImage: char?.image_url,
-              characterId: r.characterId,
-            };
-            const updated = [...prev, newMsg];
-            if ((r.selfieIntent === "photo" || r.selfieIntent === "video") && r.selfiePrompt) {
-              const intent = r.selfieIntent as "photo" | "video";
-              const prompt = r.selfiePrompt as string;
-              setTimeout(() => {
-                triggerSelfie(intent, prompt, updated.length - 1);
-              }, randomDelay());
-            }
-            return updated;
+            const msgId = `msg-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+          const newMsg: Message = {
+            id: msgId,
+            role: "assistant",
+            content: r.content,
+            characterName: r.characterName,
+            characterImage: char?.image_url,
+            characterId: r.characterId,
+          };
+          const updated = [...prev, newMsg];
+          if ((r.selfieIntent === "photo" || r.selfieIntent === "video") && r.selfiePrompt) {
+            const intent = r.selfieIntent as "photo" | "video";
+            const prompt = r.selfiePrompt as string;
+            setTimeout(() => {
+              triggerSelfie(intent, prompt, msgId);
+            }, randomDelay());
+          }
+          return updated;
           });
         }
       }
