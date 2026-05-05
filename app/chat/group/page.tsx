@@ -155,7 +155,7 @@ const VOICE_OPTIONS = [
       const imgRes = await fetch("/api/generate-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: selfiePrompt, gender: "", style: "" }),
+        body: JSON.stringify({ prompt: selfiePrompt, gender: "", style: "", userEmail: session?.user?.email }),
       });
       const imgData = await imgRes.json();
       const imageUrl = Array.isArray(imgData.output) ? imgData.output[0] : imgData.output;

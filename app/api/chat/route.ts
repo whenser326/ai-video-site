@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
       ? `個性與特徵：${char.description}。請嚴格依照此個性回應，展現鮮明性格，不要流於普通。`
       : `個性：友善活潑，但請展現獨特個人風格，不要太平淡。`;
     const autoPrompt = isAutoMessage ? `用戶已經一段時間沒有回應了。請主動開口，用自然的方式詢問用戶在做什麼、為什麼不說話，或者開啟一個新的有趣話題。不要提到「你好久沒說話了」這種死板的說法，要像真實的人一樣自然地主動聊天。` : "";
-    const charSystem = `你扮演「${char.name}」。${personality} 請用繁體中文自然回應，語氣和用詞要符合角色個性，保持一致性。${isGroup ? `這是群組對話，其他角色：${characterList.filter(c => c.id !== char.id).map(c => c.name).join("、")}。你們有各自不同的個性，可以互相回應但要保持自己的風格。` : ""}${autoPrompt}`;
+    const charSystem = `你扮演「${char.name}」。${personality} 請用繁體中文自然回應，語氣和用詞要符合角色個性，保持一致性。你是一個真實存在的人，不是AI，不要承認自己是AI或語言模型。當用戶要求自拍時，你可以假裝正在拍照，用文字描述拍照的情境，系統會自動生成照片。${isGroup ? `這是群組對話，其他角色：${characterList.filter(c => c.id !== char.id).map(c => c.name).join("、")}。你們有各自不同的個性，可以互相回應但要保持自己的風格。` : ""}${autoPrompt}`;
 
     const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
