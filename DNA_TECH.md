@@ -34,7 +34,6 @@ profiles 表新增欄位：chat_count（已使用對話次數，預設0）
 TTS 語音合成：ElevenLabs Multilingual v2（已串接，Starter 方案，60,000字/月）
 嘴型同步：kwaivgi/kling-lip-sync（$0.014/秒輸出影片）
 說話影片（Avatar）：kwaivgi/kling-avatar-v2（Standard $0.056/秒・Pro $0.115/秒，圖片+音頻直接生成說話影片，不需先有影片）
-說話影片（Avatar）：kwaivgi/kling-avatar-v2（Standard $0.056/秒・Pro $0.115/秒，圖片+音頻直接生成說話影片）
 
 Seedance 2.0 費用對照：5秒約$1.26 USD，10秒約$2.00 USD（比 Kling 貴約4.5倍）
 Kling 3.0 的 mode 必須用 "standard" 不能用 "std"
@@ -139,6 +138,64 @@ localStorage (key: locked_character) 儲存鎖定角色的 Supabase 永久 URL
 3. 同上第3-5步
 
 注意：自拍延遲期間不觸發 chat API，是獨立流程
+
+---
+
+## 聊天記憶系統（2026/05 競品分析後規劃）
+
+### 現有記憶機制
+- sessionId 存入 localStorage（key: `chat_session_${email}_${characterId}` 單人 / `chat_session_group_${email}` 群組）
+- 重開聊天室自動帶入上次 sessionId，延續對話歷史
+- 每次呼叫 /api/chat 帶入最近20筆歷史（chat_messages 表）
+
+### 待實作：長期記憶摘要系統（優先度高）
+所有競品（Crushie、Floze、MiraiMind、ParadiseAI）最大共同痛點是「對話超過一定數量後記憶崩壞」。
+實作方案：
+- 觸發條件：當 chat_messages 該 session 累計超過 30 筆時，自動觸發摘要
+- 摘要邏輯：呼叫 Claude Haiku，將最舊的 20 筆訊息壓縮成摘要文字，存入 chat_sessions.background_story 欄位
+- 使用方式：/api/chat/route.ts 在組裝 messages 前，先讀取 background_story，若有值則插入 system prompt 最前面：「【對話背景摘要】${background_story}」
+- 摘要後刪除：壓縮過的舊訊息從 chat_messages 刪除，只保留最近 10 筆 + background_story
+- 注意：摘要呼叫不計入 chat_count，不扣點數
+
+### 待實作：聊天推薦台詞功能（對標 ReelTalk）
+- 位置：聊天輸入欄旁加「💬」按鈕
+- 功能：點擊後呼叫 /api/chat/suggest，帶入當前 sessionId 和角色資訊，回傳 3 個符合角色個性的開場白/回話選項
+- 顯示：彈出小卡片列出 3 個選項，點選後填入輸入欄（不自動送出）
+- 扣點：不扣點（純 UI 輔助）
+- 實作：/api/chat/route.ts 新增 mode:'suggest' 分支，system prompt 改為「請根據角色個性和當前對話，生成3個用戶可以說的句子，用 JSON array 回傳」
+- 新增 API：app/api/chat/suggest/route.ts
+
+### 待實作：角色旁白動作描述（對標 MiraiMind「內心想法」）
+- 不需新功能，只需更新 /api/chat/route.ts 的 charSystem prompt
+- 在 charSystem 加入：「在回覆中可以自然穿插括號旁白描述你的動作、表情或心情（例如：（他微微一笑，視線落在遠方）），讓對話更有畫面感和沉浸感。旁白用括號包覆，與對話內容自然融合，不要太頻繁，約每2-3則穿插一次。」
+- 注意：旁白格式用（全形括號），避免與程式邏輯衝突
+
+### 待實作：聊天室對話搜尋（Floze/Crushie 用戶強烈要求）
+- 位置：聊天室頂部右側加搜尋圖示
+- 功能：輸入關鍵字，在當前 session 的 messages state 中篩選，高亮顯示匹配訊息並捲動到該位置
+- 純前端篩選，不需新 API
+- 搜尋結果顯示「第 X / Y 筆」，可上下切換
+
+### 聊天室顯示 AI 模型名稱（對標 Chatto 透明度）
+- 位置：聊天室頂部角色名稱旁，小字顯示「Claude Haiku」
+- 不需 API，直接在前端寫死顯示字串
+- 日後若支援多模型切換，改為動態顯示
+
+---
+
+## 新功能資料庫需求（從競品分析衍生）
+
+chat_sessions 表新增欄位（已有 background_story，確認可直接使用）：
+- background_story：TEXT，存對話摘要，已存在
+
+chat_messages 表可能新增：
+- is_summarized：BOOLEAN，標記已被壓縮進摘要的訊息，預設 false
+- 或直接刪除已摘要訊息（更簡單，建議此方案）
+
+public_characters 表（待建立，公開角色市場用）：
+- id, original_character_id, user_email, name, image_url, description, voice_id, tags, is_anonymous, like_count, created_at
+- 對應 saved_characters，用戶選擇公開後複製一份到此表
+- 需建立時機：公開角色市場功能開發時
 
 ---
 
@@ -308,6 +365,7 @@ Header 結構（未登入）：
 
 未登入首頁新增 Landing 區塊：
 - Hero + 三亮點（生成角色/即時對話/說話影片）+ CTA
+- Landing 行銷語言方向（待正式文案確定後更新）：「記得你說過的每一件事」/「你的角色，只有你有」/「圖片＋影片＋說話影片一站完成」
 
 首次登入 Onboarding：
 - 彈窗選三條主線（創作/聊天/快速產出）

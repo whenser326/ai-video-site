@@ -49,6 +49,8 @@ git push
 - 修改任何涉及 middleware.ts、auth route、防濫用機制、API 路由、資料庫、AI 模型的程式碼前，Claude 必須先確認已讀取 DNA_TECH.md，未讀取則拒絕動手並要求使用者補貼
 - 修改 GlobalHeader.tsx 前，必須先確認已讀取 DNA_TECH.md 的「GlobalHeader 規範」章節
 - 修改任何聊天相關檔案（/chat/[characterId]/page.tsx、/chat/group/page.tsx、/api/chat/route.ts）前，必須先確認已讀取 DNA_BIZ.md 的「AI 聊天功能規格」章節
+- 修改 /api/chat/route.ts 的 charSystem prompt 前，必須先確認「角色旁白動作描述」格式規範（見 DNA_TECH.md「角色旁白動作描述」），禁止改變括號格式
+- 新增聊天相關功能前，必須先確認 DNA_TECH.md「聊天記憶系統」章節，確保不破壞現有 sessionId localStorage 機制
 
 ### DNA 更新防呆
 每次新增規則前，必須先搜尋 DNA 是否有相關舊規則，有則直接修改舊規則，禁止新增重複或矛盾的條目。
@@ -117,7 +119,7 @@ page.tsx 已知 TypeScript 舊錯誤（4個）：
 - 已登入手機版：Logo + 點數徽章 + 漢堡按鈕 → Drawer 展開
 - pricing 頁面：return null（不顯示 Header）
 - 漢堡 Drawer menuItems 順序：📖 使用指南 / 🎭 我的角色 / 📅 每日簽到 / 💳 儲值點數 / 🎁 推薦賺點 / 💬 意見回饋 / 🚪 登出
-- 「使用指南」onClick：清除 localStorage onboarding_done_ key → dispatch CustomEvent('open-onboarding') → page.tsx 的 useEffect 監聽後重新顯示引導框
+- 「使用指南」onClick：直接跳 /guide（不再觸發 open-onboarding 事件，open-onboarding 只有首頁 page.tsx 有監聽）
 - FeedbackModal + unreadCount 60秒輪詢
 
 ### page.tsx 未登入 Landing Page
@@ -139,7 +141,7 @@ page.tsx 已知 TypeScript 舊錯誤（4個）：
 - 現在只做 pass-through：`return NextResponse.next()`
 - 防重複帳號改由 auth/[...nextauth]/route.ts 的 signIn callback 處理（Gmail normalize 檢查）
 
-/chat/[characterId] 聊天頁：h-screen + overflow-hidden，底部輸入列有「離開聊天室」紅色按鈕，📎上傳圖片按鈕，打字延遲2-5秒，AI自拍觸發，🎬轉成影片Modal
-/chat/group 群組聊天頁：免費用戶封鎖，入門/標準最多3角色，專業最多5角色，群組回覆隨機順序+逐一顯示間隔2-5秒
+/chat/[characterId] 聊天頁：h-screen + overflow-hidden，底部輸入列有「離開聊天室」紅色按鈕，📎上傳圖片按鈕，打字延遲2-5秒，AI自拍觸發（單人延遲3~10秒），🎬轉成影片Modal，sessionId 存 localStorage 重開延續對話
+/chat/group 群組聊天頁：免費用戶封鎖，入門/標準最多3角色，專業最多5角色，群組回覆隨機順序+逐一顯示間隔2-5秒，AI自拍延遲30秒~3分鐘，sessionId 存 localStorage 重開延續對話
 /guide 使用指南頁：三條主線可展開，點數對照表，底部「開始創作」按鈕
 Onboarding 三選項：生成角色→null（留首頁）、和AI角色聊天或製作說話影片→/characters、上傳自己的照片轉影片→setShowUploadModal(true)

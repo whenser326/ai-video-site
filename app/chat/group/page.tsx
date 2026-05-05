@@ -609,9 +609,24 @@ const VOICE_OPTIONS = [
           </div>
           <div className="flex items-center justify-between mt-2">
             <p className="text-white/15 text-[10px]">Enter 送出・Shift+Enter 換行</p>
-            <button onClick={() => router.push('/characters')} className="px-3 py-1 rounded-full text-[10px] font-bold bg-red-500/20 border border-red-500/40 text-red-300 hover:bg-red-500/30 transition-all">
-              離開聊天室
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  if (!confirm("清除記憶後對話將從頭開始，確定嗎？")) return;
+                  if (session?.user?.email) {
+                    localStorage.removeItem(`chat_session_group_${session.user.email}`);
+                  }
+                  setSessionId(null);
+                  setMessages([]);
+                }}
+                className="px-3 py-1 rounded-full text-[10px] font-bold bg-amber-500/20 border border-amber-500/40 text-amber-300 hover:bg-amber-500/30 transition-all"
+              >
+                🗑️ 清除記憶
+              </button>
+              <button onClick={() => router.push('/characters')} className="px-3 py-1 rounded-full text-[10px] font-bold bg-red-500/20 border border-red-500/40 text-red-300 hover:bg-red-500/30 transition-all">
+                離開聊天室
+              </button>
+            </div>
           </div>
         </div>
       </main>
