@@ -66,6 +66,8 @@ const VOICE_OPTIONS = [
   { id: "male-5", label: "Wilson（男）深沉" },
 ];
   const bottomRef = useRef<HTMLDivElement>(null);
+  const autoMessageTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastUserMessageTime = useRef<number>(Date.now());
 
   const maxChars = GROUP_LIMITS[plan] || 0;
   const randomDelay = () => Math.floor(Math.random() * 3000) + 2000;
@@ -87,6 +89,49 @@ const VOICE_OPTIONS = [
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+  // 主動發話 timer
+  useEffect(() => {
+    if (!started || selectedIds.length === 0) return;
+    const startTimer = () => {
+      if (autoMessageTimerRef.current) clearTimeout(autoMessageTimerRef.current);
+      autoMessageTimerRef.current = setTimeout(async () => {
+        if (!session?.user?.email || loading) return;
+        // 隨機選一個角色主動發話
+        const randomCharId = selectedIds[Math.floor(Math.random() * selectedIds.length)];
+        try {
+          const res = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userEmail: session.user.email,
+              characters: [randomCharId],
+              sessionId,
+              message: "（系統：請主動發話）",
+              isAutoMessage: true,
+            }),
+          });
+          const data = await res.json();
+          if (data.responses && Array.isArray(data.responses)) {
+            for (const r of data.responses) {
+              await new Promise(resolve => setTimeout(resolve, randomDelay()));
+              const char = characters.find(c => c.id === r.characterId);
+              setMessages(prev => [...prev, {
+                role: "assistant",
+                content: r.content,
+                characterName: r.characterName,
+                characterImage: char?.image_url,
+                characterId: r.characterId,
+              }]);
+            }
+          }
+        } catch { /* 靜默失敗 */ }
+        // 發完再重設 timer
+        startTimer();
+      }, 60000);
+    };
+    startTimer();
+    return () => { if (autoMessageTimerRef.current) clearTimeout(autoMessageTimerRef.current); };
+  }, [started, selectedIds, session, sessionId, loading]);
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => {
@@ -190,6 +235,9 @@ const VOICE_OPTIONS = [
   const handleSend = async (overrideMessage?: string, imageUrl?: string) => {
     const userMsg = overrideMessage || input.trim();
     if (!userMsg || loading || !session?.user?.email) return;
+    // 用戶發話，重置 timer
+    lastUserMessageTime.current = Date.now();
+    if (autoMessageTimerRef.current) clearTimeout(autoMessageTimerRef.current);
     if (!overrideMessage) setInput("");
     setLoading(true);
 

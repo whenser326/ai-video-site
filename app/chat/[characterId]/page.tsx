@@ -42,6 +42,7 @@ export default function ChatPage() {
   const [avatarVideoUrl, setAvatarVideoUrl] = useState("");
   const [avatarVoiceId, setAvatarVoiceId] = useState("female-2");
   const bottomRef = useRef<HTMLDivElement>(null);
+  const autoMessageTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const VOICE_OPTIONS = [
     { id: "female-1", label: "Jane（女）低沉" },
@@ -79,7 +80,43 @@ export default function ChatPage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
-
+// 主動發話 timer
+  useEffect(() => {
+    if (!character || !session?.user?.email) return;
+    const startTimer = () => {
+      if (autoMessageTimerRef.current) clearTimeout(autoMessageTimerRef.current);
+      autoMessageTimerRef.current = setTimeout(async () => {
+        if (loading) { startTimer(); return; }
+        try {
+          const res = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userEmail: session?.user?.email,
+              characterId,
+              sessionId,
+              message: "（系統：請主動發話）",
+              isAutoMessage: true,
+            }),
+          });
+          const data = await res.json();
+          if (data.responses && Array.isArray(data.responses)) {
+            for (const r of data.responses) {
+              await new Promise(resolve => setTimeout(resolve, randomDelay()));
+              setMessages(prev => [...prev, {
+                role: "assistant",
+                content: r.content,
+                characterName: r.characterName,
+              }]);
+            }
+          }
+        } catch { /* 靜默失敗 */ }
+        startTimer();
+      }, 60000);
+    };
+    startTimer();
+    return () => { if (autoMessageTimerRef.current) clearTimeout(autoMessageTimerRef.current); };
+  }, [character, session, characterId, sessionId, loading]);
   const triggerSelfie = async (intent: "photo" | "video", selfiePrompt: string, targetIndex: number) => {
     const photoCost = 1;
     const videoCost = plan === 'pro' ? 4 : plan === 'standard' ? 5 : 6;
@@ -166,6 +203,7 @@ export default function ChatPage() {
 
   const handleSend = async () => {
     if (!input.trim() || loading || !session?.user?.email) return;
+    if (autoMessageTimerRef.current) clearTimeout(autoMessageTimerRef.current);
     const userMsg = input.trim();
     setInput("");
     setMessages(prev => [...prev, { role: "user", content: userMsg }]);
@@ -176,7 +214,7 @@ export default function ChatPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userEmail: session.user.email,
+          userEmail: session?.user?.email,
           characterId,
           sessionId,
           message: userMsg,

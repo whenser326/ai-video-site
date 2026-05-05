@@ -51,7 +51,7 @@ scene：根據聊天紀錄推斷角色當前位置、服裝、氛圍，組成英
 }
 
 export async function POST(req: NextRequest) {
-  const { userEmail, characterId, sessionId, message, characters, imageUrl: chatImageUrl } = await req.json();
+  const { userEmail, characterId, sessionId, message, characters, imageUrl: chatImageUrl, isAutoMessage } = await req.json();
 
   if (!userEmail || !message) {
     return NextResponse.json({ error: "缺少必要參數" }, { status: 400 });
@@ -136,7 +136,8 @@ export async function POST(req: NextRequest) {
     const personality = char.description
       ? `個性與特徵：${char.description}。請嚴格依照此個性回應，展現鮮明性格，不要流於普通。`
       : `個性：友善活潑，但請展現獨特個人風格，不要太平淡。`;
-    const charSystem = `你扮演「${char.name}」。${personality} 請用繁體中文自然回應，語氣和用詞要符合角色個性，保持一致性。${isGroup ? `這是群組對話，其他角色：${characterList.filter(c => c.id !== char.id).map(c => c.name).join("、")}。你們有各自不同的個性，可以互相回應但要保持自己的風格。` : ""}`;
+    const autoPrompt = isAutoMessage ? `用戶已經一段時間沒有回應了。請主動開口，用自然的方式詢問用戶在做什麼、為什麼不說話，或者開啟一個新的有趣話題。不要提到「你好久沒說話了」這種死板的說法，要像真實的人一樣自然地主動聊天。` : "";
+    const charSystem = `你扮演「${char.name}」。${personality} 請用繁體中文自然回應，語氣和用詞要符合角色個性，保持一致性。${isGroup ? `這是群組對話，其他角色：${characterList.filter(c => c.id !== char.id).map(c => c.name).join("、")}。你們有各自不同的個性，可以互相回應但要保持自己的風格。` : ""}${autoPrompt}`;
 
     const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
