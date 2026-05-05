@@ -153,11 +153,13 @@ export async function POST(req: NextRequest) {
       }),
     });
 
-    const claudeData = await claudeRes.json();
+    // Claude 回應和自拍偵測並行執行
+    const [claudeData, selfieResult] = await Promise.all([
+      claudeRes.json(),
+      detectSelfieIntent(message, history, char.name, char.description || ""),
+    ]);
     const reply = claudeData.content?.[0]?.text || "（無回應）";
-
-    // 偵測自拍意圖
-    const { intent, selfiePrompt } = await detectSelfieIntent(message, history, char.name, char.description || "");
+    const { intent, selfiePrompt } = selfieResult;
 
     responses.push({
       characterId: char.id,
