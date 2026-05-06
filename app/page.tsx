@@ -2679,49 +2679,58 @@ return (
 )}
 {/* [DNA_PATCH_END] */}
 
-          {/* [DNA_PATCH_START] 動作參考影片上傳區（選填，只在 kling 模式顯示） */}
+          {/* [DNA_PATCH_START] 角色圖片 + 動作參考影片 左右排版（kling 模式） */}
           {videoModel === 'kling' && (
-            <div className="border border-[#89f5a2]/20 rounded-2xl overflow-hidden">
-              <div className="px-4 py-3 bg-[#89f5a2]/5 flex items-center justify-between">
-                <div>
-                  <p className="text-[#89f5a2] text-xs font-black">🎬 動作參考影片（選填）</p>
-                  <p className="text-white/30 text-[10px] mt-0.5">
-                    上傳後走 Motion Control・點數沿用 Kling 定價・{motionLimits.minSec}–{motionLimits.maxSec}秒・最大 {motionLimits.maxMb}MB・MP4
-                  </p>
-                </div>
-                {motionVideoUrl && (
-                  <button
-                    type="button"
-                    onClick={() => { setMotionVideoUrl(null); setMotionVideoFile(null); setMotionVideoError(''); }}
-                    className="text-red-400 text-xs font-bold hover:text-red-300 transition-all ml-2"
-                  >
-                    ✕ 移除
-                  </button>
-                )}
-              </div>
-              <div className="px-4 pb-4 pt-2 bg-black/10">
-                {motionVideoUrl ? (
-                  <div className="flex items-center gap-2 bg-[#89f5a2]/10 border border-[#89f5a2]/30 rounded-xl p-3">
-                    <span className="text-2xl">🎬</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[#89f5a2] text-xs font-bold truncate">{motionVideoFile?.name || '影片已上傳'}</p>
-                      <p className="text-white/30 text-[10px]">上傳成功 ✅</p>
-                    </div>
+            <div className="space-y-2">
+              <p className="text-white/40 text-xs font-bold">🎬 動作參考影片（選填）</p>
+              <div className="flex gap-3">
+                {/* 左：已上傳的角色圖片預覽 */}
+                <div className="flex-1">
+                  <p className="text-white/25 text-[10px] mb-1 text-center">角色照片</p>
+                  <div className="border border-white/10 rounded-xl overflow-hidden aspect-square flex items-center justify-center bg-black/20">
+                    {uploadedImage ? (
+                      <img src={uploadedImage} className="w-full h-full object-cover" />
+                    ) : (
+                      <p className="text-white/20 text-xs">未上傳</p>
+                    )}
                   </div>
-                ) : (
-                  <label className="block cursor-pointer">
-                    <div className={`border border-dashed rounded-xl p-4 text-center transition-all ${
-                      motionVideoUploading
+                </div>
+
+                {/* 右：動作參考影片上傳 */}
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-white/25 text-[10px]">動作參考影片</p>
+                    {motionVideoUrl && (
+                      <button
+                        type="button"
+                        onClick={() => { setMotionVideoUrl(null); setMotionVideoFile(null); setMotionVideoError(''); }}
+                        className="text-red-400 text-[10px] font-bold hover:text-red-300 transition-all"
+                      >
+                        ✕ 移除
+                      </button>
+                    )}
+                  </div>
+                  <label className="block cursor-pointer aspect-square">
+                    <div className={`border border-dashed rounded-xl h-full flex flex-col items-center justify-center text-center transition-all ${
+                      motionVideoUrl
+                        ? 'border-[#89f5a2]/50 bg-[#89f5a2]/8'
+                        : motionVideoUploading
                         ? 'border-[#89f5a2]/40 bg-[#89f5a2]/5'
                         : 'border-white/10 hover:border-[#89f5a2]/30'
                     }`}>
-                      {motionVideoUploading ? (
+                      {motionVideoUrl ? (
+                        <>
+                          <p className="text-2xl">✅</p>
+                          <p className="text-[#89f5a2] text-[10px] font-bold mt-1 px-1 truncate w-full text-center">{motionVideoFile?.name || '已上傳'}</p>
+                        </>
+                      ) : motionVideoUploading ? (
                         <p className="text-[#89f5a2] text-xs">上傳中...</p>
                       ) : (
                         <>
-                          <p className="text-2xl mb-1">🎞️</p>
-                          <p className="text-white/40 text-xs">點擊上傳 MP4 動作參考影片</p>
-                          <p className="text-white/20 text-[10px] mt-0.5">{motionLimits.minSec}–{motionLimits.maxSec}秒・最大 {motionLimits.maxMb}MB</p>
+                          <p className="text-2xl">🎞️</p>
+                          <p className="text-white/40 text-[10px] mt-1">點擊上傳 MP4</p>
+                          <p className="text-white/20 text-[10px]">{motionLimits.minSec}–{motionLimits.maxSec}秒</p>
+                          <p className="text-white/20 text-[10px]">最大 {motionLimits.maxMb}MB</p>
                         </>
                       )}
                     </div>
@@ -2734,7 +2743,6 @@ return (
                         const file = e.target.files?.[0];
                         if (!file) return;
                         setMotionVideoFile(file);
-                        // 前端先檢查時長
                         const videoEl = document.createElement('video');
                         videoEl.preload = 'metadata';
                         videoEl.src = URL.createObjectURL(file);
@@ -2752,11 +2760,12 @@ return (
                       }}
                     />
                   </label>
-                )}
-                {motionVideoError && (
-                  <p className="text-red-400 text-xs mt-2 text-center">{motionVideoError}</p>
-                )}
+                  {motionVideoError && (
+                    <p className="text-red-400 text-[10px] mt-1 text-center">{motionVideoError}</p>
+                  )}
+                </div>
               </div>
+              <p className="text-white/20 text-[10px] text-center">有上傳動作影片 → 走 Motion Control・無上傳 → 走原本 Kling</p>
             </div>
           )}
           {/* [DNA_PATCH_END] */}
