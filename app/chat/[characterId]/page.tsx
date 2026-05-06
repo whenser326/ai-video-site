@@ -423,12 +423,17 @@ export default function ChatPage() {
 
                 {msg.role === "assistant" && !msg.selfieLoading && (
                   <button
-                    onClick={() => setVideoModal({
-                      content: msg.content,
-                      characterId,
-                      characterImage: character?.image_url || "",
-                      characterVoiceId: character?.voice_id || "female-2",
-                    })}
+                    onClick={() => {
+                      setAvatarVoiceId(character?.voice_id || "female-2");
+                      setAvatarVideoUrl("");
+                      setAvatarStatus("");
+                      setVideoModal({
+                        content: msg.content,
+                        characterId,
+                        characterImage: character?.image_url || "",
+                        characterVoiceId: character?.voice_id || "female-2",
+                      });
+                    }}
                     className="px-3 py-1.5 rounded-full text-[10px] font-bold bg-purple-500/10 border border-purple-500/25 text-purple-300/70 hover:bg-purple-500/20 hover:text-purple-300 transition-all"
                   >
                     🎬 轉成影片

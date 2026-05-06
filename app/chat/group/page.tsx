@@ -334,10 +334,10 @@ const VOICE_OPTIONS = [
         });
       }
 
-      // 群組自拍：從有意圖的角色中隨機選一個，延遲30秒到3分鐘
+      // 群組自拍：從有意圖的角色中隨機選一個，發訊息後3~10秒立即產圖
       if (selfieQueue.length > 0) {
         const chosen = selfieQueue[Math.floor(Math.random() * selfieQueue.length)];
-        const delay = Math.floor(Math.random() * (180000 - 30000)) + 30000;
+        const delay = Math.floor(Math.random() * 7000) + 3000;
         setTimeout(() => {
           triggerSelfie(chosen.intent, chosen.prompt, chosen.msgId, chosen.charImgUrl);
         }, delay);
@@ -537,6 +537,9 @@ const VOICE_OPTIONS = [
                   <button
                     onClick={() => {
   const char = selectedChars.find(c => c.id === (msg.characterId || selectedIds[0]));
+  setAvatarVoiceId(char?.voice_id || "female-2");
+  setAvatarVideoUrl("");
+  setAvatarStatus("");
   setVideoModal({
     content: msg.content,
     characterId: msg.characterId || selectedIds[0],
