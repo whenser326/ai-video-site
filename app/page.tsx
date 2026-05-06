@@ -130,6 +130,9 @@ const [motionVideoUploading, setMotionVideoUploading] = useState(false);
 const [motionVideoError, setMotionVideoError] = useState<string>('');
 const [motionLimits, setMotionLimits] = useState({ minSec: 5, maxSec: 10, maxMb: 30 });
 const [motionExpanded, setMotionExpanded] = useState(false);
+// [DNA_PATCH_START] Upload Modal 功能下拉 state
+const [selectedFunction, setSelectedFunction] = useState<"free_motion" | "motion_video" | "multi_reference">("free_motion");
+const [functionDropdownOpen, setFunctionDropdownOpen] = useState(false);
 // [DNA_PATCH_END]
 // [DNA_PATCH_START] 影片提示詞翻譯狀態
 const [videoTranslatedPrompt, setVideoTranslatedPrompt] = useState<string | null>(null);
@@ -342,6 +345,15 @@ useEffect(() => {
   }
   return () => clearTimeout(maxWait);
 }, [credits]);
+// [DNA_PATCH_END]
+// [DNA_PATCH_START] selectedFunction 自動同步 videoModel
+useEffect(() => {
+  if (selectedFunction === "multi_reference") {
+    setVideoModel("seedance");
+  } else {
+    setVideoModel("kling");
+  }
+}, [selectedFunction]);
 // [DNA_PATCH_END]
 // [DNA_PATCH_START] promo-card-trigger：等 Onboarding 關掉後才顯示
 useEffect(() => {
@@ -2490,11 +2502,12 @@ return (
         </>
       ) : (
         <>
+          {/* 標題：動態顯示當前功能對應的模型 */}
           <h2 className="text-white font-black text-lg text-center">📁 上傳圖片轉影片</h2>
-          <p className="text-center text-sm font-black tracking-widest -mt-2" style={{color: '#fb923c'}}>
-            {videoModel === "seedance" ? "✨ Powered by Seedance 1.5 Pro" : "⚡ Powered by Kling 3.0"}
+          <p className="text-center text-sm font-black tracking-widest -mt-2" style={{color: selectedFunction === "multi_reference" ? '#fb923c' : '#89f5a2'}}>
+            {selectedFunction === "multi_reference" ? "✨ Powered by Seedance 2.0" : "⚡ Powered by Kling 3.0"}
           </p>
-          
+
           {/* 上傳圖片 */}
           <label className="block w-full cursor-pointer">
             <div className="border-2 border-dashed border-white/20 rounded-2xl p-6 text-center hover:border-[#89f5a2]/50 transition-all">
@@ -2524,12 +2537,11 @@ return (
           </label>
 
           {/* 描述框 */}
-          {/* [DNA_PATCH_START] 上傳圖片描述框 + 翻譯 */}
           <div className="relative">
             <textarea
               value={videoPrompt}
               onChange={(e) => { setVideoPrompt(e.target.value); setVideoTranslatedPrompt(null); }}
-              placeholder="描述想要的動作或場景，用英文判讀會更準！（選填，中文也可以！輸入後點「翻譯成英文」按鈕，我們幫你自動翻譯 🌐）&#10;例如：walking in a park, waving hand, dancing"
+              placeholder="描述想要的動作或場景（選填，中文也可以！）&#10;例如：walking in a park, waving hand, dancing"
               className="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/25 text-xs resize-none focus:outline-none focus:ring-1 focus:ring-[#89f5a2]/40"
               rows={3}
             />
@@ -2551,344 +2563,363 @@ return (
               <p className="text-white/40 text-xs font-bold uppercase">🌐 翻譯結果</p>
               <p className="text-[#89f5a2] text-sm">{videoTranslatedPrompt}</p>
               <div className="flex gap-2">
-                <button
-                  type="button"
+                <button type="button"
                   onClick={() => { setVideoPrompt(videoTranslatedPrompt); setVideoTranslatedPrompt(null); }}
                   className="flex-1 py-1.5 bg-[#89f5a2] text-[#0d2318] rounded-lg text-xs font-black hover:opacity-90 transition-all"
-                >
-                  ✅ 採用
-                </button>
-                <button
-                  type="button"
+                >✅ 採用</button>
+                <button type="button"
                   onClick={() => setVideoTranslatedPrompt(null)}
                   className="px-3 py-1.5 bg-white/5 border border-white/10 text-white/40 rounded-lg text-xs font-bold hover:bg-white/10 transition-all"
-                >
-                  略過
-                </button>
+                >略過</button>
+              </div>
+            </div>
+          )}
+
+          {/* [DNA_PATCH_START] 功能下拉選單（漢堡式） */}
+          <div className="relative">
+            <p className="text-white/40 text-xs mb-2">選擇功能</p>
+            {/* 已選功能顯示列 */}
+            <button
+              type="button"
+              onClick={() => setFunctionDropdownOpen(o => !o)}
+              className="w-full px-4 py-3 rounded-xl border border-white/15 bg-white/5 hover:bg-white/8 transition-all flex items-center justify-between"
+            >
+              <div className="flex items-center gap-2 text-left">
+                <span className="text-base">
+                  {selectedFunction === "free_motion" ? "🎬" : selectedFunction === "motion_video" ? "💃" : "🎨"}
+                </span>
+                <div>
+                  <p className="text-white/80 text-xs font-black">
+                    {selectedFunction === "free_motion" ? "隨意動作" : selectedFunction === "motion_video" ? "套用動作參考影片" : "多重參考圖"}
+                  </p>
+                  <p className="text-white/30 text-[10px]">
+                    {selectedFunction === "free_motion" ? "輸入提示詞指定動作，不填則 AI 自動安排・Kling 3.0" : selectedFunction === "motion_video" ? "上傳 MP4 讓角色模仿・Kling 3.0" : "1-3 張參考圖・Seedance 2.0"}
+                  </p>
+                </div>
+              </div>
+              <span className={`text-white/40 text-xs transition-transform duration-200 ${functionDropdownOpen ? 'rotate-180' : ''}`}>▼</span>
+            </button>
+
+            {/* 下拉選項 */}
+            {functionDropdownOpen && (
+              <div className="absolute top-full left-0 right-0 z-20 mt-1 rounded-xl border border-white/15 bg-[#0d2318] shadow-2xl shadow-black/60 overflow-hidden">
+                {[
+                  {
+                    id: "free_motion" as const,
+                    emoji: "🎬",
+                    title: "隨意動作",
+                    desc: "輸入提示詞指定動作，不填則 AI 自動安排",
+                    cost: "點數和 5 秒影片相同",
+                    model: "Kling 3.0",
+                    requiresPlan: false,
+                  },
+                  {
+                    id: "motion_video" as const,
+                    emoji: "💃",
+                    title: "套用動作參考影片",
+                    desc: "上傳一段 MP4，角色會模仿相同動作",
+                    cost: "點數和 5 秒影片相同",
+                    model: "Kling 3.0",
+                    requiresPlan: true,
+                  },
+                  {
+                    id: "multi_reference" as const,
+                    emoji: "🎨",
+                    title: "多重參考圖",
+                    desc: "同時上傳 1-3 張圖，指定第二角色、場景、動作",
+                    cost: "Seedance 點數 + 額外加費",
+                    model: "Seedance 2.0",
+                    requiresPlan: true,
+                  },
+                ].map((opt) => {
+                  const locked = opt.requiresPlan && plan === 'free';
+                  const isSelected = selectedFunction === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => {
+                        if (locked) {
+                          setFunctionDropdownOpen(false);
+                          router.push('/pricing');
+                          return;
+                        }
+                        setSelectedFunction(opt.id);
+                        setFunctionDropdownOpen(false);
+                        // 切換功能時清除前一個功能的上傳狀態
+                        setMotionVideoUrl(null);
+                        setMotionVideoFile(null);
+                        setMotionVideoError('');
+                        setOmniRef1(null); setOmniRef2(null); setOmniRef3(null);
+                      }}
+                      className={`w-full px-4 py-3 flex items-start gap-3 text-left transition-all border-b border-white/5 last:border-b-0 ${
+                        isSelected ? 'bg-[#89f5a2]/10' : 'hover:bg-white/5'
+                      } ${locked ? 'opacity-60' : ''}`}
+                    >
+                      <span className="text-xl flex-shrink-0 mt-0.5">{opt.emoji}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`text-xs font-black ${isSelected ? 'text-[#89f5a2]' : 'text-white/80'}`}>{opt.title}</span>
+                          {opt.id === "multi_reference" && (
+                            <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-[#fb923c] text-white">高畫質溢價</span>
+                          )}
+                          {locked && (
+                            <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-white/10 text-white/50">🔒 升級解鎖</span>
+                          )}
+                          {isSelected && <span className="text-[9px] text-[#89f5a2]">✓ 已選</span>}
+                        </div>
+                        <p className="text-white/40 text-[10px] mt-0.5 leading-relaxed">{opt.desc}</p>
+                        <p className={`text-[10px] font-bold mt-0.5 ${opt.id === "multi_reference" ? 'text-[#fb923c]' : 'text-[#89f5a2]'}`}>
+                          {opt.cost}・{opt.model}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          {/* [DNA_PATCH_END] */}
+
+          {/* [DNA_PATCH_START] 各功能展開區 */}
+          {/* 💃 套用動作參考影片 */}
+          {selectedFunction === "motion_video" && (
+            <div className="border border-[#89f5a2]/20 rounded-2xl overflow-hidden">
+              <div className="px-4 py-2.5 bg-[#89f5a2]/5 border-b border-[#89f5a2]/10">
+                <p className="text-[#89f5a2] text-xs font-black">💃 動作參考影片</p>
+                <p className="text-white/30 text-[10px] mt-0.5">上傳 MP4，角色會模仿裡面的動作（如跳舞、特定姿勢）</p>
+              </div>
+              <div className="px-4 pb-4 pt-3 bg-black/20 space-y-3">
+                <div className="bg-[#89f5a2]/8 border border-[#89f5a2]/20 rounded-xl px-3 py-2.5">
+                  <p className="text-[#89f5a2] text-[11px] font-black text-center">你的角色照片 ＋ 動作影片 ＝ 角色做出影片裡的動作</p>
+                  <p className="text-white/40 text-[10px] text-center mt-1">📌 適合：跳舞、特定姿勢、模仿動作</p>
+                </div>
+                {motionVideoUrl ? (
+                  <div className="flex items-center gap-3 bg-[#89f5a2]/10 border border-[#89f5a2]/30 rounded-xl p-3">
+                    <span className="text-2xl">🎞️</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[#89f5a2] text-xs font-bold truncate">{motionVideoFile?.name || '影片已上傳'}</p>
+                      <p className="text-white/30 text-[10px]">上傳成功 ✅</p>
+                    </div>
+                    <button type="button"
+                      onClick={() => { setMotionVideoUrl(null); setMotionVideoFile(null); setMotionVideoError(''); }}
+                      className="text-red-400 text-xs font-bold hover:text-red-300 transition-all flex-shrink-0"
+                    >✕ 移除</button>
+                  </div>
+                ) : (
+                  <label className="block cursor-pointer">
+                    <div className={`border-2 border-dashed rounded-xl p-6 text-center transition-all ${
+                      motionVideoUploading ? 'border-[#89f5a2]/40 bg-[#89f5a2]/5' : 'border-white/10 hover:border-[#89f5a2]/40'
+                    }`}>
+                      {motionVideoUploading ? (
+                        <p className="text-[#89f5a2] text-sm">上傳中...</p>
+                      ) : (
+                        <>
+                          <p className="text-3xl mb-2">🎞️</p>
+                          <p className="text-white/50 text-sm font-bold">點擊上傳 MP4 動作參考影片</p>
+                          <p className="text-white/30 text-[11px] mt-1">{motionLimits.minSec}–{motionLimits.maxSec} 秒・最大 {motionLimits.maxMb}MB</p>
+                        </>
+                      )}
+                    </div>
+                    <input
+                      type="file"
+                      accept="video/mp4,video/*"
+                      className="hidden"
+                      disabled={motionVideoUploading}
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setMotionVideoFile(file);
+                        const videoEl = document.createElement('video');
+                        videoEl.preload = 'metadata';
+                        videoEl.src = URL.createObjectURL(file);
+                        videoEl.onloadedmetadata = async () => {
+                          URL.revokeObjectURL(videoEl.src);
+                          const dur = videoEl.duration;
+                          if (dur < motionLimits.minSec || dur > motionLimits.maxSec) {
+                            setMotionVideoError(`影片長度需在 ${motionLimits.minSec}–${motionLimits.maxSec} 秒之間（目前 ${Math.round(dur)} 秒）`);
+                            setMotionVideoFile(null);
+                            e.target.value = '';
+                            return;
+                          }
+                          await handleMotionVideoUpload(file);
+                        };
+                      }}
+                    />
+                  </label>
+                )}
+                {motionVideoError && <p className="text-red-400 text-[11px] text-center">{motionVideoError}</p>}
+                <p className="text-white/25 text-[10px] text-center">💡 點數和 5 秒影片相同</p>
+              </div>
+            </div>
+          )}
+
+          {/* 🎨 多重參考圖 */}
+          {selectedFunction === "multi_reference" && (
+            <div className="border border-[#fb923c]/20 rounded-2xl overflow-hidden">
+              <div className="px-4 py-2.5 bg-[#fb923c]/5 border-b border-[#fb923c]/10">
+                <p className="text-[#fb923c] text-xs font-black">🎨 多重參考圖（1-3 張，至少上傳 1 張）</p>
+                <p className="text-white/30 text-[10px] mt-0.5">
+                  上傳後額外加費：入門+6點・標準+5點・專業+4點
+                </p>
+              </div>
+              <div className="px-4 pb-4 pt-3 bg-black/10 space-y-3">
+                {[
+                  { label: "🎭 第二角色", hint: "加入第二個人物", state: omniRef1, setter: setOmniRef1 },
+                  { label: "🌄 場景風格", hint: "指定場景或背景風格", state: omniRef2, setter: setOmniRef2 },
+                  { label: "🎬 動作參考", hint: "指定動作或姿勢", state: omniRef3, setter: setOmniRef3 },
+                ].map((item, idx) => (
+                  <div key={idx}>
+                    <p className="text-white/40 text-[10px] font-bold mb-1">{item.label}
+                      <span className="text-white/20 font-normal ml-1">（{item.hint}）</span>
+                    </p>
+                    <label className="block cursor-pointer">
+                      <div className={`border border-dashed rounded-xl p-3 text-center transition-all ${
+                        item.state ? "border-[#fb923c]/50 bg-[#fb923c]/5" : "border-white/10 hover:border-[#fb923c]/30"
+                      }`}>
+                        {item.state ? (
+                          <div className="relative">
+                            <img src={item.state} className="w-full max-h-24 object-contain rounded-lg" />
+                            <button type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                item.setter(null);
+                                const input = e.currentTarget.closest('label')?.querySelector('input[type="file"]') as HTMLInputElement;
+                                if (input) input.value = '';
+                              }}
+                              className="absolute top-1 right-1 w-5 h-5 bg-red-500/80 rounded-full text-white text-xs flex items-center justify-center font-black hover:bg-red-500"
+                            >×</button>
+                          </div>
+                        ) : (
+                          <p className="text-white/25 text-xs">點擊上傳圖片</p>
+                        )}
+                      </div>
+                      <input type="file" accept="image/*" className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = () => item.setter(reader.result as string);
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+                ))}
               </div>
             </div>
           )}
           {/* [DNA_PATCH_END] */}
 
-          {/* [DNA_PATCH_START] 模型選擇 */}
-          <div>
-            <p className="text-white/40 text-xs mb-2">影片模型</p>
-            <div className="flex flex-col gap-2">
-              <button
-                onClick={() => setVideoModel("kling")}
-                className={`w-full px-4 py-3 rounded-xl text-left border transition-all ${
-                  videoModel === "kling"
-                    ? "bg-[#89f5a2]/15 border-[#89f5a2]"
-                    : "bg-white/5 border-white/10 hover:border-white/30"
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-white font-black text-sm">⚡ Kling 3.0</span>
-                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-[#89f5a2] text-[#0d2318]">推薦</span>
-                </div>
-                <p className="text-white/50 text-xs mt-1">4K畫質・角色一致性強・生成速度快</p>
-                <p className="text-[#89f5a2] text-xs font-bold mt-0.5">5秒 4–6點 ／ 10秒 8–12點</p>
-              </button>
-              {plan !== 'free' && (
-              <button
-                onClick={() => setVideoModel("seedance")}
-                className={`w-full px-4 py-3 rounded-xl text-left border transition-all ${
-                  videoModel === "seedance"
-                    ? "bg-[#fb923c]/15 border-[#fb923c]"
-                    : "bg-white/5 border-white/10 hover:border-white/30"
-                }`}
-              >
-                <div className="flex items-center justify-between">
-  <span className="text-white font-black text-sm">✨ Seedance 2.0</span>
-  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-[#fb923c] text-white">高畫質溢價</span>
-</div>
-<p className="text-white/50 text-xs mt-1">物理動態超真實・原生音訊・場景特效強</p>
-<p className="text-white/30 text-xs mt-0.5">🔒 Replicate 官方版・非第三方不穩定版</p>
-                <p className="text-[#fb923c] text-xs font-bold mt-0.5">
-                  5秒 {plan === 'starter' ? '17點' : plan === 'standard' ? '15點' : plan === 'pro' ? '13點' : '—'} ／
-10秒 {plan === 'starter' ? '27點' : plan === 'standard' ? '25點' : plan === 'pro' ? '21點' : '—'}
-                  　⚠️ 點數較高
-                </p>
-              </button>
-              )}
-            </div>
-          </div>
-{/* [DNA_PATCH_END] */}
-{/* [DNA_PATCH_START] Omni-Reference 區塊（Seedance 專屬） */}
-{videoModel === "seedance" && (
-  <div className="border border-[#fb923c]/20 rounded-2xl overflow-hidden">
-    <div className="px-4 py-3 bg-[#fb923c]/5 flex items-center justify-between">
-      <div>
-        <p className="text-[#fb923c] text-xs font-black">✨ Omni-Reference 多參考圖（選填）</p>
-        <p className="text-white/30 text-[10px] mt-0.5">
-          上傳後額外加費：入門+6點・標準+5點・專業+4點
-        </p>
-      </div>
-    </div>
-    <div className="px-4 pb-4 pt-2 space-y-3 bg-black/10">
-      {[
-        { label: "🎭 第二角色", hint: "加入第二個人物", state: omniRef1, setter: setOmniRef1 },
-        { label: "🌄 場景風格", hint: "指定場景或背景風格", state: omniRef2, setter: setOmniRef2 },
-        { label: "🎬 動作參考", hint: "指定動作或姿勢", state: omniRef3, setter: setOmniRef3 },
-      ].map((item, idx) => (
-        <div key={idx}>
-          <p className="text-white/40 text-[10px] font-bold mb-1">{item.label}
-            <span className="text-white/20 font-normal ml-1">（{item.hint}）</span>
-          </p>
-          <label className="block cursor-pointer">
-            <div className={`border border-dashed rounded-xl p-3 text-center transition-all ${
-              item.state
-                ? "border-[#fb923c]/50 bg-[#fb923c]/5"
-                : "border-white/10 hover:border-[#fb923c]/30"
-            }`}>
-              {item.state ? (
-                <div className="relative">
-                  <img src={item.state} className="w-full max-h-24 object-contain rounded-lg" />
-                  <button
-                    type="button"
-                    onClick={(e) => { 
-  e.preventDefault(); 
-  item.setter(null);
-  const input = e.currentTarget.closest('label')?.querySelector('input[type="file"]') as HTMLInputElement;
-  if (input) input.value = '';
-}}
-                    className="absolute top-1 right-1 w-5 h-5 bg-red-500/80 rounded-full text-white text-xs flex items-center justify-center font-black hover:bg-red-500"
-                  >×</button>
-                </div>
-              ) : (
-                <p className="text-white/25 text-xs">點擊上傳圖片</p>
-              )}
-            </div>
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  const reader = new FileReader();
-                  reader.onload = () => item.setter(reader.result as string);
-                  reader.readAsDataURL(file);
-                }
-              }}
-            />
-          </label>
-        </div>
-      ))}
-    </div>
-  </div>
-)}
-{/* [DNA_PATCH_END] */}
-
-         {/* [DNA_PATCH_START] 摺疊式進階選項：動作參考影片（kling 模式） */}
-          {videoModel === 'kling' && (
-            <div className="border border-white/10 rounded-2xl overflow-hidden">
-              {/* 摺疊標題列 */}
-              <button
-                type="button"
-                onClick={() => setMotionExpanded(!motionExpanded)}
-                className={`w-full px-4 py-3 flex items-center justify-between transition-all ${
-                  motionVideoUrl
-                    ? 'bg-[#89f5a2]/8 hover:bg-[#89f5a2]/12'
-                    : 'bg-white/5 hover:bg-white/8'
-                }`}
-              >
-                <div className="flex items-center gap-2 text-left">
-                  <span className="text-base">🎬</span>
-                  <div>
-                    <p className={`text-xs font-black ${motionVideoUrl ? 'text-[#89f5a2]' : 'text-white/70'}`}>
-                      進階：套用動作參考影片
-                      {motionVideoUrl && <span className="ml-2 text-[10px] font-bold">✅ 已上傳</span>}
-                    </p>
-                    <p className="text-white/30 text-[10px] mt-0.5">選填・讓角色做出參考影片裡的動作（如舞蹈）</p>
-                  </div>
-                </div>
-                <span className={`text-white/40 text-xs transition-transform ${motionExpanded ? 'rotate-180' : ''}`}>
-                  ▼
-                </span>
-              </button>
-
-              {/* 摺疊內容 */}
-              {motionExpanded && (
-                <div className="px-4 pb-4 pt-3 bg-black/20 space-y-3">
-                  {/* 公式說明 */}
-                  <div className="bg-[#89f5a2]/8 border border-[#89f5a2]/20 rounded-xl px-3 py-2">
-                    <p className="text-[#89f5a2] text-[11px] font-bold text-center leading-relaxed">
-                      你的角色照片 ＋ 動作影片 ＝ 角色做出影片裡的動作
-                    </p>
-                  </div>
-
-                  {/* 上傳區（單一全寬） */}
-                  {motionVideoUrl ? (
-                    <div className="flex items-center gap-3 bg-[#89f5a2]/10 border border-[#89f5a2]/30 rounded-xl p-3">
-                      <span className="text-2xl">🎞️</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[#89f5a2] text-xs font-bold truncate">{motionVideoFile?.name || '影片已上傳'}</p>
-                        <p className="text-white/30 text-[10px]">上傳成功 ✅ 將套用 Motion Control</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => { setMotionVideoUrl(null); setMotionVideoFile(null); setMotionVideoError(''); }}
-                        className="text-red-400 text-xs font-bold hover:text-red-300 transition-all flex-shrink-0"
-                      >
-                        ✕ 移除
-                      </button>
-                    </div>
-                  ) : (
-                    <label className="block cursor-pointer">
-                      <div className={`border-2 border-dashed rounded-xl p-6 text-center transition-all ${
-                        motionVideoUploading
-                          ? 'border-[#89f5a2]/40 bg-[#89f5a2]/5'
-                          : 'border-white/10 hover:border-[#89f5a2]/40'
-                      }`}>
-                        {motionVideoUploading ? (
-                          <p className="text-[#89f5a2] text-sm">上傳中...</p>
-                        ) : (
-                          <>
-                            <p className="text-3xl mb-2">🎞️</p>
-                            <p className="text-white/50 text-sm font-bold">點擊上傳 MP4 動作參考影片</p>
-                            <p className="text-white/30 text-[11px] mt-1">
-                              {motionLimits.minSec}–{motionLimits.maxSec} 秒・最大 {motionLimits.maxMb}MB
-                            </p>
-                          </>
-                        )}
-                      </div>
-                      <input
-                        type="file"
-                        accept="video/mp4,video/*"
-                        className="hidden"
-                        disabled={motionVideoUploading}
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          setMotionVideoFile(file);
-                          const videoEl = document.createElement('video');
-                          videoEl.preload = 'metadata';
-                          videoEl.src = URL.createObjectURL(file);
-                          videoEl.onloadedmetadata = async () => {
-                            URL.revokeObjectURL(videoEl.src);
-                            const dur = videoEl.duration;
-                            if (dur < motionLimits.minSec || dur > motionLimits.maxSec) {
-                              setMotionVideoError(`影片長度需在 ${motionLimits.minSec}–${motionLimits.maxSec} 秒之間（目前 ${Math.round(dur)} 秒）`);
-                              setMotionVideoFile(null);
-                              e.target.value = '';
-                              return;
-                            }
-                            await handleMotionVideoUpload(file);
-                          };
-                        }}
-                      />
-                    </label>
-                  )}
-
-                  {motionVideoError && (
-                    <p className="text-red-400 text-[11px] text-center">{motionVideoError}</p>
-                  )}
-
-                  <p className="text-white/25 text-[10px] text-center">
-                    💡 點數沿用 Kling 5秒定價・無上傳則走原本 Kling 流程
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-          {/* [DNA_PATCH_END] */}
+          {/* 影片比例 */}
           <div>
             <p className="text-white/40 text-xs mb-2">影片比例</p>
             <div className="flex gap-2 flex-wrap">
               {["1:1", "16:9", "9:16", "4:3", "3:4"].map((r) => (
-                <button
-                  key={r}
-                  onClick={() => setVideoRatio(r)}
+                <button key={r} onClick={() => setVideoRatio(r)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
-                    videoRatio === r
-                      ? "bg-[#89f5a2] text-[#0d2318] border-[#89f5a2]"
-                      : "bg-white/5 text-white/50 border-white/10 hover:border-white/30"
+                    videoRatio === r ? "bg-[#89f5a2] text-[#0d2318] border-[#89f5a2]" : "bg-white/5 text-white/50 border-white/10 hover:border-white/30"
                   }`}
-                >
-                  {r}
-                </button>
+                >{r}</button>
               ))}
             </div>
           </div>
 
-          {/* 秒數選擇 */}
+          {/* 影片秒數 */}
           <div>
             <p className="text-white/40 text-xs mb-2">影片秒數</p>
             <div className="flex gap-2">
               {[{ s: 5, label: "5秒", cost: "4-6點" }, { s: 10, label: "10秒", cost: "8-12點" }].map((item) => (
-                <button
-                  key={item.s}
-                  onClick={() => setVideoDuration(item.s)}
+                <button key={item.s} onClick={() => setVideoDuration(item.s)}
                   className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all ${
-                    videoDuration === item.s
-                      ? "bg-[#89f5a2] text-[#0d2318] border-[#89f5a2]"
-                      : "bg-white/5 text-white/50 border-white/10 hover:border-white/30"
+                    videoDuration === item.s ? "bg-[#89f5a2] text-[#0d2318] border-[#89f5a2]" : "bg-white/5 text-white/50 border-white/10 hover:border-white/30"
                   }`}
-                >
-                  {item.label} <span className="opacity-60">{item.cost}</span>
-                </button>
+                >{item.label} <span className="opacity-60">{item.cost}</span></button>
               ))}
             </div>
           </div>
 
+          {/* 取消 + 生成按鈕 */}
           <div className="grid grid-cols-2 gap-3">
             <button
-              onClick={() => { setShowUploadModal(false); setAgreedToTerms(false); setTermsChecked(false); setUploadedImage(null); setVideoPrompt(""); setMotionVideoUrl(null); setMotionVideoFile(null); setMotionVideoError(''); setMotionExpanded(false); }}
+              onClick={() => {
+                setShowUploadModal(false);
+                setAgreedToTerms(false);
+                setTermsChecked(false);
+                setUploadedImage(null);
+                setVideoPrompt("");
+                setMotionVideoUrl(null);
+                setMotionVideoFile(null);
+                setMotionVideoError('');
+                setMotionExpanded(false);
+                setSelectedFunction("free_motion");
+                setFunctionDropdownOpen(false);
+                setOmniRef1(null); setOmniRef2(null); setOmniRef3(null);
+              }}
               className="py-3 rounded-xl border border-white/10 text-white/50 text-sm font-bold hover:bg-white/5 transition-all"
-            >
-              取消
-            </button>
+            >取消</button>
             <button
               onClick={() => {
-                if (uploadedImage) {
-  setShowUploadModal(false);
-  setAgreedToTerms(false);
-  setTermsChecked(false);
-  // [DNA_PATCH_START] 有動作參考影片 → Motion Control；否則走原本 Kling/Seedance
-  if (motionVideoUrl && videoModel === 'kling') {
-    handleMotionControl(uploadedImage, motionVideoUrl, videoTranslatedPrompt || videoPrompt, videoRatio, videoDuration);
-  } else {
-    const refs = videoModel === "seedance" ? [omniRef1, omniRef2, omniRef3] : [];
-    handleGenerateVideo(uploadedImage, videoTranslatedPrompt || videoPrompt, videoRatio, videoDuration, videoModel, refs);
-    setOmniRef1(null); setOmniRef2(null); setOmniRef3(null);
-  }
-  setMotionVideoUrl(null);
-  setMotionVideoFile(null);
-  setMotionExpanded(false);
-  // [DNA_PATCH_END]
-  // [DNA_PATCH_START] 上傳照片自動鎖定角色
-  fetch("/api/upload-image", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ imageUrl: uploadedImage, email: session?.user?.email }),
-  }).then(r => r.json()).then(data => {
-    if (data.url) {
-      fetch("/api/user/save-locked-character", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: session?.user?.email ?? '', url: data.url }),
-      });
-      localStorage.setItem('locked_character', data.url);
-      setLockedCharacterUrl(data.url);
-      const matched = savedCharacters.find((c: any) => c.image_url === data.url);
-      if (matched) setLockedCharacterId(matched.id);
-      else setLockedCharacterId(null);
-      setToastMessage("✅ 已自動鎖定此角色，後續生成將套用同一張臉");
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 8000);
-    }
-  });
-  // [DNA_PATCH_END]
-  setUploadedImage(null);
-  setVideoPrompt("");
-}
+                if (!uploadedImage) return;
+                // [DNA_PATCH_START] 功能選擇驗證
+                if (selectedFunction === "motion_video" && !motionVideoUrl) {
+                  alert("⚠️ 請先上傳動作參考影片");
+                  return;
+                }
+                if (selectedFunction === "multi_reference" && !omniRef1 && !omniRef2 && !omniRef3) {
+                  alert("⚠️ 請至少上傳一張參考圖");
+                  return;
+                }
+                // [DNA_PATCH_END]
+                setShowUploadModal(false);
+                setAgreedToTerms(false);
+                setTermsChecked(false);
+
+                if (selectedFunction === "motion_video" && motionVideoUrl) {
+                  handleMotionControl(uploadedImage, motionVideoUrl, videoTranslatedPrompt || videoPrompt, videoRatio, videoDuration);
+                } else if (selectedFunction === "multi_reference") {
+                  handleGenerateVideo(uploadedImage, videoTranslatedPrompt || videoPrompt, videoRatio, videoDuration, "seedance", [omniRef1, omniRef2, omniRef3]);
+                  setOmniRef1(null); setOmniRef2(null); setOmniRef3(null);
+                } else {
+                  handleGenerateVideo(uploadedImage, videoTranslatedPrompt || videoPrompt, videoRatio, videoDuration, "kling", []);
+                }
+
+                setMotionVideoUrl(null);
+                setMotionVideoFile(null);
+                setMotionExpanded(false);
+                setSelectedFunction("free_motion");
+                setFunctionDropdownOpen(false);
+
+                // 上傳照片自動鎖定角色
+                fetch("/api/upload-image", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ imageUrl: uploadedImage, email: session?.user?.email }),
+                }).then(r => r.json()).then(data => {
+                  if (data.url) {
+                    fetch("/api/user/save-locked-character", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ email: session?.user?.email ?? '', url: data.url }),
+                    });
+                    localStorage.setItem('locked_character', data.url);
+                    setLockedCharacterUrl(data.url);
+                    const matched = savedCharacters.find((c: any) => c.image_url === data.url);
+                    if (matched) setLockedCharacterId(matched.id);
+                    else setLockedCharacterId(null);
+                    setToastMessage("✅ 已自動鎖定此角色，後續生成將套用同一張臉");
+                    setShowToast(true);
+                    setTimeout(() => setShowToast(false), 8000);
+                  }
+                });
+
+                setUploadedImage(null);
+                setVideoPrompt("");
               }}
               disabled={!uploadedImage}
               className="py-3 rounded-xl bg-gradient-to-r from-[#89f5a2] to-[#4ade80] text-[#0d2318] text-sm font-bold disabled:opacity-30 hover:opacity-90 transition-all"
-            >
-              🎬 生成影片
-            </button>
+            >🎬 生成影片</button>
           </div>
         </>
       )}

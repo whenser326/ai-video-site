@@ -32,6 +32,7 @@ profiles 表新增欄位：chat_count（已使用對話次數，預設0）
 影片生成第二選擇：bytedance/seedance-2.0（Replicate，1080p，原生音訊，約 $1.26/支）
 影片生成第三選擇（快速版）：bytedance/seedance-2.0-fast
 TTS 語音合成：ElevenLabs Multilingual v2（已串接，Starter 方案，60,000字/月）
+動作參考影片：kwaivgi/kling-v3-motion-control（套用參考影片動作到角色照片，image_orientation: "image" 角色面向以照片為準，沿用 Kling 5秒點數定價）
 嘴型同步：kwaivgi/kling-lip-sync（$0.014/秒輸出影片）
 說話影片（Avatar）：kwaivgi/kling-avatar-v2（Standard $0.056/秒・Pro $0.115/秒，圖片+音頻直接生成說話影片，不需先有影片）
 
@@ -119,6 +120,13 @@ key 清單（共21個，後台沒設定時 route.ts 有 fallback 預設值）：
 
 ---
 
+## 影片生成 API 路由
+- /api/character：主要影片/圖片生成（Kling、Seedance、Flux）
+- /api/upload-video：上傳動作參考影片到 Supabase Storage character-images bucket（從 admin_settings 動態讀取大小/時長限制）
+- /api/motion-control：呼叫 Kling Motion Control 模型，免費用戶不開放，沿用 Kling 5秒點數
+
+---
+
 ## 自拍生成規範
 - 使用 flux-kontext-pro，帶入 char.image_url 鎖定臉孔
 - 走 /api/character，參數用 selfieCharacterImage（不是 lockedCharacter）
@@ -173,11 +181,12 @@ key 清單（共21個，後台沒設定時 route.ts 有 fallback 預設值）：
 - 在 charSystem 加入：「在回覆中可以自然穿插括號旁白描述你的動作、表情或心情（例如：（他微微一笑，視線落在遠方）），讓對話更有畫面感和沉浸感。旁白用括號包覆，與對話內容自然融合，不要太頻繁，約每2-3則穿插一次。」
 - 注意：旁白格式用（全形括號），避免與程式邏輯衝突
 
-### 待實作：聊天室對話搜尋（Floze/Crushie 用戶強烈要求）
-- 位置：聊天室頂部右側加搜尋圖示
-- 功能：輸入關鍵字，在當前 session 的 messages state 中篩選，高亮顯示匹配訊息並捲動到該位置
-- 純前端篩選，不需新 API
-- 搜尋結果顯示「第 X / Y 筆」，可上下切換
+### ✅ 聊天室對話搜尋（已完成）
+- 位置：單人/群組聊天室頂部右側 🔍 按鈕
+- 功能：輸入關鍵字，在 messages state 中純前端篩選，高亮匹配訊息（目前匹配亮綠框 ring-2、其他匹配淡綠框 ring-1）並自動捲動
+- 搜尋結果顯示「第 X / Y 筆」，↑↓ 切換，✕ 關閉
+- 相關 state：searchOpen / searchQuery / searchIndex / searchInputRef / messageRefs
+- 不需新 API，不影響 sessionId / autoMessageTimer
 
 ### 聊天室顯示 AI 模型名稱（對標 Chatto 透明度）
 - 位置：聊天室頂部角色名稱旁，小字顯示「Claude Haiku」

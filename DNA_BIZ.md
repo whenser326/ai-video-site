@@ -140,9 +140,9 @@ AI 自拍媒體類型與扣點：
 - **Pazzy**：語音陪伴為主，FB/IG廣告大量投放台灣市場。
 
 ### 從競品提煉的待實作功能（近期優先）
-- ⬜ **聊天對話搜尋功能**（Floze / Crushie 用戶強烈要求）：聊天室頂部加搜尋圖示，可用關鍵字搜尋歷史訊息，解決「要往上翻很久」的問題。
+- ✅ **聊天對話搜尋功能**（Floze / Crushie 用戶強烈要求）：已完成。單人聊天室（/chat/[characterId]）與群組聊天室（/chat/group）頂部右側均已加搜尋圖示，輸入關鍵字純前端篩選，顯示「第 X / Y 筆」，可上下切換並自動捲動，目前匹配項亮綠框高亮。
 - ⬜ **記憶摘要系統**（所有競品共同致命傷）：當對話超過20則時，自動呼叫 Claude 生成對話摘要存入 chat_sessions 的 background_story 欄位，下次對話帶入 system prompt，解決長對話記憶崩壞問題。這是目前所有競品最大的用戶痛點，率先解決可成為最強差異點。
-- ⬜ **動作參考影片上傳**（對標 Viggle AI，近期優先）：在「線C 上傳照片轉影片」流程中，新增「上傳動作參考影片」選項。用戶同時上傳一張角色照片 + 一段動作參考影片（如舞蹈），Kling 生成角色套用該動作的影片。技術上現有 Kling 架構已可支援，不需新模型。實作位置：主頁 upload 模式新增第二個上傳區，參數帶入 reference_video。
+- ✅ 動作參考影片上傳（對標 Viggle AI）：已完成。/api/upload-video 上傳到 Supabase Storage、/api/motion-control 呼叫 kwaivgi/kling-v3-motion-control，免費用戶不開放，付費用戶沿用 Kling 5秒點數（入門6/標準5/專業4）。Upload Modal 已重構為「先選功能、自動選模型」漢堡下拉選單設計（B+ 方案），三個功能：🎬 隨意動作（Kling）、💃 套用動作參考影片（Kling Motion Control）、🎨 多重參考圖（Seedance + omniRefs）。
 
 ### 從競品提煉的待實作功能（中期）
 - ⬜ **聊天推薦台詞按鈕**（對標 ReelTalk）：輸入欄旁加「💬 推薦開場白」，根據角色個性和當前對話context動態生成3個回話選項讓用戶點選，解決新手冷場問題。實作：呼叫 /api/chat 帶 mode:'suggest' 參數，回傳3個選項，點選後直接填入輸入欄。

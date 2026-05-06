@@ -44,6 +44,13 @@ export default function ChatPage() {
   const [avatarVoiceId, setAvatarVoiceId] = useState("female-2");
   const bottomRef = useRef<HTMLDivElement>(null);
   const autoMessageTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // [DNA_PATCH_START] 搜尋功能 state
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchIndex, setSearchIndex] = useState(0);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const messageRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  // [DNA_PATCH_END]
 
   const VOICE_OPTIONS = [
     { id: "female-1", label: "Jane（女）低沉" },
@@ -295,6 +302,36 @@ export default function ChatPage() {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
   };
 
+  // [DNA_PATCH_START] 搜尋邏輯
+  const searchResults = searchQuery.trim()
+    ? messages.reduce<number[]>((acc, msg, idx) => {
+        if (msg.content.toLowerCase().includes(searchQuery.toLowerCase())) acc.push(idx);
+        return acc;
+      }, [])
+    : [];
+
+  const handleSearchNav = (dir: 1 | -1) => {
+    if (searchResults.length === 0) return;
+    const next = (searchIndex + dir + searchResults.length) % searchResults.length;
+    setSearchIndex(next);
+    const targetIdx = searchResults[next];
+    messageRefs.current[targetIdx]?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+
+  const handleSearchOpen = () => {
+    setSearchOpen(true);
+    setSearchQuery("");
+    setSearchIndex(0);
+    setTimeout(() => searchInputRef.current?.focus(), 100);
+  };
+
+  const handleSearchClose = () => {
+    setSearchOpen(false);
+    setSearchQuery("");
+    setSearchIndex(0);
+  };
+  // [DNA_PATCH_END]
+
   const saveToCharacterAlbum = async (url: string) => {
     if (!character || !session?.user?.email) return;
     await fetch("/api/user/save-generation", {
@@ -328,13 +365,56 @@ export default function ChatPage() {
               </div>
             </>
           )}
-          <div className="flex-shrink-0 text-right">
-            {isOverQuota
-              ? <p className="text-yellow-300 text-[10px] font-bold">💎 {credits} 點</p>
-              : <p className="text-white/30 text-[10px]">剩餘 {remainingQuota ?? "..."} 次</p>
-            }
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="text-right">
+              {isOverQuota
+                ? <p className="text-yellow-300 text-[10px] font-bold">💎 {credits} 點</p>
+                : <p className="text-white/30 text-[10px]">剩餘 {remainingQuota ?? "..."} 次</p>
+              }
+            </div>
+            {/* [DNA_PATCH_START] 搜尋按鈕 */}
+            <button
+              onClick={handleSearchOpen}
+              className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all flex-shrink-0"
+            >
+              <span className="text-sm">🔍</span>
+            </button>
+            {/* [DNA_PATCH_END] */}
           </div>
         </div>
+
+        {/* [DNA_PATCH_START] 搜尋列 */}
+        {searchOpen && (
+          <div className="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-[#0a1d12]/95 border-b border-white/10">
+            <input
+              ref={searchInputRef}
+              value={searchQuery}
+              onChange={e => { setSearchQuery(e.target.value); setSearchIndex(0); }}
+              placeholder="搜尋對話內容..."
+              className="flex-1 px-3 py-1.5 bg-white/5 border border-white/10 rounded-xl text-white text-xs placeholder-white/25 focus:outline-none focus:border-[#89f5a2]/40"
+            />
+            {searchQuery.trim() && (
+              <span className="text-white/30 text-[10px] flex-shrink-0 whitespace-nowrap">
+                {searchResults.length > 0 ? `第 ${searchIndex + 1} / ${searchResults.length} 筆` : "無結果"}
+              </span>
+            )}
+            <button
+              onClick={() => handleSearchNav(-1)}
+              disabled={searchResults.length === 0}
+              className="w-7 h-7 rounded-lg bg-white/5 border border-white/10 text-white/50 text-xs flex items-center justify-center hover:bg-white/10 disabled:opacity-30 transition-all"
+            >↑</button>
+            <button
+              onClick={() => handleSearchNav(1)}
+              disabled={searchResults.length === 0}
+              className="w-7 h-7 rounded-lg bg-white/5 border border-white/10 text-white/50 text-xs flex items-center justify-center hover:bg-white/10 disabled:opacity-30 transition-all"
+            >↓</button>
+            <button
+              onClick={handleSearchClose}
+              className="w-7 h-7 rounded-lg bg-white/5 border border-white/10 text-white/40 text-xs flex items-center justify-center hover:bg-white/10 transition-all"
+            >✕</button>
+          </div>
+        )}
+        {/* [DNA_PATCH_END] */}
 
         {isOverQuota && (
           <div className="flex-shrink-0 px-4 py-2 bg-yellow-400/10 border-b border-yellow-400/20">
@@ -353,8 +433,15 @@ export default function ChatPage() {
             </div>
           )}
 
-          {messages.map((msg, idx) => (
-            <div key={idx} className={`flex gap-3 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
+          {messages.map((msg, idx) => {
+            const isSearchHit = searchResults.includes(idx);
+            const isCurrentHit = searchResults[searchIndex] === idx;
+            return (
+            <div
+              key={idx}
+              ref={el => { messageRefs.current[idx] = el; }}
+              className={`flex gap-3 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"} ${isCurrentHit ? "rounded-2xl ring-2 ring-[#89f5a2]/50" : isSearchHit ? "rounded-2xl ring-1 ring-[#89f5a2]/20" : ""}`}
+            >
               {msg.role === "assistant" && character && (
                 <img src={character.image_url} alt={character.name} className="w-8 h-8 rounded-full object-cover border border-white/20 flex-shrink-0 self-end" />
               )}
@@ -441,7 +528,8 @@ export default function ChatPage() {
                 )}
               </div>
             </div>
-          ))}
+          );
+          })}
 
           {loading && (
             <div className="flex gap-3">
