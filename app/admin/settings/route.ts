@@ -26,6 +26,14 @@ export async function GET(req: NextRequest) {
       "referral_credits_starter", "referral_credits_standard", "referral_credits_pro",
       "plan_credits_starter", "plan_credits_standard", "plan_credits_pro",
       "plan_price_starter", "plan_price_standard", "plan_price_pro",
+      "tts_credits_starter", "tts_credits_standard", "tts_credits_pro",
+      "wav2lip_credits_starter", "wav2lip_credits_standard", "wav2lip_credits_pro",
+      "kling_5s_starter", "kling_5s_standard", "kling_5s_pro",
+      "kling_10s_starter", "kling_10s_standard", "kling_10s_pro",
+      "seedance_5s_starter", "seedance_5s_standard", "seedance_5s_pro",
+      "seedance_10s_starter", "seedance_10s_standard", "seedance_10s_pro",
+      "omni_extra_starter", "omni_extra_standard", "omni_extra_pro",
+      "motion_max_size_mb", "motion_min_duration_sec", "motion_max_duration_sec",
     ]);
     // [DNA_PATCH_END]
 
@@ -54,6 +62,14 @@ export async function POST(req: NextRequest) {
     "referral_credits_starter", "referral_credits_standard", "referral_credits_pro",
     "plan_credits_starter", "plan_credits_standard", "plan_credits_pro",
     "plan_price_starter", "plan_price_standard", "plan_price_pro",
+    "tts_credits_starter", "tts_credits_standard", "tts_credits_pro",
+    "wav2lip_credits_starter", "wav2lip_credits_standard", "wav2lip_credits_pro",
+    "kling_5s_starter", "kling_5s_standard", "kling_5s_pro",
+    "kling_10s_starter", "kling_10s_standard", "kling_10s_pro",
+    "seedance_5s_starter", "seedance_5s_standard", "seedance_5s_pro",
+    "seedance_10s_starter", "seedance_10s_standard", "seedance_10s_pro",
+    "omni_extra_starter", "omni_extra_standard", "omni_extra_pro",
+    "motion_max_size_mb", "motion_min_duration_sec", "motion_max_duration_sec",
   ];
   // [DNA_PATCH_END]
 

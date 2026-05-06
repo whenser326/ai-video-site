@@ -37,6 +37,9 @@ type Settings = {
   omni_extra_starter: string;
   omni_extra_standard: string;
   omni_extra_pro: string;
+  motion_max_size_mb: string;
+  motion_min_duration_sec: string;
+  motion_max_duration_sec: string;
 };
 // [DNA_PATCH_END]
 
@@ -83,6 +86,9 @@ export default function AdminPage() {
     omni_extra_starter: "6",
     omni_extra_standard: "5",
     omni_extra_pro: "4",
+    motion_max_size_mb: "30",
+    motion_min_duration_sec: "5",
+    motion_max_duration_sec: "10",
   });
   const [logs, setLogs] = useState<Log[]>([]);
   const [saving, setSaving] = useState(false);
@@ -387,6 +393,46 @@ export default function AdminPage() {
         </div>
         {/* [DNA_PATCH_END] */}
         {/* [DNA_PATCH_END] */}
+
+        {/* [DNA_PATCH_START] 動作參考影片設定 */}
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
+          <h2 className="text-lg font-bold mb-1">🎭 動作參考影片設定</h2>
+          <p className="text-white/40 text-xs mb-4">用戶上傳動作參考影片時的限制（Kling 3.0 Motion Control）</p>
+          <div className="flex items-center gap-4 mb-3">
+            <span className="text-sm w-36">最大檔案大小</span>
+            <input type="number" min="1"
+              value={settings.motion_max_size_mb}
+              onChange={(e) => setSettings({ ...settings, motion_max_size_mb: e.target.value })}
+              className="w-24 bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-[#89f5a2]/50"
+            />
+            <span className="text-white/40 text-sm">MB</span>
+          </div>
+          <div className="flex items-center gap-4 mb-3">
+            <span className="text-sm w-36">最短影片秒數</span>
+            <input type="number" min="1"
+              value={settings.motion_min_duration_sec}
+              onChange={(e) => setSettings({ ...settings, motion_min_duration_sec: e.target.value })}
+              className="w-24 bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-[#89f5a2]/50"
+            />
+            <span className="text-white/40 text-sm">秒</span>
+          </div>
+          <div className="flex items-center gap-4 mb-3">
+            <span className="text-sm w-36">最長影片秒數</span>
+            <input type="number" min="1"
+              value={settings.motion_max_duration_sec}
+              onChange={(e) => setSettings({ ...settings, motion_max_duration_sec: e.target.value })}
+              className="w-24 bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-[#89f5a2]/50"
+            />
+            <span className="text-white/40 text-sm">秒</span>
+          </div>
+          <button onClick={handleSave} disabled={saving}
+            className="mt-4 px-6 py-2 bg-[#89f5a2]/20 border border-[#89f5a2]/40 rounded-xl text-[#89f5a2] font-bold text-sm hover:bg-[#89f5a2]/30 transition-all">
+            {saving ? "儲存中..." : "儲存設定"}
+          </button>
+          {msg && <p className="mt-2 text-sm">{msg}</p>}
+        </div>
+        {/* [DNA_PATCH_END] */}
+
         {/* 分潤紀錄 */}
         {/* 分潤紀錄 */}
         <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
