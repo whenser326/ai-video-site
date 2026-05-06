@@ -119,7 +119,7 @@ page.tsx 已知 TypeScript 舊錯誤（4個）：
 - 已登入手機版：Logo + 點數徽章 + 漢堡按鈕 → Drawer 展開
 - pricing 頁面：return null（不顯示 Header）
 - 漢堡 Drawer menuItems 順序：📖 使用指南 / 🎭 我的角色 / 📅 每日簽到 / 💳 儲值點數 / 🎁 推薦賺點 / 💬 意見回饋 / 🚪 登出
-- 「使用指南」onClick：直接跳 /guide（不再觸發 open-onboarding 事件，open-onboarding 只有首頁 page.tsx 有監聽）
+- 「使用指南」onClick：首頁時 dispatchEvent('open-onboarding') 觸發 Onboarding 彈窗，其他頁面 router.push('/guide')
 - FeedbackModal + unreadCount 60秒輪詢
 
 ### page.tsx 未登入 Landing Page

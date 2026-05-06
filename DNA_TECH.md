@@ -111,8 +111,11 @@ localStorage (key: locked_character) 儲存鎖定角色的 Supabase 永久 URL
 
 ## 後台 admin_settings key 清單
 
-影片點數 key（共15個，後台沒設定時 route.ts 有 fallback 預設值）：
-`kling_5s/10s_starter/standard/pro`、`seedance_5s/10s_starter/standard/pro`、`omni_extra_starter/standard/pro`、`kling_avatar_credits_starter/standard/pro`（Avatar 說話影片點數，預設 10/9/8）
+key 清單（共21個，後台沒設定時 route.ts 有 fallback 預設值）：
+- 影片點數 key（共12個）：`kling_5s/10s_starter/standard/pro`、`seedance_5s/10s_starter/standard/pro`
+- Omni 加費 key（共3個）：`omni_extra_starter/standard/pro`
+- Avatar 說話影片點數 key（共3個）：`kling_avatar_credits_starter/standard/pro`（預設 10/9/8）
+- 動作參考影片限制 key（共3個）：`motion_max_size_mb`（預設30）、`motion_min_duration_sec`（預設5）、`motion_max_duration_sec`（預設10）
 
 ---
 
