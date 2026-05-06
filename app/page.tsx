@@ -129,6 +129,7 @@ const [motionVideoUrl, setMotionVideoUrl] = useState<string | null>(null);
 const [motionVideoUploading, setMotionVideoUploading] = useState(false);
 const [motionVideoError, setMotionVideoError] = useState<string>('');
 const [motionLimits, setMotionLimits] = useState({ minSec: 5, maxSec: 10, maxMb: 30 });
+const [motionExpanded, setMotionExpanded] = useState(false);
 // [DNA_PATCH_END]
 // [DNA_PATCH_START] 影片提示詞翻譯狀態
 const [videoTranslatedPrompt, setVideoTranslatedPrompt] = useState<string | null>(null);
@@ -2679,89 +2680,119 @@ return (
 )}
 {/* [DNA_PATCH_END] */}
 
-          {/* [DNA_PATCH_START] 動作參考影片上傳區（選填，只在 kling 模式顯示） */}
+         {/* [DNA_PATCH_START] 摺疊式進階選項：動作參考影片（kling 模式） */}
           {videoModel === 'kling' && (
-            <div className="border border-[#89f5a2]/20 rounded-2xl overflow-hidden">
-              <div className="px-4 py-3 bg-[#89f5a2]/5 flex items-center justify-between">
-                <div>
-                  <p className="text-[#89f5a2] text-xs font-black">🎬 動作參考影片（選填）</p>
-                  <p className="text-white/30 text-[10px] mt-0.5">
-                    上傳後走 Motion Control・點數沿用 Kling 定價・{motionLimits.minSec}–{motionLimits.maxSec}秒・最大 {motionLimits.maxMb}MB・MP4
+            <div className="border border-white/10 rounded-2xl overflow-hidden">
+              {/* 摺疊標題列 */}
+              <button
+                type="button"
+                onClick={() => setMotionExpanded(!motionExpanded)}
+                className={`w-full px-4 py-3 flex items-center justify-between transition-all ${
+                  motionVideoUrl
+                    ? 'bg-[#89f5a2]/8 hover:bg-[#89f5a2]/12'
+                    : 'bg-white/5 hover:bg-white/8'
+                }`}
+              >
+                <div className="flex items-center gap-2 text-left">
+                  <span className="text-base">🎬</span>
+                  <div>
+                    <p className={`text-xs font-black ${motionVideoUrl ? 'text-[#89f5a2]' : 'text-white/70'}`}>
+                      進階：套用動作參考影片
+                      {motionVideoUrl && <span className="ml-2 text-[10px] font-bold">✅ 已上傳</span>}
+                    </p>
+                    <p className="text-white/30 text-[10px] mt-0.5">選填・讓角色做出參考影片裡的動作（如舞蹈）</p>
+                  </div>
+                </div>
+                <span className={`text-white/40 text-xs transition-transform ${motionExpanded ? 'rotate-180' : ''}`}>
+                  ▼
+                </span>
+              </button>
+
+              {/* 摺疊內容 */}
+              {motionExpanded && (
+                <div className="px-4 pb-4 pt-3 bg-black/20 space-y-3">
+                  {/* 公式說明 */}
+                  <div className="bg-[#89f5a2]/8 border border-[#89f5a2]/20 rounded-xl px-3 py-2">
+                    <p className="text-[#89f5a2] text-[11px] font-bold text-center leading-relaxed">
+                      你的角色照片 ＋ 動作影片 ＝ 角色做出影片裡的動作
+                    </p>
+                  </div>
+
+                  {/* 上傳區（單一全寬） */}
+                  {motionVideoUrl ? (
+                    <div className="flex items-center gap-3 bg-[#89f5a2]/10 border border-[#89f5a2]/30 rounded-xl p-3">
+                      <span className="text-2xl">🎞️</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[#89f5a2] text-xs font-bold truncate">{motionVideoFile?.name || '影片已上傳'}</p>
+                        <p className="text-white/30 text-[10px]">上傳成功 ✅ 將套用 Motion Control</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { setMotionVideoUrl(null); setMotionVideoFile(null); setMotionVideoError(''); }}
+                        className="text-red-400 text-xs font-bold hover:text-red-300 transition-all flex-shrink-0"
+                      >
+                        ✕ 移除
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="block cursor-pointer">
+                      <div className={`border-2 border-dashed rounded-xl p-6 text-center transition-all ${
+                        motionVideoUploading
+                          ? 'border-[#89f5a2]/40 bg-[#89f5a2]/5'
+                          : 'border-white/10 hover:border-[#89f5a2]/40'
+                      }`}>
+                        {motionVideoUploading ? (
+                          <p className="text-[#89f5a2] text-sm">上傳中...</p>
+                        ) : (
+                          <>
+                            <p className="text-3xl mb-2">🎞️</p>
+                            <p className="text-white/50 text-sm font-bold">點擊上傳 MP4 動作參考影片</p>
+                            <p className="text-white/30 text-[11px] mt-1">
+                              {motionLimits.minSec}–{motionLimits.maxSec} 秒・最大 {motionLimits.maxMb}MB
+                            </p>
+                          </>
+                        )}
+                      </div>
+                      <input
+                        type="file"
+                        accept="video/mp4,video/*"
+                        className="hidden"
+                        disabled={motionVideoUploading}
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          setMotionVideoFile(file);
+                          const videoEl = document.createElement('video');
+                          videoEl.preload = 'metadata';
+                          videoEl.src = URL.createObjectURL(file);
+                          videoEl.onloadedmetadata = async () => {
+                            URL.revokeObjectURL(videoEl.src);
+                            const dur = videoEl.duration;
+                            if (dur < motionLimits.minSec || dur > motionLimits.maxSec) {
+                              setMotionVideoError(`影片長度需在 ${motionLimits.minSec}–${motionLimits.maxSec} 秒之間（目前 ${Math.round(dur)} 秒）`);
+                              setMotionVideoFile(null);
+                              e.target.value = '';
+                              return;
+                            }
+                            await handleMotionVideoUpload(file);
+                          };
+                        }}
+                      />
+                    </label>
+                  )}
+
+                  {motionVideoError && (
+                    <p className="text-red-400 text-[11px] text-center">{motionVideoError}</p>
+                  )}
+
+                  <p className="text-white/25 text-[10px] text-center">
+                    💡 點數沿用 Kling 5秒定價・無上傳則走原本 Kling 流程
                   </p>
                 </div>
-                {motionVideoUrl && (
-                  <button
-                    type="button"
-                    onClick={() => { setMotionVideoUrl(null); setMotionVideoFile(null); setMotionVideoError(''); }}
-                    className="text-red-400 text-xs font-bold hover:text-red-300 transition-all ml-2"
-                  >
-                    ✕ 移除
-                  </button>
-                )}
-              </div>
-              <div className="px-4 pb-4 pt-2 bg-black/10">
-                {motionVideoUrl ? (
-                  <div className="flex items-center gap-2 bg-[#89f5a2]/10 border border-[#89f5a2]/30 rounded-xl p-3">
-                    <span className="text-2xl">🎬</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[#89f5a2] text-xs font-bold truncate">{motionVideoFile?.name || '影片已上傳'}</p>
-                      <p className="text-white/30 text-[10px]">上傳成功 ✅</p>
-                    </div>
-                  </div>
-                ) : (
-                  <label className="block cursor-pointer">
-                    <div className={`border border-dashed rounded-xl p-4 text-center transition-all ${
-                      motionVideoUploading
-                        ? 'border-[#89f5a2]/40 bg-[#89f5a2]/5'
-                        : 'border-white/10 hover:border-[#89f5a2]/30'
-                    }`}>
-                      {motionVideoUploading ? (
-                        <p className="text-[#89f5a2] text-xs">上傳中...</p>
-                      ) : (
-                        <>
-                          <p className="text-2xl mb-1">🎞️</p>
-                          <p className="text-white/40 text-xs">點擊上傳 MP4 動作參考影片</p>
-                          <p className="text-white/20 text-[10px] mt-0.5">{motionLimits.minSec}–{motionLimits.maxSec}秒・最大 {motionLimits.maxMb}MB</p>
-                        </>
-                      )}
-                    </div>
-                    <input
-                      type="file"
-                      accept="video/mp4,video/*"
-                      className="hidden"
-                      disabled={motionVideoUploading}
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        setMotionVideoFile(file);
-                        // 前端先檢查時長
-                        const videoEl = document.createElement('video');
-                        videoEl.preload = 'metadata';
-                        videoEl.src = URL.createObjectURL(file);
-                        videoEl.onloadedmetadata = async () => {
-                          URL.revokeObjectURL(videoEl.src);
-                          const dur = videoEl.duration;
-                          if (dur < motionLimits.minSec || dur > motionLimits.maxSec) {
-                            setMotionVideoError(`影片長度需在 ${motionLimits.minSec}–${motionLimits.maxSec} 秒之間（目前 ${Math.round(dur)} 秒）`);
-                            setMotionVideoFile(null);
-                            e.target.value = '';
-                            return;
-                          }
-                          await handleMotionVideoUpload(file);
-                        };
-                      }}
-                    />
-                  </label>
-                )}
-                {motionVideoError && (
-                  <p className="text-red-400 text-xs mt-2 text-center">{motionVideoError}</p>
-                )}
-              </div>
+              )}
             </div>
           )}
           {/* [DNA_PATCH_END] */}
-
-          {/* 比例選擇 */}
           <div>
             <p className="text-white/40 text-xs mb-2">影片比例</p>
             <div className="flex gap-2 flex-wrap">
@@ -2803,7 +2834,7 @@ return (
 
           <div className="grid grid-cols-2 gap-3">
             <button
-              onClick={() => { setShowUploadModal(false); setAgreedToTerms(false); setTermsChecked(false); setUploadedImage(null); setVideoPrompt(""); setMotionVideoUrl(null); setMotionVideoFile(null); setMotionVideoError(''); }}
+              onClick={() => { setShowUploadModal(false); setAgreedToTerms(false); setTermsChecked(false); setUploadedImage(null); setVideoPrompt(""); setMotionVideoUrl(null); setMotionVideoFile(null); setMotionVideoError(''); setMotionExpanded(false); }}
               className="py-3 rounded-xl border border-white/10 text-white/50 text-sm font-bold hover:bg-white/5 transition-all"
             >
               取消
@@ -2824,6 +2855,7 @@ return (
   }
   setMotionVideoUrl(null);
   setMotionVideoFile(null);
+  setMotionExpanded(false);
   // [DNA_PATCH_END]
   // [DNA_PATCH_START] 上傳照片自動鎖定角色
   fetch("/api/upload-image", {
