@@ -196,10 +196,11 @@ key 清單（共21個，後台沒設定時 route.ts 有 fallback 預設值）：
 - sessionId localStorage key：chat_session_default_${email}_${characterId}（單人）/ chat_session_default_group_${email}_${ids}（群組）
 - /api/chat 新增 defaultCharacter / defaultCharacters 參數，優先於 saved_characters 查詢
 - 中期待實作：後台管理頁面讓圖片可上傳替換
+- 預設角色區塊預設收合，點標題列展開/收起（defaultExpanded state）
 
 ### ✅ 聊天內容揭露（2026/05/07 已完成）
 - 頂部固定小字：所有聊天室頂部顯示「支援曖昧互動，明確露骨內容由 AI 自動過濾」
-- 一次性提示框：進入聊天室檢查 localStorage key「chat_notice_seen」，沒看過就顯示，看過不再出現
+- 每日提示框：進入聊天室檢查 localStorage key「chat_notice_seen_${今日日期}」，每天第一次進入顯示，隔天重置
 - 涵蓋範圍：單人聊天室、群組聊天室（預設角色聊天室頂部小字已內建，不另加提示框）
 - guide 頁面：差異化區塊和線B展開內容均有說明
 

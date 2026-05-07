@@ -240,16 +240,55 @@ const [defaultExpanded, setDefaultExpanded] = useState(false);
             ))}
           </div>
         )}
+{!loading && characters.length >= 2 && (
+          <div className="mt-6 bg-black/20 border border-white/10 rounded-2xl p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-white/70 text-sm font-bold">🎭 群組聊天</p>
+              <span className="text-[10px] bg-[#89f5a2]/10 border border-[#89f5a2]/20 rounded-full px-2 py-0.5 text-[#89f5a2]">
+                入門/標準 最多3人・專業 最多5人
+              </span>
+            </div>
+            <p className="text-white/30 text-xs">選擇 2 個以上角色，一起開聊</p>
+            <div className="flex gap-2 items-center">
+              {characters.slice(0, 3).map((c) => (
+                <img
+                  key={c.id}
+                  src={c.image_url}
+                  alt={c.name}
+                  className="w-11 h-11 rounded-full object-cover border-2 border-[#89f5a2]/30"
+                />
+              ))}
+              {characters.length > 3 && (
+                <div className="w-11 h-11 rounded-full bg-white/5 border-2 border-dashed border-white/20 flex items-center justify-center text-white/30 text-xs font-bold">
+                  +{characters.length - 3}
+                </div>
+              )}
+              <button
+                onClick={() => router.push('/chat/group')}
+                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#2d8a42] to-[#3db558] text-white text-xs font-black hover:opacity-90 transition-all"
+              >
+                開始群組聊天 →
+              </button>
+            </div>
+          </div>
+        )}
+
 {/* 預設角色區塊 */}
         <div className="mt-6">
           <button
             onClick={() => setDefaultExpanded(prev => !prev)}
-            className="w-full flex items-center gap-2 mb-3 hover:opacity-80 transition-all"
+            className="w-full flex items-center gap-2 mb-2 hover:opacity-80 transition-all"
           >
             <p className="text-white/60 text-sm font-bold">✨ 預設角色</p>
             <span className="text-[10px] bg-[#5bd4f0]/10 border border-[#5bd4f0]/25 rounded-full px-2 py-0.5 text-[#5bd4f0]">免費可用</span>
             <span className="ml-auto text-white/30 text-xs">{defaultExpanded ? "▲ 收起" : "▼ 展開"}</span>
           </button>
+          {!defaultExpanded && (
+            <p className="text-white/25 text-[11px] mb-3">👆 點擊展開，選角色直接開聊</p>
+          )}
+          {defaultExpanded && (
+            <p className="text-white/30 text-[11px] mb-3">點選角色即可開始，選 2 位以上可開群組聊天</p>
+          )}
           {defaultExpanded && (
           <div className="grid grid-cols-2 gap-3">
             {DEFAULT_CHARACTERS.map((char) => (
@@ -303,38 +342,6 @@ const [defaultExpanded, setDefaultExpanded] = useState(false);
             </div>
           )}
         </div>
-        {!loading && characters.length >= 2 && (
-          <div className="mt-8 bg-black/20 border border-white/10 rounded-2xl p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <p className="text-white/70 text-sm font-bold">🎭 群組聊天</p>
-              <span className="text-[10px] bg-[#89f5a2]/10 border border-[#89f5a2]/20 rounded-full px-2 py-0.5 text-[#89f5a2]">
-                入門/標準 最多3人・專業 最多5人
-              </span>
-            </div>
-            <p className="text-white/30 text-xs">選擇 2 個以上角色，一起開聊</p>
-            <div className="flex gap-2 items-center">
-              {characters.slice(0, 3).map((c) => (
-                <img
-                  key={c.id}
-                  src={c.image_url}
-                  alt={c.name}
-                  className="w-11 h-11 rounded-full object-cover border-2 border-[#89f5a2]/30"
-                />
-              ))}
-              {characters.length > 3 && (
-                <div className="w-11 h-11 rounded-full bg-white/5 border-2 border-dashed border-white/20 flex items-center justify-center text-white/30 text-xs font-bold">
-                  +{characters.length - 3}
-                </div>
-              )}
-              <button
-                onClick={() => router.push('/chat/group')}
-                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#2d8a42] to-[#3db558] text-white text-xs font-black hover:opacity-90 transition-all"
-              >
-                開始群組聊天 →
-              </button>
-            </div>
-          </div>
-        )}
 
       </div>
     </main>

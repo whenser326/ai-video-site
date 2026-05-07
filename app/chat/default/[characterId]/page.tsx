@@ -45,12 +45,37 @@ export default function DefaultChatPage() {
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [remainingQuota, setRemainingQuota] = useState<number | null>(null);
+  const [showSuggest, setShowSuggest] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [suggestLoading, setSuggestLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const autoMessageTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  const randomDelay = () => Math.floor(Math.random() * 3000) + 2000;
+const randomDelay = () => Math.floor(Math.random() * 3000) + 2000;
   const emoji = character?.gender === "female" ? "👩" : "👨";
 
+  const handleSuggest = async () => {
+    if (suggestLoading) return;
+    setShowSuggest(true);
+    setSuggestLoading(true);
+    setSuggestions([]);
+    try {
+      const res = await fetch("/api/chat/suggest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userEmail: session?.user?.email,
+          sessionId,
+          characterName: character?.name || "角色",
+          characterDescription: character?.description || "",
+        }),
+      });
+      const data = await res.json();
+      if (Array.isArray(data.suggestions)) setSuggestions(data.suggestions);
+    } catch {
+      setSuggestions(["你今天過得怎麼樣？", "有沒有什麼有趣的事想分享？", "我一直在想你說的話…"]);
+    }
+    setSuggestLoading(false);
+  };
   useEffect(() => {
     if (!session?.user?.email || !characterId) return;
     fetch(`/api/user/credits?email=${session.user.email}`)
@@ -242,6 +267,10 @@ export default function DefaultChatPage() {
       {/* 輸入列 */}
       <div className="px-4 py-3 border-t border-white/8 bg-black/20 flex-shrink-0">
         <div className="flex gap-2 items-end">
+          <button onClick={handleSuggest} title="推薦開場白"
+            className="flex-shrink-0 w-11 h-11 rounded-2xl bg-purple-500/15 border border-purple-500/30 text-purple-300 text-lg hover:bg-purple-500/25 transition-all flex items-center justify-center">
+            💬
+          </button>
           <textarea
             value={input}
             onChange={e => setInput(e.target.value)}
@@ -256,6 +285,21 @@ export default function DefaultChatPage() {
             className="flex-shrink-0 w-11 h-11 rounded-2xl bg-[#89f5a2]/20 border border-[#89f5a2]/40 text-[#89f5a2] font-black text-lg hover:bg-[#89f5a2]/30 disabled:opacity-30 transition-all flex items-center justify-center"
           >↑</button>
         </div>
+        {showSuggest && (
+            <div className="mt-2 bg-[#0d2318]/90 border border-purple-500/25 rounded-2xl p-3 space-y-2">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-purple-300/60 text-[10px] font-bold">💬 推薦開場白</p>
+                <button onClick={() => setShowSuggest(false)} className="text-white/20 text-xs hover:text-white/50">✕</button>
+              </div>
+              {suggestLoading && <p className="text-white/30 text-xs text-center py-2">生成中...</p>}
+              {!suggestLoading && suggestions.map((s, i) => (
+                <button key={i} onClick={() => { setInput(s); setShowSuggest(false); }}
+                  className="w-full text-left px-3 py-2 bg-white/5 border border-white/8 rounded-xl text-white/70 text-xs hover:bg-purple-500/15 hover:border-purple-500/30 hover:text-white/90 transition-all">
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
         <div className="flex items-center justify-between mt-2">
           <p className="text-white/15 text-[10px]">Enter 送出・Shift+Enter 換行</p>
           <div className="flex items-center gap-2">
