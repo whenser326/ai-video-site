@@ -45,7 +45,7 @@ addCredits = PLAN_CREDITS + PLAN_BONUS_CREDITS，付款成功後自動入帳
 藍新 AES 解密後需 `.replace(/\x00+$/, "").trim()` 去除 padding
 藍新 MerchantOrderNo 長度上限 30 字元，改用 pending_orders 資料表暫存訂單資訊
 
-Apple Pay：網域驗證已完成（public/.well-known + API route + next.config.ts rewrites），等藍新回覆幕後支付授權文件
+Apple Pay：幕前支付已串接（checkout tradeInfo 加入 APPLEPAY:"1"），iPhone Safari 付款頁會顯示 Apple Pay 選項。幕後支付不串接。notify 已加入 TradeSha 簽章驗證、payment_logs 防重複加點、分潤 referrer_email 修正。
 
 已放棄：
 - Stripe：不支援台灣商家收款
@@ -141,7 +141,7 @@ AI 自拍媒體類型與扣點：
 
 ### 從競品提煉的待實作功能（近期優先）
 - ✅ **聊天對話搜尋功能**（Floze / Crushie 用戶強烈要求）：已完成。單人聊天室（/chat/[characterId]）與群組聊天室（/chat/group）頂部右側均已加搜尋圖示，輸入關鍵字純前端篩選，顯示「第 X / Y 筆」，可上下切換並自動捲動，目前匹配項亮綠框高亮。
-- ⬜ **記憶摘要系統**（所有競品共同致命傷）：當對話超過20則時，自動呼叫 Claude 生成對話摘要存入 chat_sessions 的 background_story 欄位，下次對話帶入 system prompt，解決長對話記憶崩壞問題。這是目前所有競品最大的用戶痛點，率先解決可成為最強差異點。
+- ✅ **記憶摘要系統**（所有競品共同致命傷）：當對話超過50則時，自動呼叫 Claude 生成對話摘要存入 chat_sessions 的 background_story 欄位，下次對話帶入 system prompt，解決長對話記憶崩壞問題。這是目前所有競品最大的用戶痛點，率先解決可成為最強差異點。
 - ✅ 動作參考影片上傳（對標 Viggle AI）：已完成。/api/upload-video 上傳到 Supabase Storage、/api/motion-control 呼叫 kwaivgi/kling-v3-motion-control，免費用戶不開放，付費用戶沿用 Kling 5秒點數（入門6/標準5/專業4）。Upload Modal 已重構為「先選功能、自動選模型」漢堡下拉選單設計（B+ 方案），三個功能：🎬 隨意動作（Kling）、💃 套用動作參考影片（Kling Motion Control）、🎨 多重參考圖（Seedance + omniRefs）。
 
 ### 從競品提煉的待實作功能（中期）

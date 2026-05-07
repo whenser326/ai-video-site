@@ -15,7 +15,7 @@ const lines = [
     steps: [
       { icon: "🖼️", label: "生成圖片", cost: "1點/張", detail: "選風格、設定外觀、輸入描述，支援 1:1/16:9 等多種比例" },
       { icon: "⚡", label: "批次生成", cost: "1點/張", detail: "生成第一張圖後，可一次批次產出多張（入門2張・標準4張・專業6張），快速取得素材，付費方案限定" },
-      { icon: "🎬", label: "轉成影片", cost: "4-6點/支", detail: "鎖定角色後生成影片，Kling 3.0 或 Seedance 2.0 兩種引擎可選" },
+      { icon: "🎬", label: "轉成影片", cost: "4-17點/支", detail: "鎖定角色後生成影片，Kling 3.0（4-6點）或 Seedance 2.0（13-17點）自動對應選擇的功能" },
       { icon: "🎙️", label: "加語音", cost: "6-8點/次", detail: "10種聲音、中英文TTS合成，5秒影片限30字，10秒限55字" },
       { icon: "👄", label: "嘴型同步", cost: "8-10點/次", detail: "Wav2Lip 技術讓角色嘴型對應語音（需先有影片），或用 Kling Avatar V2 直接從靜態照片生成說話影片，合計扣點依方案不同" },
     ],
@@ -56,12 +56,12 @@ const lines = [
     colorText: "#f97316",
     steps: [
       { icon: "📤", label: "上傳照片", cost: "免費", detail: "上傳自己或他人的照片（JPG/PNG），支援人臉、全身、半身照" },
-      { icon: "✍️", label: "輸入提示詞", cost: "免費", detail: "描述想要的動作或場景，例如「微笑點頭」「在海邊揮手」，中文即可自動翻譯" },
-      { icon: "🎬", label: "生成影片", cost: "4-6點/支", detail: "Kling 引擎驅動，照片中的人物會依照提示詞動起來，支援 5 秒或 10 秒" },
+      { icon: "✍️", label: "選擇功能", cost: "免費", detail: "三種功能可選：🎬 隨意動作（輸入提示詞或不填讓 AI 自動安排）、💃 套用動作參考影片（上傳 MP4 讓角色模仿動作，付費限定）、🎨 多重參考圖（上傳 1-3 張圖指定第二角色/場景/動作，Seedance 引擎，付費限定）" },
+      { icon: "🎬", label: "生成影片", cost: "4-17點/支", detail: "依功能不同：隨意動作/套用動作 4-6點（Kling 3.0），多重參考圖 13-17點+額外加費（Seedance 2.0），支援 5 秒或 10 秒" },
       { icon: "🔒", label: "鎖定角色", cost: "免費", detail: "生成後可點「鎖定角色」，後續生成影片都會維持同一人物外觀一致性" },
       { icon: "🎙️", label: "說話影片", cost: "8-10點/次", detail: "生成圖片後點「🎙️ 讓她說話」，輸入台詞選擇聲音，用 Kling Avatar V2 直接從照片生成說話影片，無需影片素材" },
     ],
-    note: "💡 上傳的照片建議正臉清晰、光線均勻，效果最佳。上傳後系統自動鎖定為主角，可直接生成影片",
+    note: "💡 上傳的照片建議正臉清晰、光線均勻，效果最佳。功能選單預設摺疊，點開後選擇功能，系統自動套用對應 AI 引擎。多重參考圖至少需上傳 1 張，套用動作參考影片需上傳 MP4 才能生成",
     billing: null,
   },
   {
@@ -216,7 +216,27 @@ export default function GuidePage() {
             )}
           </div>
         ))}
-
+{/* 為什麼我們不一樣 */}
+        <div style={{
+          background: 'rgba(29,158,200,0.12)',
+          border: '1px solid rgba(29,158,200,0.35)',
+          borderRadius: 20,
+          padding: '18px 20px',
+        }}>
+          <p style={{ fontSize: 14, fontWeight: 900, color: '#5bd4f0', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 7 }}>
+            🧠 為什麼我們不一樣？
+          </p>
+          {[
+            { text: '對話超過50則自動摘要，角色永遠記得你說過的每一件事' },
+            { text: '圖片＋影片＋說話影片，一站完成' },
+            { text: '你建立的角色，個性外觀只有你有' },
+          ].map((item, i) => (
+            <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 8 }}>
+              <span style={{ color: '#5bd4f0', flexShrink: 0, fontSize: 13, marginTop: 1 }}>✓</span>
+              <span style={{ fontSize: 12, color: 'rgba(180,240,255,0.65)', lineHeight: 1.6 }}>{item.text}</span>
+            </div>
+          ))}
+        </div>
         {/* 點數方案快速對照 */}
         <div style={{
           background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.08)',

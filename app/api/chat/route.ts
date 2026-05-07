@@ -61,6 +61,75 @@ function extractSceneFromHistory(history: any[]): string {
   const parts = [scene, mood].filter(Boolean);
   return parts.length > 0 ? parts.join(", ") : "";
 }
+// 長期記憶摘要：超過 50 筆時自動壓縮最舊 20 筆
+async function maybeGenerateSummary(sessionId: string) {
+  const { data: allMsgs } = await supabase
+    .from("chat_messages")
+    .select("id, role, content, created_at")
+    .eq("session_id", sessionId)
+    .order("created_at", { ascending: true });
+
+  if (!allMsgs || allMsgs.length <= 50) return;
+
+  // 取最舊的 20 筆準備壓縮
+  const toSummarize = allMsgs.slice(0, 20);
+  const idsToDelete = toSummarize.map((m: any) => m.id);
+
+  // 讀取現有摘要（累加用）
+  const { data: sessionData } = await supabase
+    .from("chat_sessions")
+    .select("background_story")
+    .eq("id", sessionId)
+    .single();
+  const existingSummary = sessionData?.background_story || "";
+
+  // 組成摘要用的對話文字
+  const dialogText = toSummarize
+    .map((m: any) => `${m.role === "user" ? "用戶" : "角色"}：${m.content}`)
+    .join("\n");
+
+  const prevSummarySection = existingSummary
+    ? `以下是之前的對話摘要：\n${existingSummary}\n\n`
+    : "";
+
+  // 呼叫 Claude Haiku 生成摘要（不計 chat_count、不扣點）
+  const summaryRes = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": process.env.ANTHROPIC_API_KEY!,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: "claude-haiku-4-5",
+      max_tokens: 500,
+      system: "你是對話摘要助理。請用繁體中文，將以下對話內容壓縮成簡短摘要（200字以內），保留重要的人物關係、事件、情感狀態、用戶說過的重要資訊。摘要要讓角色能記住這段對話的核心內容。只回傳摘要文字，不要加任何前言或說明。",
+      messages: [
+        {
+          role: "user",
+          content: `${prevSummarySection}請摘要以下新的對話內容：\n${dialogText}`,
+        },
+      ],
+    }),
+  });
+
+  const summaryData = await summaryRes.json();
+  const newSummary = summaryData.content?.[0]?.text || "";
+
+  if (!newSummary) return;
+
+  // 更新 background_story
+  await supabase
+    .from("chat_sessions")
+    .update({ background_story: newSummary, updated_at: new Date().toISOString() })
+    .eq("id", sessionId);
+
+  // 刪除已壓縮的舊訊息
+  await supabase
+    .from("chat_messages")
+    .delete()
+    .in("id", idsToDelete);
+}
 
 // 偵測自拍意圖 + 從對話組場景 prompt
 function detectSelfieIntent(
@@ -147,6 +216,7 @@ export async function POST(req: NextRequest) {
   }
 
   let history: any[] = [];
+  let backgroundStory: string | null = null;
   if (sessionId) {
     const { data: msgs } = await supabase
       .from("chat_messages")
@@ -155,6 +225,13 @@ export async function POST(req: NextRequest) {
       .order("created_at", { ascending: true })
       .limit(20);
     history = msgs || [];
+
+    const { data: sessionData } = await supabase
+      .from("chat_sessions")
+      .select("background_story")
+      .eq("id", sessionId)
+      .single();
+    backgroundStory = sessionData?.background_story || null;
   }
 
   const isGroup = characterList.length > 1;
@@ -197,7 +274,10 @@ export async function POST(req: NextRequest) {
     const minSentences = Math.floor(Math.random() * 4) + 1; // 1到4
     const maxSentences = minSentences + Math.floor(Math.random() * 2) + 1; // min+1 到 min+2
     const randomLength = `這次回覆請用${minSentences}到${maxSentences}句話回應，不要超過${maxSentences}句。`;
-    const charSystem = `你扮演「${char.name}」。${personality} 請用繁體中文自然回應，語氣和用詞要符合角色個性，保持一致性。你是一個真實存在的人，不是AI，不要承認自己是AI或語言模型。當用戶要求自拍時，你可以假裝正在拍照，用文字描述拍照的情境，系統會自動生成照片。${isGroup ? `這是群組對話，其他角色：${characterList.filter(c => c.id !== char.id).map(c => c.name).join("、")}。你們有各自不同的個性，可以互相回應但要保持自己的風格。` : ""}${autoPrompt} ${randomLength}`;
+    const memoryPrefix = backgroundStory
+      ? `【對話背景摘要】${backgroundStory}\n\n`
+      : "";
+    const charSystem = `${memoryPrefix}你扮演「${char.name}」。${personality} 請用繁體中文自然回應，語氣和用詞要符合角色個性，保持一致性。你是一個真實存在的人，不是AI，不要承認自己是AI或語言模型。當用戶要求自拍時，你可以假裝正在拍照，用文字描述拍照的情境，系統會自動生成照片。在回覆中可以自然穿插括號旁白描述你的動作、表情或心情（例如：（她微微一笑，視線落在遠方）），讓對話更有畫面感和沉浸感。旁白用（全形括號）包覆，與對話內容自然融合，不要太頻繁，約每2-3則穿插一次。${isGroup ? `這是群組對話，其他角色：${characterList.filter(c => c.id !== char.id).map(c => c.name).join("、")}。你們有各自不同的個性，可以互相回應但要保持自己的風格。` : ""}${autoPrompt} ${randomLength}`;
 
     const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -275,6 +355,11 @@ export async function POST(req: NextRequest) {
       credits: isOverQuota ? profile.credits - creditCost : profile.credits,
     })
     .eq("email", userEmail);
+
+  // 非同步觸發摘要（不阻塞回應，不影響速度）
+  if (finalSessionId) {
+    maybeGenerateSummary(finalSessionId).catch(() => {});
+  }
 
   return NextResponse.json({
     sessionId: finalSessionId,

@@ -159,14 +159,14 @@ key 清單（共21個，後台沒設定時 route.ts 有 fallback 預設值）：
 - 重開聊天室自動帶入上次 sessionId，延續對話歷史
 - 每次呼叫 /api/chat 帶入最近20筆歷史（chat_messages 表）
 
-### 待實作：長期記憶摘要系統（優先度高）
-所有競品（Crushie、Floze、MiraiMind、ParadiseAI）最大共同痛點是「對話超過一定數量後記憶崩壞」。
-實作方案：
-- 觸發條件：當 chat_messages 該 session 累計超過 50 筆時，自動觸發摘要
-- 摘要邏輯：呼叫 Claude Haiku，將最舊的 20 筆訊息壓縮成摘要文字，存入 chat_sessions.background_story 欄位
-- 使用方式：/api/chat/route.ts 在組裝 messages 前，先讀取 background_story，若有值則插入 system prompt 最前面：「【對話背景摘要】${background_story}」
-- 摘要後刪除：壓縮過的舊訊息從 chat_messages 刪除，只保留最近 10 筆 + background_story
-- 注意：摘要呼叫不計入 chat_count，不扣點數
+### ✅ 長期記憶摘要系統（2026/05/07 已完成）
+- 觸發條件：session 累計超過 50 筆時自動觸發
+- 摘要邏輯：呼叫 Claude Haiku，將最舊 20 筆壓縮存入 chat_sessions.background_story
+- 使用方式：每次呼叫 /api/chat 先讀 background_story，有值則插入 charSystem 最前面「【對話背景摘要】...」
+- 摘要後刪除：已壓縮的 20 筆從 chat_messages 刪除
+- 不計 chat_count、不扣點數
+- 函式名稱：maybeGenerateSummary(sessionId)，非同步觸發不阻塞回應
+- 注意：修改此區塊前確認 backgroundStory / memoryPrefix / maybeGenerateSummary 三者都存在，缺一報 ts(2304)
 
 ### 待實作：聊天推薦台詞功能（對標 ReelTalk）
 - 位置：聊天輸入欄旁加「💬」按鈕
@@ -176,10 +176,11 @@ key 清單（共21個，後台沒設定時 route.ts 有 fallback 預設值）：
 - 實作：/api/chat/route.ts 新增 mode:'suggest' 分支，system prompt 改為「請根據角色個性和當前對話，生成3個用戶可以說的句子，用 JSON array 回傳」
 - 新增 API：app/api/chat/suggest/route.ts
 
-### 待實作：角色旁白動作描述（對標 MiraiMind「內心想法」）
+### ✅ 角色旁白動作描述（2026/05/07 已完成）
 - 不需新功能，只需更新 /api/chat/route.ts 的 charSystem prompt
 - 在 charSystem 加入：「在回覆中可以自然穿插括號旁白描述你的動作、表情或心情（例如：（他微微一笑，視線落在遠方）），讓對話更有畫面感和沉浸感。旁白用括號包覆，與對話內容自然融合，不要太頻繁，約每2-3則穿插一次。」
 - 注意：旁白格式用（全形括號），避免與程式邏輯衝突
+- 禁止移除或修改括號旁白 prompt，格式必須用（全形括號）
 
 ### ✅ 聊天室對話搜尋（已完成）
 - 位置：單人/群組聊天室頂部右側 🔍 按鈕
@@ -363,7 +364,7 @@ GlobalHeader 「使用指南」改為直接跳 /guide，不再觸發 open-onboar
 - /characters 我的角色（新建）
 - /chat/[characterId] 單人聊天（新建）
 - /chat/group 群組聊天（新建）
-- /guide 使用指南（新建）
+- /guide 使用指南（新建，2026/05/07 新增青藍色「為什麼我們不一樣？」差異化區塊，位於四條主線下方、點數方案上方，內容以陣列管理）
 - /pricing 定價（優化）
 
 Header 結構（已登入）：
