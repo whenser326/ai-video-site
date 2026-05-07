@@ -558,6 +558,9 @@ const VOICE_OPTIONS = [
           </div>
         )}
         {/* [DNA_PATCH_END] */}
+        <div className="text-center py-1 border-b border-white/5 flex-shrink-0">
+          <p className="text-white/20 text-[10px]">支援曖昧互動，明確露骨內容由 AI 自動過濾</p>
+        </div>
 
         {isOverQuota && (
           <div className="flex-shrink-0 px-4 py-2 bg-yellow-400/10 border-b border-yellow-400/20">

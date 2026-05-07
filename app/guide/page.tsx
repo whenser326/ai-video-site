@@ -228,6 +228,7 @@ export default function GuidePage() {
           </p>
           {[
             { text: '對話超過50則自動摘要，角色永遠記得你說過的每一件事' },
+            { text: '不知道說什麼？點 💬 讓 AI 幫你想開場白' },
             { text: '圖片＋影片＋說話影片，一站完成' },
             { text: '你建立的角色，個性外觀只有你有' },
           ].map((item, i) => (

@@ -274,7 +274,7 @@ const [defaultExpanded, setDefaultExpanded] = useState(false);
         )}
 
 {/* 預設角色區塊 */}
-        <div className="mt-6">
+        <div className="mt-6 border border-[#5bd4f0]/20 rounded-2xl p-4 bg-[#5bd4f0]/5">
           <button
             onClick={() => setDefaultExpanded(prev => !prev)}
             className="w-full flex items-center gap-2 mb-2 hover:opacity-80 transition-all"
