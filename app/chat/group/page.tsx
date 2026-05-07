@@ -48,6 +48,7 @@ export default function GroupChatPage() {
   const [remainingQuota, setRemainingQuota] = useState<number | null>(null);
   const [isOverQuota, setIsOverQuota] = useState(false);
   const [started, setStarted] = useState(false);
+  const [showNotice, setShowNotice] = useState(false);
   const [videoModal, setVideoModal] = useState<VideoModal | null>(null);
 const [albumModal, setAlbumModal] = useState<{ url: string } | null>(null);
 const [avatarStatus, setAvatarStatus] = useState("");
@@ -96,6 +97,8 @@ const VOICE_OPTIONS = [
     // 從 localStorage 恢復群組 sessionId
     const savedSession = localStorage.getItem(`chat_session_group_${session.user.email}`);
     if (savedSession) setSessionId(savedSession);
+    const noticeSeen = localStorage.getItem("chat_notice_seen");
+    if (!noticeSeen) setShowNotice(true);
   }, [session]);
 
   useEffect(() => {
@@ -721,6 +724,28 @@ const VOICE_OPTIONS = [
           </div>
         </div>
       </main>
+      {/* 聊天須知 一次性提示框 */}
+      {showNotice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+          <div className="w-full max-w-sm bg-[#0d2318] border border-[#89f5a2]/20 rounded-3xl p-6 space-y-4 shadow-2xl">
+            <p className="text-white font-black text-base">🎭 聊天須知</p>
+            <div className="space-y-3 text-sm text-white/60 leading-relaxed">
+              <p>角色由 AI 扮演，可以自由聊曖昧、挑逗、情感互動，沒有話題限制。</p>
+              <p>明確的性描述內容會被 AI 自動過濾，其他都交給你和角色自由發揮 💬</p>
+              <p className="text-white/30 text-xs">此提示不再顯示</p>
+            </div>
+            <button
+              onClick={() => {
+                localStorage.setItem("chat_notice_seen", "1");
+                setShowNotice(false);
+              }}
+              className="w-full py-3 bg-gradient-to-r from-[#89f5a2] to-[#4ade80] text-[#0d2318] rounded-2xl font-black text-sm hover:opacity-90 transition-all"
+            >
+              我知道了，開始聊天 🚀
+            </button>
+          </div>
+        </div>
+      )}
 {/* 存入相簿選角色 Modal */}
       {albumModal !== null && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center px-4">

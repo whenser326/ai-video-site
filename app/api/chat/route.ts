@@ -169,7 +169,8 @@ function detectSelfieIntent(
 }
 
 export async function POST(req: NextRequest) {
-  const { userEmail, characterId, sessionId, message, characters, imageUrl: chatImageUrl, isAutoMessage } = await req.json();
+  const body = await req.json();
+  const { userEmail, characterId, sessionId, message, characters, imageUrl: chatImageUrl, isAutoMessage, defaultCharacter, defaultCharacters } = body;
 
   if (!userEmail || !message) {
     return NextResponse.json({ error: "缺少必要參數" }, { status: 400 });
@@ -195,9 +196,13 @@ export async function POST(req: NextRequest) {
     }
     creditCost = characters ? characters.length : 1;
   }
-
+  
   let characterList: any[] = [];
-  if (characters && characters.length > 0) {
+  if (defaultCharacter) {
+    characterList = [defaultCharacter];
+  } else if (defaultCharacters && defaultCharacters.length > 0) {
+    characterList = defaultCharacters;
+  } else if (characters && characters.length > 0) {
     const { data: chars } = await supabase
       .from("saved_characters")
       .select("*")

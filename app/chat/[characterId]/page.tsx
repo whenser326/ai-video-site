@@ -34,6 +34,7 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [showNotice, setShowNotice] = useState(false);
   const [plan, setPlan] = useState("free");
   const [credits, setCredits] = useState<number | null>(null);
   const [remainingQuota, setRemainingQuota] = useState<number | null>(null);
@@ -87,6 +88,8 @@ export default function ChatPage() {
     // 從 localStorage 恢復上次 sessionId
     const savedSession = localStorage.getItem(`chat_session_${session.user.email}_${characterId}`);
     if (savedSession) setSessionId(savedSession);
+    const noticeSeen = localStorage.getItem("chat_notice_seen");
+    if (!noticeSeen) setShowNotice(true);
   }, [session, characterId]);
 
   useEffect(() => {
@@ -647,7 +650,28 @@ export default function ChatPage() {
           </div>
         </div>
       </main>
-
+{/* 聊天須知 一次性提示框 */}
+      {showNotice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+          <div className="w-full max-w-sm bg-[#0d2318] border border-[#89f5a2]/20 rounded-3xl p-6 space-y-4 shadow-2xl">
+            <p className="text-white font-black text-base">🎭 聊天須知</p>
+            <div className="space-y-3 text-sm text-white/60 leading-relaxed">
+              <p>角色由 AI 扮演，可以自由聊曖昧、挑逗、情感互動，沒有話題限制。</p>
+              <p>明確的性描述內容會被 AI 自動過濾，其他都交給你和角色自由發揮 💬</p>
+              <p className="text-white/30 text-xs">此提示不再顯示</p>
+            </div>
+            <button
+              onClick={() => {
+                localStorage.setItem("chat_notice_seen", "1");
+                setShowNotice(false);
+              }}
+              className="w-full py-3 bg-gradient-to-r from-[#89f5a2] to-[#4ade80] text-[#0d2318] rounded-2xl font-black text-sm hover:opacity-90 transition-all"
+            >
+              我知道了，開始聊天 🚀
+            </button>
+          </div>
+        </div>
+      )}
       {/* 轉成影片 Modal */}
       {videoModal !== null && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center px-4">
