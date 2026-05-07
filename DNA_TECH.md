@@ -168,13 +168,13 @@ key 清單（共21個，後台沒設定時 route.ts 有 fallback 預設值）：
 - 函式名稱：maybeGenerateSummary(sessionId)，非同步觸發不阻塞回應
 - 注意：修改此區塊前確認 backgroundStory / memoryPrefix / maybeGenerateSummary 三者都存在，缺一報 ts(2304)
 
-### 待實作：聊天推薦台詞功能（對標 ReelTalk）
-- 位置：聊天輸入欄旁加「💬」按鈕
-- 功能：點擊後呼叫 /api/chat/suggest，帶入當前 sessionId 和角色資訊，回傳 3 個符合角色個性的開場白/回話選項
-- 顯示：彈出小卡片列出 3 個選項，點選後填入輸入欄（不自動送出）
+### ✅ 聊天推薦台詞功能（2026/05/07 已完成）
+- 位置：聊天輸入欄旁「💬」按鈕
+- 功能：點擊後呼叫 /api/chat/suggest，帶入 sessionId、characterName、characterDescription，回傳 3 個符合角色個性的開場白選項
+- 顯示：輸入欄上方彈出小卡片，點選後填入輸入欄（不自動送出）
 - 扣點：不扣點（純 UI 輔助）
-- 實作：/api/chat/route.ts 新增 mode:'suggest' 分支，system prompt 改為「請根據角色個性和當前對話，生成3個用戶可以說的句子，用 JSON array 回傳」
-- 新增 API：app/api/chat/suggest/route.ts
+- API：app/api/chat/suggest/route.ts（fetch 直接呼叫 Anthropic API，不用 SDK）
+- 涵蓋：單人聊天室、群組聊天室、預設角色聊天室
 
 ### ✅ 角色旁白動作描述（2026/05/07 已完成）
 - 不需新功能，只需更新 /api/chat/route.ts 的 charSystem prompt

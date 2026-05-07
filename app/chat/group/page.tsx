@@ -773,24 +773,36 @@ const VOICE_OPTIONS = [
           </div>
         </div>
       </main>
-      {/* 聊天須知 一次性提示框 */}
+      {/* 聊天須知 每日提示框 */}
       {showNotice && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-          <div className="w-full max-w-sm bg-[#0d2318] border border-[#89f5a2]/20 rounded-3xl p-6 space-y-4 shadow-2xl">
-            <p className="text-white font-black text-base">🎭 聊天須知</p>
-            <div className="space-y-3 text-sm text-white/60 leading-relaxed">
-              <p>角色由 AI 扮演，可以自由聊曖昧、挑逗、情感互動，沒有話題限制。</p>
-              <p>明確的性描述內容會被 AI 自動過濾，其他都交給你和角色自由發揮 💬</p>
-              <p className="text-white/30 text-xs">此提示不再顯示</p>
+        <div className="fixed inset-0 z-50 flex items-end justify-center pb-10 px-4 bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-sm bg-[#0d2318] border border-[#89f5a2]/25 rounded-3xl p-6 space-y-4 shadow-2xl">
+            <p className="text-white font-black text-base">💬 聊天室說明</p>
+            <p className="text-white/40 text-xs leading-relaxed">角色由 AI 扮演，可以自由聊天、曖昧互動、情感陪伴。</p>
+            <div className="space-y-2">
+              <p className="text-[#89f5a2]/70 text-xs font-bold">✅ 可以聊</p>
+              <div className="space-y-1 pl-2">
+                <p className="text-white/40 text-xs">• 暖昧、挑逗語氣</p>
+                <p className="text-white/40 text-xs">• 情感親密對話</p>
+                <p className="text-white/40 text-xs">• 輕度性暗示</p>
+              </div>
+              <p className="text-red-400/70 text-xs font-bold mt-2">🚫 AI 會自動過濾</p>
+              <div className="space-y-1 pl-2">
+                <p className="text-white/40 text-xs">• 明確的性行為描述</p>
+                <p className="text-white/40 text-xs">• 未成年相關任何內容</p>
+                <p className="text-white/40 text-xs">• 極端暴力細節</p>
+              </div>
             </div>
+            <p className="text-white/20 text-[10px]">此提示每日顯示一次</p>
             <button
               onClick={() => {
-                localStorage.setItem("chat_notice_seen", "1");
+                const today = new Date().toLocaleDateString("en-CA");
+                localStorage.setItem(`chat_notice_seen_${today}`, "1");
                 setShowNotice(false);
               }}
-              className="w-full py-3 bg-gradient-to-r from-[#89f5a2] to-[#4ade80] text-[#0d2318] rounded-2xl font-black text-sm hover:opacity-90 transition-all"
+              className="w-full py-3 bg-[#89f5a2]/15 border border-[#89f5a2]/30 text-[#89f5a2] rounded-xl text-sm font-black hover:bg-[#89f5a2]/25 transition-all"
             >
-              我知道了，開始聊天 🚀
+              了解，開始聊天 →
             </button>
           </div>
         </div>

@@ -45,6 +45,7 @@ export default function DefaultChatPage() {
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [remainingQuota, setRemainingQuota] = useState<number | null>(null);
+  const [showNotice, setShowNotice] = useState(false);
   const [showSuggest, setShowSuggest] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [suggestLoading, setSuggestLoading] = useState(false);
@@ -76,6 +77,11 @@ const randomDelay = () => Math.floor(Math.random() * 3000) + 2000;
     }
     setSuggestLoading(false);
   };
+  useEffect(() => {
+    if (!session?.user?.email) return;
+    const today = new Date().toLocaleDateString("en-CA");
+    if (!localStorage.getItem(`chat_notice_seen_${today}`)) setShowNotice(true);
+  }, [session]);
   useEffect(() => {
     if (!session?.user?.email || !characterId) return;
     fetch(`/api/user/credits?email=${session.user.email}`)
@@ -215,7 +221,39 @@ const randomDelay = () => Math.floor(Math.random() * 3000) + 2000;
           )}
         </div>
       </div>
-
+{showNotice && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center pb-10 px-4 bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-sm bg-[#0d2318] border border-[#89f5a2]/25 rounded-3xl p-6 space-y-4 shadow-2xl">
+            <p className="text-white font-black text-base">💬 聊天室說明</p>
+            <p className="text-white/40 text-xs leading-relaxed">角色由 AI 扮演，可以自由聊天、曖昧互動、情感陪伴。</p>
+            <div className="space-y-2">
+              <p className="text-[#89f5a2]/70 text-xs font-bold">✅ 可以聊</p>
+              <div className="space-y-1 pl-2">
+                <p className="text-white/40 text-xs">• 暖昧、挑逗語氣</p>
+                <p className="text-white/40 text-xs">• 情感親密對話</p>
+                <p className="text-white/40 text-xs">• 輕度性暗示</p>
+              </div>
+              <p className="text-red-400/70 text-xs font-bold mt-2">🚫 AI 會自動過濾</p>
+              <div className="space-y-1 pl-2">
+                <p className="text-white/40 text-xs">• 明確的性行為描述</p>
+                <p className="text-white/40 text-xs">• 未成年相關任何內容</p>
+                <p className="text-white/40 text-xs">• 極端暴力細節</p>
+              </div>
+            </div>
+            <p className="text-white/20 text-[10px]">此提示每日顯示一次</p>
+            <button
+              onClick={() => {
+                const today = new Date().toLocaleDateString("en-CA");
+                localStorage.setItem(`chat_notice_seen_${today}`, "1");
+                setShowNotice(false);
+              }}
+              className="w-full py-3 bg-[#89f5a2]/15 border border-[#89f5a2]/30 text-[#89f5a2] rounded-xl text-sm font-black hover:bg-[#89f5a2]/25 transition-all"
+            >
+              了解，開始聊天 →
+            </button>
+          </div>
+        </div>
+      )}
       {/* 內容揭露小字 */}
       <div className="px-4 py-1.5 bg-black/15 border-b border-white/5 flex-shrink-0">
         <p className="text-[10px] text-white/20 text-center">💬 支援曖昧互動，明確露骨內容由 AI 自動過濾</p>
@@ -267,6 +305,26 @@ const randomDelay = () => Math.floor(Math.random() * 3000) + 2000;
       {/* 輸入列 */}
       <div className="px-4 py-3 border-t border-white/8 bg-black/20 flex-shrink-0">
         <div className="flex gap-2 items-end">
+          <label className="flex-shrink-0 w-11 h-11 rounded-2xl bg-white/5 border border-white/15 flex items-center justify-center cursor-pointer hover:bg-white/10 transition-all">
+            <span className="text-base">📎</span>
+            <input type="file" accept="image/*" className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file || !session?.user?.email) return;
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('email', session.user.email);
+                try {
+                  const res = await fetch('/api/upload-chat-image', { method: 'POST', body: formData });
+                  const data = await res.json();
+                  if (data.url) {
+                    setMessages(prev => [...prev, { role: 'user', content: '（傳送了一張圖片）' }]);
+                  }
+                } catch { }
+                e.target.value = '';
+              }}
+            />
+          </label>
           <button onClick={handleSuggest} title="推薦開場白"
             className="flex-shrink-0 w-11 h-11 rounded-2xl bg-purple-500/15 border border-purple-500/30 text-purple-300 text-lg hover:bg-purple-500/25 transition-all flex items-center justify-center">
             💬

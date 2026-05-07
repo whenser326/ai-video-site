@@ -51,6 +51,9 @@ export default function DefaultGroupChatPage() {
   const [plan, setPlan] = useState("free");
   const [remainingQuota, setRemainingQuota] = useState<number | null>(null);
   const [showNotice, setShowNotice] = useState(false);
+  const [showSuggest, setShowSuggest] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [suggestLoading, setSuggestLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const autoMessageTimerRef = useRef<NodeJS.Timeout | null>(null);
 // [DNA_PATCH_START] 每日提示框
@@ -63,6 +66,30 @@ export default function DefaultGroupChatPage() {
     }
   }, [session]);
   // [DNA_PATCH_END]
+  const handleSuggest = async () => {
+    if (suggestLoading) return;
+    setShowSuggest(true);
+    setSuggestLoading(true);
+    setSuggestions([]);
+    const firstChar = selectedChars[0];
+    try {
+      const res = await fetch("/api/chat/suggest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userEmail: session?.user?.email,
+          sessionId,
+          characterName: firstChar?.name || "角色",
+          characterDescription: firstChar?.description || "",
+        }),
+      });
+      const data = await res.json();
+      if (Array.isArray(data.suggestions)) setSuggestions(data.suggestions);
+    } catch {
+      setSuggestions(["你今天過得怎麼樣？", "有沒有什麼有趣的事想分享？", "我一直在想你說的話…"]);
+    }
+    setSuggestLoading(false);
+  };
   const randomDelay = () => Math.floor(Math.random() * 3000) + 2000;
   const getEmoji = (gender: string) => gender === "female" ? "👩" : "👨";
   const sessionKey = `chat_session_default_group_${session?.user?.email}_${ids.join("-")}`;
@@ -210,7 +237,22 @@ export default function DefaultGroupChatPage() {
         <div className="fixed inset-0 z-50 flex items-end justify-center pb-10 px-4 bg-black/50 backdrop-blur-sm">
           <div className="w-full max-w-sm bg-[#0d2318] border border-[#89f5a2]/25 rounded-3xl p-6 space-y-4 shadow-2xl">
             <p className="text-white font-black text-base">💬 聊天室說明</p>
-            <p className="text-white/50 text-sm leading-relaxed">支援曖昧互動，明確露骨內容由 AI 自動過濾。預設角色不支援 AI 自拍功能，收藏角色後可解鎖。</p>
+            <p className="text-white/40 text-xs leading-relaxed">角色由 AI 扮演，可以自由聊天、曖昧互動、情感陪伴。</p>
+            <div className="space-y-2">
+              <p className="text-[#89f5a2]/70 text-xs font-bold">✅ 可以聊</p>
+              <div className="space-y-1 pl-2">
+                <p className="text-white/40 text-xs">• 暖昧、挑逗語氣</p>
+                <p className="text-white/40 text-xs">• 情感親密對話</p>
+                <p className="text-white/40 text-xs">• 輕度性暗示</p>
+              </div>
+              <p className="text-red-400/70 text-xs font-bold mt-2">🚫 AI 會自動過濾</p>
+              <div className="space-y-1 pl-2">
+                <p className="text-white/40 text-xs">• 明確的性行為描述</p>
+                <p className="text-white/40 text-xs">• 未成年相關任何內容</p>
+                <p className="text-white/40 text-xs">• 極端暴力細節</p>
+              </div>
+            </div>
+            <p className="text-white/20 text-[10px]">此提示每日顯示一次</p>
             <button
               onClick={() => {
                 const today = new Date().toLocaleDateString("en-CA");
@@ -287,6 +329,30 @@ export default function DefaultGroupChatPage() {
       {/* 輸入列 */}
       <div className="px-4 py-3 border-t border-white/8 bg-black/20 flex-shrink-0">
         <div className="flex gap-2 items-end">
+          <label className="flex-shrink-0 w-11 h-11 rounded-2xl bg-white/5 border border-white/15 flex items-center justify-center cursor-pointer hover:bg-white/10 transition-all">
+            <span className="text-base">📎</span>
+            <input type="file" accept="image/*" className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file || !session?.user?.email) return;
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('email', session.user.email);
+                try {
+                  const res = await fetch('/api/upload-chat-image', { method: 'POST', body: formData });
+                  const data = await res.json();
+                  if (data.url) {
+                    setMessages(prev => [...prev, { role: 'user', content: '（傳送了一張圖片）' }]);
+                  }
+                } catch { }
+                e.target.value = '';
+              }}
+            />
+          </label>
+          <button onClick={handleSuggest} title="推薦開場白"
+            className="flex-shrink-0 w-11 h-11 rounded-2xl bg-purple-500/15 border border-purple-500/30 text-purple-300 text-lg hover:bg-purple-500/25 transition-all flex items-center justify-center">
+            💬
+          </button>
           <textarea
             value={input}
             onChange={e => setInput(e.target.value)}
@@ -301,6 +367,21 @@ export default function DefaultGroupChatPage() {
             className="flex-shrink-0 w-11 h-11 rounded-2xl bg-[#89f5a2]/20 border border-[#89f5a2]/40 text-[#89f5a2] font-black text-lg hover:bg-[#89f5a2]/30 disabled:opacity-30 transition-all flex items-center justify-center"
           >↑</button>
         </div>
+        {showSuggest && (
+            <div className="mt-2 bg-[#0d2318]/90 border border-purple-500/25 rounded-2xl p-3 space-y-2">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-purple-300/60 text-[10px] font-bold">💬 推薦開場白</p>
+                <button onClick={() => setShowSuggest(false)} className="text-white/20 text-xs hover:text-white/50">✕</button>
+              </div>
+              {suggestLoading && <p className="text-white/30 text-xs text-center py-2">生成中...</p>}
+              {!suggestLoading && suggestions.map((s, i) => (
+                <button key={i} onClick={() => { setInput(s); setShowSuggest(false); }}
+                  className="w-full text-left px-3 py-2 bg-white/5 border border-white/8 rounded-xl text-white/70 text-xs hover:bg-purple-500/15 hover:border-purple-500/30 hover:text-white/90 transition-all">
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
         <div className="flex items-center justify-between mt-2">
           <p className="text-white/15 text-[10px]">Enter 送出・Shift+Enter 換行</p>
           <div className="flex items-center gap-2">
