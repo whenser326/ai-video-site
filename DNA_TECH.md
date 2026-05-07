@@ -188,11 +188,20 @@ key 清單（共21個，後台沒設定時 route.ts 有 fallback 預設值）：
 - 搜尋結果顯示「第 X / Y 筆」，↑↓ 切換，✕ 關閉
 - 相關 state：searchOpen / searchQuery / searchIndex / searchInputRef / messageRefs
 - 不需新 API，不影響 sessionId / autoMessageTimer
+### ✅ 預設角色系統（2026/05/07 已完成）
+- DEFAULT_CHARACTERS 陣列寫死在三個檔案：app/characters/page.tsx、app/chat/default/[characterId]/page.tsx、app/chat/default-group/page.tsx
+- 單人路由：/chat/default/[characterId]
+- 群組路由：/chat/default-group?ids=default-f1,default-m3
+- 不支援自拍（偵測到關鍵字回傳付費提示文字）
+- sessionId localStorage key：chat_session_default_${email}_${characterId}（單人）/ chat_session_default_group_${email}_${ids}（群組）
+- /api/chat 新增 defaultCharacter / defaultCharacters 參數，優先於 saved_characters 查詢
+- 中期待實作：後台管理頁面讓圖片可上傳替換
 
-### 聊天室顯示 AI 模型名稱（對標 Chatto 透明度）
-- 位置：聊天室頂部角色名稱旁，小字顯示「Claude Haiku」
-- 不需 API，直接在前端寫死顯示字串
-- 日後若支援多模型切換，改為動態顯示
+### ✅ 聊天內容揭露（2026/05/07 已完成）
+- 頂部固定小字：所有聊天室頂部顯示「支援曖昧互動，明確露骨內容由 AI 自動過濾」
+- 一次性提示框：進入聊天室檢查 localStorage key「chat_notice_seen」，沒看過就顯示，看過不再出現
+- 涵蓋範圍：單人聊天室、群組聊天室（預設角色聊天室頂部小字已內建，不另加提示框）
+- guide 頁面：差異化區塊和線B展開內容均有說明
 
 ---
 

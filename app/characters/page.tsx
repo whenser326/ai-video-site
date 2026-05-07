@@ -47,6 +47,7 @@ export default function CharactersPage() {
   const menuRef = useRef<HTMLDivElement>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 const [selectedDefaultIds, setSelectedDefaultIds] = useState<string[]>([]);
+const [defaultExpanded, setDefaultExpanded] = useState(false);
   // 編輯聲音 Modal 狀態
   const [editVoiceChar, setEditVoiceChar] = useState<any | null>(null);
   const [editVoiceId, setEditVoiceId] = useState("female-2");
@@ -241,10 +242,15 @@ const [selectedDefaultIds, setSelectedDefaultIds] = useState<string[]>([]);
         )}
 {/* 預設角色區塊 */}
         <div className="mt-6">
-          <div className="flex items-center gap-2 mb-3">
+          <button
+            onClick={() => setDefaultExpanded(prev => !prev)}
+            className="w-full flex items-center gap-2 mb-3 hover:opacity-80 transition-all"
+          >
             <p className="text-white/60 text-sm font-bold">✨ 預設角色</p>
             <span className="text-[10px] bg-[#5bd4f0]/10 border border-[#5bd4f0]/25 rounded-full px-2 py-0.5 text-[#5bd4f0]">免費可用</span>
-          </div>
+            <span className="ml-auto text-white/30 text-xs">{defaultExpanded ? "▲ 收起" : "▼ 展開"}</span>
+          </button>
+          {defaultExpanded && (
           <div className="grid grid-cols-2 gap-3">
             {DEFAULT_CHARACTERS.map((char) => (
               <div
@@ -275,6 +281,7 @@ const [selectedDefaultIds, setSelectedDefaultIds] = useState<string[]>([]);
               </div>
             ))}
           </div>
+        )}
         {selectedDefaultIds.length === 1 && (
             <div className="mt-3 flex items-center gap-3 bg-black/20 border border-white/10 rounded-2xl p-3">
               <p className="text-white/50 text-xs flex-1">已選 1 位・可再選更多開群組</p>

@@ -34,7 +34,6 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [showNotice, setShowNotice] = useState(false);
   const [plan, setPlan] = useState("free");
   const [credits, setCredits] = useState<number | null>(null);
   const [remainingQuota, setRemainingQuota] = useState<number | null>(null);
@@ -46,7 +45,8 @@ export default function ChatPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const autoMessageTimerRef = useRef<NodeJS.Timeout | null>(null);
   // [DNA_PATCH_START] 搜尋功能 state
-  const [searchOpen, setSearchOpen] = useState(false);
+  const [showNotice, setShowNotice] = useState(false);
+const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchIndex, setSearchIndex] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -65,7 +65,21 @@ export default function ChatPage() {
     { id: "male-4", label: "Adrian（男）旁白" },
     { id: "male-5", label: "Wilson（男）深沉" },
   ];
-
+// [DNA_PATCH_START] 每日提示框
+  useEffect(() => {
+    if (!session?.user?.email) return;
+    const today = new Date().toLocaleDateString("en-CA");
+    const key = `chat_notice_seen_${today}`;
+    if (!localStorage.getItem(key)) {
+      setShowNotice(true);
+    }
+  }, [session]);
+  // [DNA_PATCH_END]
+  useEffect(() => {
+    if (!session?.user?.email) return;
+    const today = new Date().toLocaleDateString("en-CA");
+    if (!localStorage.getItem(`chat_notice_seen_${today}`)) setShowNotice(true);
+  }, [session]);
   const randomDelay = () => Math.floor(Math.random() * 3000) + 2000;
   const selfieDelay = () => Math.floor(Math.random() * 7000) + 3000; // 單人：3~10秒
 
@@ -88,8 +102,6 @@ export default function ChatPage() {
     // 從 localStorage 恢復上次 sessionId
     const savedSession = localStorage.getItem(`chat_session_${session.user.email}_${characterId}`);
     if (savedSession) setSessionId(savedSession);
-    const noticeSeen = localStorage.getItem("chat_notice_seen");
-    if (!noticeSeen) setShowNotice(true);
   }, [session, characterId]);
 
   useEffect(() => {
@@ -418,7 +430,24 @@ export default function ChatPage() {
           </div>
         )}
         {/* [DNA_PATCH_END] */}
-
+{showNotice && (
+          <div className="fixed inset-0 z-50 flex items-end justify-center pb-10 px-4 bg-black/50 backdrop-blur-sm">
+            <div className="w-full max-w-sm bg-[#0d2318] border border-[#89f5a2]/25 rounded-3xl p-6 space-y-4 shadow-2xl">
+              <p className="text-white font-black text-base">💬 聊天室說明</p>
+              <p className="text-white/50 text-sm leading-relaxed">支援曖昧互動，明確露骨內容由 AI 自動過濾。</p>
+              <button
+                onClick={() => {
+                  const today = new Date().toLocaleDateString("en-CA");
+                  localStorage.setItem(`chat_notice_seen_${today}`, "1");
+                  setShowNotice(false);
+                }}
+                className="w-full py-3 bg-[#89f5a2]/15 border border-[#89f5a2]/30 text-[#89f5a2] rounded-xl text-sm font-black hover:bg-[#89f5a2]/25 transition-all"
+              >
+                了解，開始聊天 →
+              </button>
+            </div>
+          </div>
+        )}
         {isOverQuota && (
           <div className="flex-shrink-0 px-4 py-2 bg-yellow-400/10 border-b border-yellow-400/20">
             <p className="text-yellow-300 text-xs text-center font-bold">⚠️ 免費次數已用完，每次對話扣 1 點</p>
@@ -650,28 +679,7 @@ export default function ChatPage() {
           </div>
         </div>
       </main>
-{/* 聊天須知 一次性提示框 */}
-      {showNotice && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-          <div className="w-full max-w-sm bg-[#0d2318] border border-[#89f5a2]/20 rounded-3xl p-6 space-y-4 shadow-2xl">
-            <p className="text-white font-black text-base">🎭 聊天須知</p>
-            <div className="space-y-3 text-sm text-white/60 leading-relaxed">
-              <p>角色由 AI 扮演，可以自由聊曖昧、挑逗、情感互動，沒有話題限制。</p>
-              <p>明確的性描述內容會被 AI 自動過濾，其他都交給你和角色自由發揮 💬</p>
-              <p className="text-white/30 text-xs">此提示不再顯示</p>
-            </div>
-            <button
-              onClick={() => {
-                localStorage.setItem("chat_notice_seen", "1");
-                setShowNotice(false);
-              }}
-              className="w-full py-3 bg-gradient-to-r from-[#89f5a2] to-[#4ade80] text-[#0d2318] rounded-2xl font-black text-sm hover:opacity-90 transition-all"
-            >
-              我知道了，開始聊天 🚀
-            </button>
-          </div>
-        </div>
-      )}
+
       {/* 轉成影片 Modal */}
       {videoModal !== null && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center px-4">

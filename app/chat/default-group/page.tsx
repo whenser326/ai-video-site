@@ -50,9 +50,19 @@ export default function DefaultGroupChatPage() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [plan, setPlan] = useState("free");
   const [remainingQuota, setRemainingQuota] = useState<number | null>(null);
+  const [showNotice, setShowNotice] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const autoMessageTimerRef = useRef<NodeJS.Timeout | null>(null);
-
+// [DNA_PATCH_START] 每日提示框
+  useEffect(() => {
+    if (!session?.user?.email) return;
+    const today = new Date().toLocaleDateString("en-CA");
+    const key = `chat_notice_seen_${today}`;
+    if (!localStorage.getItem(key)) {
+      setShowNotice(true);
+    }
+  }, [session]);
+  // [DNA_PATCH_END]
   const randomDelay = () => Math.floor(Math.random() * 3000) + 2000;
   const getEmoji = (gender: string) => gender === "female" ? "👩" : "👨";
   const sessionKey = `chat_session_default_group_${session?.user?.email}_${ids.join("-")}`;
@@ -195,7 +205,26 @@ export default function DefaultGroupChatPage() {
         </div>
         <span className="text-[10px] bg-[#5bd4f0]/10 border border-[#5bd4f0]/20 rounded-full px-2 py-0.5 text-[#5bd4f0]">預設角色</span>
       </div>
-
+{/* [DNA_PATCH_START] 每日提示框 */}
+      {showNotice && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center pb-10 px-4 bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-sm bg-[#0d2318] border border-[#89f5a2]/25 rounded-3xl p-6 space-y-4 shadow-2xl">
+            <p className="text-white font-black text-base">💬 聊天室說明</p>
+            <p className="text-white/50 text-sm leading-relaxed">支援曖昧互動，明確露骨內容由 AI 自動過濾。預設角色不支援 AI 自拍功能，收藏角色後可解鎖。</p>
+            <button
+              onClick={() => {
+                const today = new Date().toLocaleDateString("en-CA");
+                localStorage.setItem(`chat_notice_seen_${today}`, "1");
+                setShowNotice(false);
+              }}
+              className="w-full py-3 bg-[#89f5a2]/15 border border-[#89f5a2]/30 text-[#89f5a2] rounded-xl text-sm font-black hover:bg-[#89f5a2]/25 transition-all"
+            >
+              了解，開始聊天 →
+            </button>
+          </div>
+        </div>
+      )}
+      {/* [DNA_PATCH_END] */}
       {/* 內容揭露小字 */}
       <div className="px-4 py-1.5 bg-black/15 border-b border-white/5 flex-shrink-0">
         <p className="text-[10px] text-white/20 text-center">💬 支援曖昧互動，明確露骨內容由 AI 自動過濾</p>
