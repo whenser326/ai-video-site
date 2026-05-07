@@ -48,7 +48,18 @@ export async function POST(req: NextRequest) {
     if (status !== "SUCCESS") {
       return NextResponse.json({ received: true });
     }
-
+    
+    // [DNA_PATCH_START] 驗證 TradeSha 防偽造
+    const tradeSha = formData.get("TradeSha") as string;
+    const expectedSha = crypto
+      .createHash("sha256")
+      .update(`HashKey=${HASH_KEY}&${tradeInfo}&HashIV=${HASH_IV}`)
+      .digest("hex")
+      .toUpperCase();
+    if (tradeSha !== expectedSha) {
+      return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+    }
+    // [DNA_PATCH_END]
     // AES 解密
     const decrypted = aesDecrypt(tradeInfo);
     const params = new URLSearchParams(decrypted);
@@ -64,7 +75,23 @@ export async function POST(req: NextRequest) {
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
+// [DNA_PATCH_START] 防重複：先檢查是否已有 payment_logs 紀錄
+    const { data: existingLog } = await supabase
+      .from("payment_logs")
+      .select("id")
+      .eq("order_no", merchantOrderNo)
+      .single();
 
+    if (existingLog) {
+      return NextResponse.json({ received: true }); // 已處理過，直接回傳成功
+    }
+
+    await supabase.from("payment_logs").insert({
+      order_no: merchantOrderNo,
+      email: order.email,
+      plan: order.plan,
+    });
+    // [DNA_PATCH_END]
     const { email, plan, referral_code } = order;
 
     // 取得現有 profile
@@ -103,7 +130,7 @@ export async function POST(req: NextRequest) {
       if (bonusCredits > 0) {
         const { data: referrer } = await supabase
           .from("profiles")
-          .select("credits, referral_credits_earned")
+          .select("credits, referral_credits_earned, email")
           .eq("referral_code", profile.referred_by)
           .single();
 
@@ -117,7 +144,7 @@ export async function POST(req: NextRequest) {
             .eq("referral_code", profile.referred_by);
 
           await supabase.from("referral_logs").insert({
-            referrer_email: profile.referred_by,
+            referrer_email: referrer.email,
             referred_email: email,
             plan: plan,
             credits_awarded: bonusCredits,

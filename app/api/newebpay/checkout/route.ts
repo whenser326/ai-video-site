@@ -68,6 +68,7 @@ export async function POST(req: NextRequest) {
       WEBATM: "1",
       ATM: "1",
       UNIONPAY: "1",
+      APPLEPAY: "1",
     }).toString();
 
     const tradeInfoEncrypted = aesEncrypt(tradeInfo);
