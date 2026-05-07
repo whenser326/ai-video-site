@@ -163,7 +163,7 @@ export default function Text2VideoModal({
                 setText2videoPrompt(e.target.value);
                 setText2videoTranslated(null);
               }}
-              placeholder={"描述你想要的影片內容...可以輸入中文！\n例如：一個女生在海邊散步，陽光灑落，慢動作鏡頭"}
+              placeholder={"描述你想要的影片內容...可以輸入中文(即時翻譯)！\n例如：一個女生在海邊散步，陽光灑落，慢動作鏡頭"}
               className="w-full px-3 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder-white/25 focus:outline-none focus:border-[#89f5a2]/40 resize-none leading-relaxed"
             />
             {hasChinese(text2videoPrompt) && !text2videoTranslated && (

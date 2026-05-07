@@ -2541,7 +2541,7 @@ return (
             <textarea
               value={videoPrompt}
               onChange={(e) => { setVideoPrompt(e.target.value); setVideoTranslatedPrompt(null); }}
-              placeholder="描述想要的動作或場景（選填，中文也可以！）&#10;例如：walking in a park, waving hand, dancing"
+              placeholder="描述想要的動作或場景（選填，中文也可以！即時翻譯！）&#10;例如：walking in a park, waving hand, dancing"
               className="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/25 text-xs resize-none focus:outline-none focus:ring-1 focus:ring-[#89f5a2]/40"
               rows={3}
             />
