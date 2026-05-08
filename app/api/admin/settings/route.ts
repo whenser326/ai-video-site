@@ -69,9 +69,10 @@ export async function POST(req: NextRequest) {
   ];
   // [DNA_PATCH_END]
 
-  for (const key of keys) {
-    if (body[key] !== undefined) {
-      // 先嘗試 update，沒影響任何 row 才 insert
+  await Promise.all(
+    keys.map(async (key) => {
+      if (body[key] === undefined) return;
+
       const { data: updated, error: updateError } = await supabase
         .from("admin_settings")
         .update({ value: String(body[key]), updated_at: new Date().toISOString() })
@@ -86,8 +87,8 @@ export async function POST(req: NextRequest) {
           .insert({ key, value: String(body[key]), updated_at: new Date().toISOString() });
         if (insertError) console.error(`insert failed for key=${key}:`, insertError);
       }
-    }
-  }
+    })
+  );
 
   return NextResponse.json({ ok: true });
 }
