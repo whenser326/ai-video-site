@@ -214,6 +214,7 @@ const [batchCurrentIndex, setBatchCurrentIndex] = useState(-1);
 // [DNA_PATCH_START] promo-card-state
 const [showPromoCard, setShowPromoCard] = useState(false)
 const [promoCollapsed, setPromoCollapsed] = useState(false)
+const [adultEnabled, setAdultEnabled] = useState(false)
 // [DNA_PATCH_START] Onboarding 引導狀態
 const [showOnboarding, setShowOnboarding] = useState(false);
 const [onboardingDismissed, setOnboardingDismissed] = useState(false);
@@ -343,7 +344,14 @@ useEffect(() => {
   }
 }, [showReferralModal]);
 // [DNA_PATCH_END]
-
+// [DNA_PATCH_START] 讀取成人專區開關
+useEffect(() => {
+  fetch("/api/admin/settings-public?key=adult_section_enabled")
+    .then(r => r.json())
+    .then(d => { if (d.value === "true") setAdultEnabled(true); })
+    .catch(() => {});
+}, []);
+// [DNA_PATCH_END]
 // [DNA_PATCH_START] 偵測主頁載入完成 → 結束入場動畫
 useEffect(() => {
   const maxWait = setTimeout(() => setPageReady(true), 2500);
@@ -2305,15 +2313,6 @@ return (
         )}
       </button>
 
-      {/* 上傳轉影片 */}
-      <button
-        onClick={() => setShowUploadModal(true)}
-        className="flex flex-col items-center gap-1.5 py-3.5 bg-gradient-to-b from-[#89f5a2]/10 to-[#89f5a2]/4 border border-[#89f5a2]/25 text-[#89f5a2]/65 rounded-2xl text-xs font-black hover:from-[#89f5a2]/18 hover:border-[#89f5a2]/40 hover:text-[#89f5a2]/90 transition-all active:scale-95"
-      >
-        <span className="text-lg">📁</span>
-        <span>上傳轉影片</span>
-      </button>
-
       {/* 解除鎖定 */}
       <button
         onClick={async () => {
@@ -2353,22 +2352,25 @@ return (
       <span className="text-yellow-400/50 text-sm group-hover:translate-x-0.5 transition-transform flex-shrink-0">›</span>
     </button>
 
-    {/* 成人專區入口（暫時隱藏） */}
-    {false && (
-      <button
-        className="w-full flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-pink-500/8 to-rose-500/5 border border-pink-500/20 rounded-2xl hover:from-pink-500/15 hover:border-pink-500/35 transition-all group opacity-60"
-      >
-        <div className="w-8 h-8 rounded-xl bg-pink-500/15 flex items-center justify-center flex-shrink-0">
-          <span className="text-base">🔞</span>
-        </div>
-        <div className="text-left flex-1 min-w-0">
-          <p className="text-pink-300 text-sm font-black leading-tight">成人專區</p>
-          <p className="text-white/25 text-[11px] mt-0.5">即將開放 · 需年齡驗證</p>
-        </div>
-        <span className="text-xs px-2 py-0.5 bg-pink-500/15 text-pink-300/60 rounded-full border border-pink-500/15 flex-shrink-0">Coming Soon</span>
-      </button>
-    )}
-
+    {/* 成人專區入口 */}
+    <button
+      onClick={() => adultEnabled && router.push("/adult")}
+      disabled={!adultEnabled}
+      className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all group ${
+        adultEnabled
+          ? "bg-gradient-to-r from-pink-500/12 to-rose-500/8 border-pink-500/30 hover:from-pink-500/20 hover:border-pink-500/50 cursor-pointer"
+          : "bg-white/3 border-white/8 cursor-not-allowed opacity-40"
+      }`}
+    >
+      <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${adultEnabled ? "bg-pink-500/20" : "bg-white/5"}`}>
+        <span className="text-base">🔞</span>
+      </div>
+      <div className="text-left flex-1 min-w-0">
+        <p className={`text-sm font-black leading-tight ${adultEnabled ? "text-pink-300" : "text-white/20"}`}>成人專區</p>
+        <p className="text-white/30 text-[11px] mt-0.5">{adultEnabled ? "點擊進入" : "目前未開放"}</p>
+      </div>
+      {adultEnabled && <span className="text-pink-400/50 text-sm group-hover:translate-x-0.5 transition-transform flex-shrink-0">›</span>}
+    </button>
   </div>
 )}
 {/* [DNA_PATCH_END] */}
