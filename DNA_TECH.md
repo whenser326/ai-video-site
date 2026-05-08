@@ -357,6 +357,16 @@ GlobalHeader 「使用指南」改為直接跳 /guide，不再觸發 open-onboar
 
 ---
 
+## profiles 表新增欄位（2026/05/08）
+
+- `total_generations` (integer, default 0)：用戶累計總生成次數
+- 寫入時機：`/api/history` POST 時自動 +1
+- 用途：後台 `/admin/members` 統計用，獨立於 user_generations 表
+- **重要**：user_generations 表會被 `/api/history` GET 自動清理（免費影片3天/付費影片7天/圖片7-90天），所以後台統計**不能**直接 count user_generations，必須讀 profiles.total_generations
+- 已回填過去歷史資料（2026/05/08 一次性 SQL 更新）
+
+---
+
 ## Splash 入場動畫（2026/04/24）
 
 - 觸發條件：credits !== null 時立刻結束，最長等 2500ms 強制結束

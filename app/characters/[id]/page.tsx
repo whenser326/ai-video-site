@@ -111,7 +111,6 @@ export default function CharacterDetailPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: session?.user?.email, url: imageUrl }),
     });
-    localStorage.setItem('locked_character', imageUrl);
     alert(`✅ 已鎖定此圖，返回首頁即可使用`);
     router.push('/');
   };

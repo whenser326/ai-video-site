@@ -228,10 +228,9 @@ const [onboardingDismissed, setOnboardingDismissed] = useState(false);
       if (savedPrediction) setPrediction(JSON.parse(savedPrediction));
     }
     
-    // 新
-if (session?.user?.email) {
-  setLockedCharacterUrl(localStorage.getItem('locked_character'));
-}
+    // [DNA_PATCH_START] 鎖定角色從資料庫讀，避免跨帳號污染
+    // 不再讀 localStorage，改由 credits API 回傳後設定（見下方 fetch credits 的 .then）
+    // [DNA_PATCH_END]
     // [DNA_PATCH_START] history 延遲載入，不阻塞首屏
     if (session?.user?.email) {
       setTimeout(() => {
@@ -274,6 +273,9 @@ if (session?.user?.email) {
         .then(data => {
           setCredits(data.credits);
           setPlan(data.plan || 'free');
+          // [DNA_PATCH_START] 從資料庫讀鎖定角色，避免跨帳號污染
+          setLockedCharacterUrl(data.locked_character || null);
+          // [DNA_PATCH_END]
         });
       setTimeout(() => {
         fetch(`/api/saved-characters?email=${session?.user?.email}`)
@@ -281,11 +283,17 @@ if (session?.user?.email) {
           .then(data => {
             if (Array.isArray(data)) {
               setSavedCharacters(data);
-              const lockedUrl = localStorage.getItem('locked_character');
-              if (lockedUrl) {
-                const matched = data.find((c: any) => c.image_url === lockedUrl);
-                if (matched) setLockedCharacterId(matched.id);
-              }
+              // [DNA_PATCH_START] 從資料庫讀鎖定角色（不讀 localStorage）
+              fetch(`/api/user/credits?email=${session?.user?.email}`)
+                .then(r => r.json())
+                .then(creditsData => {
+                  const lockedUrl = creditsData.locked_character;
+                  if (lockedUrl) {
+                    const matched = data.find((c: any) => c.image_url === lockedUrl);
+                    if (matched) setLockedCharacterId(matched.id);
+                  }
+                });
+              // [DNA_PATCH_END]
             }
           });
       }, 400);
@@ -2191,7 +2199,6 @@ return (
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: session?.user?.email }),
       });
-      localStorage.removeItem('locked_character');
       setLockedCharacterUrl(null);
       setLockedCharacterId(null);
     }}
@@ -2243,7 +2250,6 @@ return (
                 body: JSON.stringify({ email: session?.user?.email ?? '', url: data.url }),
               });
               setError('');
-              localStorage.setItem('locked_character', data.url);
               setLockedCharacterUrl(data.url);
               // [DNA_PATCH_START] 比對 savedCharacters 自動帶入 character_id
               const matched = savedCharacters.find((c: any) => c.image_url === data.url);
@@ -2375,7 +2381,6 @@ return (
       {savedCharacters.map((char) => (
         <div key={char.id} className="flex-shrink-0 w-20 group relative cursor-pointer"
           onClick={() => {
-            localStorage.setItem('locked_character', char.image_url);
             setLockedCharacterUrl(char.image_url);
             setLockedCharacterId(char.id);
             fetch("/api/user/save-locked-character", {
@@ -2903,7 +2908,6 @@ return (
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({ email: session?.user?.email ?? '', url: data.url }),
                     });
-                    localStorage.setItem('locked_character', data.url);
                     setLockedCharacterUrl(data.url);
                     const matched = savedCharacters.find((c: any) => c.image_url === data.url);
                     if (matched) setLockedCharacterId(matched.id);

@@ -161,6 +161,7 @@ AI 自拍媒體類型與扣點：
 - 每日簽到＋推薦賺點要在聊天室內更明顯提示，降低用戶「點數焦慮」（Floze/Crushie 最大流失原因）
 
 ✅ /api/history DELETE method（已完成，query string: id+email）
+✅ profiles.total_generations 累計欄位（2026/05/08，後台生成次數獨立於 history 清理）
 ✅ /api/saved-characters：POST 新增名稱重複檢查、description 欄位寫入；DELETE 改為 query string
 ✅ saved_characters 表新增 voice_id 欄位（角色預設聲音，建角色時設定）
 ✅ /api/kling-avatar/route.ts：Kling Avatar V2 說話影片 API（POST 生成・GET polling）
