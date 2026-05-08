@@ -71,9 +71,21 @@ export async function POST(req: NextRequest) {
 
   for (const key of keys) {
     if (body[key] !== undefined) {
-      await supabase
+      // 先嘗試 update，沒影響任何 row 才 insert
+      const { data: updated, error: updateError } = await supabase
         .from("admin_settings")
-        .upsert({ key, value: String(body[key]), updated_at: new Date().toISOString() });
+        .update({ value: String(body[key]), updated_at: new Date().toISOString() })
+        .eq("key", key)
+        .select();
+
+      if (updateError) console.error(`update failed for key=${key}:`, updateError);
+
+      if (!updated || updated.length === 0) {
+        const { error: insertError } = await supabase
+          .from("admin_settings")
+          .insert({ key, value: String(body[key]), updated_at: new Date().toISOString() });
+        if (insertError) console.error(`insert failed for key=${key}:`, insertError);
+      }
     }
   }
 
