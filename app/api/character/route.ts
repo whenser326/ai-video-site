@@ -319,6 +319,35 @@ export async function GET(req: Request) {
         logs: prediction.logs,
       });
     }
+
+    // [DNA_PATCH_START] 寫入 user_generations（僅 succeeded 時，且避免重複寫）
+    if (prediction.status === "succeeded") {
+      const userEmail = searchParams.get("userEmail");
+      const characterId = searchParams.get("characterId") || null;
+      if (userEmail) {
+        const { data: existing } = await supabase
+          .from('user_generations')
+          .select('id')
+          .eq('id', prediction.id)
+          .maybeSingle();
+        if (!existing) {
+          const output = prediction.output;
+          const outputUrl = Array.isArray(output) ? output[0] : (typeof output === 'string' ? output : null);
+          const isVideo = typeof outputUrl === 'string' && (outputUrl.includes('.mp4') || outputUrl.includes('video'));
+          await supabase.from('user_generations').insert({
+            id: prediction.id,
+            user_email: userEmail,
+            image_url: isVideo ? null : outputUrl,
+            video_url: isVideo ? outputUrl : null,
+            prompt: null,
+            status: 'succeeded',
+            character_id: characterId,
+          });
+        }
+      }
+    }
+    // [DNA_PATCH_END]
+
     return NextResponse.json(prediction);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

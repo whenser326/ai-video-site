@@ -421,7 +421,7 @@ useEffect(() => {
 const checkStatus = async (id: string, currentGenType?: string) => {
 // [DNA_PATCH_END]
     try {
-      const res = await fetch(`/api/character?id=${id}&email=${session?.user?.email}`);
+      const res = await fetch(`/api/character?id=${id}&email=${session?.user?.email}&userEmail=${encodeURIComponent(session?.user?.email || '')}`);
       const data = await res.json();
       setSeconds(prev => prev + 2);
       console.log("Polling status:", data.status, "Error:", data.error, data);
