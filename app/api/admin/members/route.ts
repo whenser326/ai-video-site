@@ -17,13 +17,9 @@ export async function GET() {
 
   const { data: profiles, error } = await supabase
     .from('profiles')
-    .select('id, email, plan, credits, created_at')
+    .select('id, email, plan, credits, created_at, total_generations')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
-  const { data: generations } = await supabase
-    .from('user_generations')
-    .select('user_email, status')
 
   const planCount = { free: 0, starter: 0, standard: 0, pro: 0 }
   profiles?.forEach(p => {
@@ -31,16 +27,8 @@ export async function GET() {
     if (plan in planCount) planCount[plan]++
   })
 
-  // 每位用戶的生成總次數
-  const genMap: Record<string, number> = {}
-  generations?.forEach(g => {
-    if (g.status === 'succeeded') {
-      genMap[g.user_email] = (genMap[g.user_email] || 0) + 1
-    }
-  })
-
   const totalMembers = profiles?.length || 0
-  const totalGenerations = Object.values(genMap).reduce((a, b) => a + b, 0)
+  const totalGenerations = profiles?.reduce((sum, p: any) => sum + (p.total_generations || 0), 0) || 0
 
   // 今日新增會員
   const today = new Date()
@@ -58,12 +46,12 @@ export async function GET() {
     planCount,
     totalGenerations,
     newToday,
-    profiles: profiles?.map(p => ({
+    profiles: profiles?.map((p: any) => ({
       id: p.id,
       email: p.email,
       plan: p.plan,
       credits: p.credits,
-      generations: genMap[p.email] || 0,
+      generations: p.total_generations || 0,
       created_at: p.created_at,
     })),
     adjustments: adjustments || [],
