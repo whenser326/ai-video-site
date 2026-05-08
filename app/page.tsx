@@ -2323,7 +2323,6 @@ return (
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email: session?.user?.email }),
           });
-          localStorage.removeItem('locked_character');
           setLockedCharacterUrl(null);
           setLockedCharacterId(null);
         }}

@@ -27,7 +27,7 @@ function checkRateLimit(ip: string): boolean {
 }
 
 function getTodayString(): string {
-  return new Date().toLocaleDateString('zh-TW', { timeZone: 'Asia/Taipei' });
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
 }
 
 export async function POST(req: Request) {

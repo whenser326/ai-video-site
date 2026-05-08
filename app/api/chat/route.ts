@@ -363,7 +363,7 @@ export async function POST(req: NextRequest) {
 
   // 非同步觸發摘要（不阻塞回應，不影響速度）
   if (finalSessionId) {
-    maybeGenerateSummary(finalSessionId).catch(() => {});
+    maybeGenerateSummary(finalSessionId).catch(err => console.error('summary generation failed:', err));
   }
 
   return NextResponse.json({

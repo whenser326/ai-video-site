@@ -166,7 +166,7 @@ const VOICE_OPTIONS = [
               }]);
             }
           }
-        } catch { /* 靜默失敗 */ }
+        } catch (err) { console.error('auto message failed:', err); }
         // 發完再重設 timer
         startTimer();
       }, 60000);
@@ -713,7 +713,7 @@ const VOICE_OPTIONS = [
                       setMessages(prev => [...prev, { role: 'user', content: '（傳送了一張圖片）', mediaUrl: data.url }]);
                       await handleSend("（用戶傳了一張圖片）", data.url);
                     }
-                  } catch { /* 靜默失敗 */ }
+                  } catch (err) { console.error('group action failed:', err); }
                   e.target.value = '';
                 }}
               />

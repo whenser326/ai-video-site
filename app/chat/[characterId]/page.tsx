@@ -680,7 +680,7 @@ const [searchOpen, setSearchOpen] = useState(false);
                       }
                     });
                   }
-                } catch { /* 靜默失敗 */ }
+                } catch (err) { console.error('auto message failed:', err); }
                 e.target.value = '';
               }}
             />

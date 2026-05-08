@@ -89,9 +89,9 @@ Apple Pay：幕前支付已串接（checkout tradeInfo 加入 APPLEPAY:"1"），
 - 計費模型：claude-haiku-4-5
 
 群組聊天上限：
-- 免費：不開放
-- 入門/標準：最多3個角色
-- 專業：最多5個角色
+- 自建角色群組：免費不開放、入門/標準最多3個、專業最多5個
+- 預設角色群組：免費可用最多3個、入門/標準最多3個、專業最多5個
+- 預設角色不支援「讓她說話」說話影片功能（未來再考慮開放）
 - 計費方式：幾個角色回覆算幾次（方案B）
 - 回覆順序：隨機
 - 角色間可互相回應
@@ -160,7 +160,7 @@ AI 自拍媒體類型與扣點：
 - 避免主打「無審查/尺度」——Bloomi 走這條路，和我們定位不同，且 App Store 風險高
 - 每日簽到＋推薦賺點要在聊天室內更明顯提示，降低用戶「點數焦慮」（Floze/Crushie 最大流失原因）
 
-✅ /api/history DELETE method（已完成，query string: id+email）
+✅ profiles.total_generations 累計欄位（2026/05/08，後台生成次數獨立於 history 清理）
 ✅ profiles.total_generations 累計欄位（2026/05/08，後台生成次數獨立於 history 清理）
 ✅ /api/saved-characters：POST 新增名稱重複檢查、description 欄位寫入；DELETE 改為 query string
 ✅ saved_characters 表新增 voice_id 欄位（角色預設聲音，建角色時設定）
