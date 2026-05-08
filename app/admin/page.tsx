@@ -103,7 +103,7 @@ export default function AdminPage() {
   }, [session, status]);
 
   const fetchData = async () => {
-    const res = await fetch(`/api/admin/settings`);
+    const res = await fetch(`/api/admin/settings?email=${session?.user?.email}`);
     const data = await res.json();
     if (data.settings) setSettings(prev => ({ ...prev, ...data.settings }));
     if (data.logs) setLogs(data.logs);
@@ -426,30 +426,6 @@ export default function AdminPage() {
               className="w-24 bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-[#89f5a2]/50"
             />
             <span className="text-white/40 text-sm">秒</span>
-          </div>
-          <button onClick={handleSave} disabled={saving}
-            className="mt-4 px-6 py-2 bg-[#89f5a2]/20 border border-[#89f5a2]/40 rounded-xl text-[#89f5a2] font-bold text-sm hover:bg-[#89f5a2]/30 transition-all">
-            {saving ? "儲存中..." : "儲存設定"}
-          </button>
-          {msg && <p className="mt-2 text-sm">{msg}</p>}
-        </div>
-        {/* [DNA_PATCH_END] */}
-
-        {/* [DNA_PATCH_START] 成人專區開關 */}
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
-          <h2 className="text-lg font-bold mb-1">🔞 成人專區開關</h2>
-          <p className="text-white/40 text-xs mb-4">開啟後前台顯示成人專區按鈕，關閉後按鈕變灰色不可按</p>
-          <div className="flex items-center gap-4">
-            <span className="text-sm">前台顯示成人專區</span>
-            <button
-              onClick={() => setSettings(prev => ({ ...prev, adult_section_enabled: prev.adult_section_enabled === "true" ? "false" : "true" }))}
-              className={`relative w-14 h-7 rounded-full transition-all ${settings.adult_section_enabled === "true" ? "bg-pink-500/60 border border-pink-400/50" : "bg-white/10 border border-white/20"}`}
-            >
-              <div className={`absolute top-1 w-5 h-5 rounded-full transition-all ${settings.adult_section_enabled === "true" ? "left-8 bg-pink-300" : "left-1 bg-white/40"}`} />
-            </button>
-            <span className={`text-sm font-bold ${settings.adult_section_enabled === "true" ? "text-pink-300" : "text-white/30"}`}>
-              {settings.adult_section_enabled === "true" ? "✅ 開啟" : "❌ 關閉"}
-            </span>
           </div>
           <button onClick={handleSave} disabled={saving}
             className="mt-4 px-6 py-2 bg-[#89f5a2]/20 border border-[#89f5a2]/40 rounded-xl text-[#89f5a2] font-bold text-sm hover:bg-[#89f5a2]/30 transition-all">

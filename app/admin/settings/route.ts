@@ -77,9 +77,13 @@ export async function POST(req: NextRequest) {
 
   for (const key of keys) {
     if (body[key] !== undefined) {
-      await supabase
+      const { error } = await supabase
         .from("admin_settings")
-        .upsert({ key, value: String(body[key]), updated_at: new Date().toISOString() });
+        .upsert(
+          { key, value: String(body[key]), updated_at: new Date().toISOString() },
+          { onConflict: "key" }
+        );
+      if (error) console.error(`upsert failed for key=${key}:`, error);
     }
   }
 
