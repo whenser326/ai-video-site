@@ -14,6 +14,8 @@ export default function GlobalHeader() {
   const [credits, setCredits] = useState<number | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
+  const [showLowCreditToast, setShowLowCreditToast] = useState(false);
+const hasShownLowCreditToast = useRef(false);
 
   useEffect(() => {
     if (!session?.user?.email) return;
@@ -35,11 +37,20 @@ export default function GlobalHeader() {
 
   // 點數同步
   useEffect(() => {
-    if (!session?.user?.email) return;
-    fetch(`/api/user/credits?email=${session.user.email}`)
-      .then(r => r.json())
-      .then(d => { if (d.credits !== undefined) setCredits(d.credits); });
-  }, [session]);
+  if (!session?.user?.email) return;
+  fetch(`/api/user/credits?email=${session.user.email}`)
+    .then(r => r.json())
+    .then(d => {
+      if (d.credits !== undefined) {
+        setCredits(d.credits);
+        if (d.credits <= 5 && d.credits > 0 && !hasShownLowCreditToast.current) {
+          hasShownLowCreditToast.current = true;
+          setShowLowCreditToast(true);
+          setTimeout(() => setShowLowCreditToast(false), 8000);
+        }
+      }
+    });
+}, [session]);
 
   // [DNA_PATCH_START] 點外部關閉 Drawer（排除漢堡按鈕本身）
   const hamburgerRef = useRef<HTMLButtonElement>(null);
@@ -289,6 +300,25 @@ if (!session) return (
             });
           }}
         />
+      )}
+    {/* 低點數警戒 Toast */}
+      {showLowCreditToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] w-[90vw] max-w-sm">
+          <div className="bg-[#0d2318] border border-yellow-400/40 rounded-2xl px-4 py-3 flex items-center gap-3 shadow-2xl">
+            <span className="text-2xl flex-shrink-0">⚠️</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-yellow-300 text-sm font-black">點數即將用完</p>
+              <p className="text-white/40 text-xs">剩餘 {credits} 點，補充點數繼續創作</p>
+            </div>
+            <button
+              onClick={() => { router.push('/pricing#plans'); setShowLowCreditToast(false); }}
+              className="flex-shrink-0 px-3 py-1.5 bg-yellow-400/20 border border-yellow-400/40 text-yellow-300 rounded-xl text-xs font-black hover:bg-yellow-400/30 transition-all"
+            >
+              補充 →
+            </button>
+            <button onClick={() => setShowLowCreditToast(false)} className="text-white/20 hover:text-white/50 text-lg flex-shrink-0">✕</button>
+          </div>
+        </div>
       )}
     </>
   );

@@ -62,6 +62,7 @@ export default function SaveCharacterModal({
     lockedCharacterId ?? (savedCharacters[0]?.id ?? null)
   );
   const [saving, setSaving] = useState(false);
+  const [selectedRelation, setSelectedRelation] = useState("");
 
   const handleSave = async () => {
     if (!predictionOutput || !userEmail) return;
@@ -80,9 +81,9 @@ export default function SaveCharacterModal({
     } catch { /* 上傳失敗就用原始 URL */ }
 
     const description =
-      [selectedPersonality, selectedJob, customPersonality, selectedHair, selectedEye, selectedBody, customAppearance]
-        .filter(Boolean)
-        .join("・") || null;
+  [selectedRelation, selectedPersonality, selectedJob, customPersonality, selectedHair, selectedEye, selectedBody, customAppearance]
+    .filter(Boolean)
+    .join("・") || null;
 
     // 模式A：存入現有角色相簿（鎖定角色 or 用戶選的）
     if (mode === "existing" && selectedExistingId) {
@@ -218,6 +219,24 @@ export default function SaveCharacterModal({
               maxLength={20}
               className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/25 text-sm focus:outline-none focus:border-yellow-400/50"
             />
+            <div className="space-y-1.5">
+  <p className="text-white/40 text-xs">💞 關係設定</p>
+  <div className="flex gap-2 flex-wrap">
+    {["初戀", "前輩", "青梅竹馬", "命中注定", "契約戀人", "死對頭"].map(r => (
+      <button
+        key={r}
+        onClick={() => setSelectedRelation(prev => prev === r ? "" : r)}
+        className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+          selectedRelation === r
+            ? "bg-yellow-400/20 border-yellow-400/50 text-yellow-300"
+            : "bg-white/5 border-white/10 text-white/40 hover:border-white/25"
+        }`}
+      >
+        {r}
+      </button>
+    ))}
+  </div>
+</div>
             <div className="space-y-1.5">
               <p className="text-white/40 text-xs">🎙️ 預設聲音</p>
               <select

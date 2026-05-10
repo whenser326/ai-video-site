@@ -49,6 +49,9 @@ export default function ChatPage() {
   const [showSuggest, setShowSuggest] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [suggestLoading, setSuggestLoading] = useState(false);
+  const [showStylePanel, setShowStylePanel] = useState(false);
+const [chatStyle, setChatStyle] = useState("療癒");
+const [writingStyle, setWritingStyle] = useState("直白");
 const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchIndex, setSearchIndex] = useState(0);
@@ -284,11 +287,13 @@ const [searchOpen, setSearchOpen] = useState(false);
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userEmail: session?.user?.email,
-          characterId,
-          sessionId,
-          message: userMsg,
-        }),
+  userEmail: session?.user?.email,
+  characterId,
+  sessionId,
+  message: userMsg,
+  chatStyle,
+  writingStyle,
+}),
       });
 
       const data = await res.json();
@@ -699,6 +704,54 @@ const [searchOpen, setSearchOpen] = useState(false);
           >
             💬
           </button>
+          {/* 風格切換按鈕 */}
+<button
+  onClick={() => setShowStylePanel(p => !p)}
+  title="切換說話風格"
+  className={`flex-shrink-0 w-11 h-11 rounded-2xl text-lg transition-all flex items-center justify-center ${showStylePanel || chatStyle !== "療癒" || writingStyle !== "直白" ? "bg-[#89f5a2]/15 border border-[#89f5a2]/60 text-[#89f5a2]" : "bg-white/5 border border-white/10 text-white/40 hover:border-white/25"}`}
+>
+  🎨
+</button>
+{/* 風格面板 */}
+{showStylePanel && (
+  <div className="mb-2 bg-[#0a1e12] border border-[#89f5a2]/15 rounded-2xl p-3">
+    {/* 角色底層設定 */}
+    <div className="bg-[#0d2318] border border-[#89f5a2]/10 rounded-xl p-3 mb-3">
+      <p className="text-[#89f5a2]/50 text-[10px] tracking-widest mb-2">角色設定</p>
+      <div className="space-y-1.5">
+        <div className="flex gap-2">
+          <span className="text-white/30 text-[11px] w-8 shrink-0">名稱</span>
+          <span className="text-white/80 text-[11px]">{character?.name || "—"}</span>
+        </div>
+        <div className="flex gap-2">
+          <span className="text-white/30 text-[11px] w-8 shrink-0">個性</span>
+          <span className="text-white/80 text-[11px]">{character?.description || "—"}</span>
+        </div>
+        <div className="flex gap-2">
+          <span className="text-white/30 text-[11px] w-8 shrink-0">聲線</span>
+          <span className="text-white/80 text-[11px]">{VOICE_OPTIONS.find(v => v.id === (character?.voice_id || "female-2"))?.label || "—"}</span>
+        </div>
+      </div>
+    </div>
+    {/* 口吻與文風 */}
+    <p className="text-white/30 text-[10px] mb-2">選擇口吻與文風</p>
+    <div className="flex gap-2 flex-wrap items-center">
+      {["療癒", "毒舌", "刺激"].map(s => (
+        <button key={s} onClick={() => setChatStyle(s)}
+          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${chatStyle === s ? "bg-[#89f5a2] text-[#0d2318]" : "bg-white/5 border border-white/15 text-white/50 hover:border-white/30"}`}>
+          {s}
+        </button>
+      ))}
+      <div className="w-px h-5 bg-white/15 mx-1" />
+      {["直白", "文藝", "輕小說"].map(s => (
+        <button key={s} onClick={() => setWritingStyle(s)}
+          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${writingStyle === s ? "bg-[#89f5a2] text-[#0d2318]" : "bg-white/5 border border-white/15 text-white/50 hover:border-white/30"}`}>
+          {s}
+        </button>
+      ))}
+    </div>
+  </div>
+)}
           <textarea
             value={input}
               onChange={e => setInput(e.target.value)}

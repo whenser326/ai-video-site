@@ -56,13 +56,17 @@ export async function POST(req: NextRequest) {
 
   let newStreak = lastDate === yesterdayStr ? (profile.checkin_streak || 0) + 1 : 1;
 
-  // 計算獎勵點數
+  // 隨機轉盤點數（機率：1點50%/2點40%/3點5%/4點4%/5點1%）
+  const rand = Math.random() * 100;
+  const spinCredits = rand < 50 ? 1 : rand < 90 ? 2 : rand < 95 ? 3 : rand < 99 ? 4 : 5;
+
+  // 計算連續獎勵點數
   let bonusCredits = 0;
   if (newStreak === 7) bonusCredits = 3;
   if (newStreak === 14) bonusCredits = 5;
   if (newStreak === 21) bonusCredits = 5;
   if (newStreak === 30) bonusCredits = 10;
-  const totalCredits = 1 + bonusCredits;
+  const totalCredits = spinCredits + bonusCredits;
 
   // 更新 profiles（免費用戶簽到後重設當日影片計數，額度+1）
   const { data: planData } = await supabase
@@ -105,8 +109,9 @@ export async function POST(req: NextRequest) {
     success: true,
     streak: newStreak,
     creditsEarned: totalCredits,
+    spinCredits,
     bonusCredits,
-    bonusVideo: isFreeUser && hasUsedVideo, // 有重設影片額度才回傳 true
+    bonusVideo: isFreeUser && hasUsedVideo,
   });
 }
 

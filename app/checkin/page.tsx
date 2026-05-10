@@ -11,7 +11,10 @@ export default function CheckinPage() {
   const [streak, setStreak] = useState(0);
   const [already, setAlready] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{ creditsEarned: number; bonusCredits: number; bonusVideo: boolean } | null>(null);
+  const [result, setResult] = useState<{ creditsEarned: number; spinCredits: number; bonusCredits: number; bonusVideo: boolean } | null>(null);
+  const [spinning, setSpinning] = useState(false);
+  const [spinAngle, setSpinAngle] = useState(0);
+  const canvasRef = typeof window !== 'undefined' ? null : null;
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -26,25 +29,6 @@ export default function CheckinPage() {
     }
   }, [session, status]);
 
-  const handleCheckin = async () => {
-    if (!session?.user?.email || already || loading) return;
-    setLoading(true);
-    setError("");
-    const res = await fetch("/api/checkin", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: session.user.email }),
-    });
-    const data = await res.json();
-    setLoading(false);
-    if (data.error) {
-      setError(data.error);
-    } else {
-      setAlready(true);
-      setStreak(data.streak);
-      setResult({ creditsEarned: data.creditsEarned, bonusCredits: data.bonusCredits, bonusVideo: !!data.bonusVideo });
-    }
-  };
 
   // 計算30天格子
   const currentStreak = streak;
@@ -85,34 +69,131 @@ export default function CheckinPage() {
           <p className="text-white/40 text-sm mt-1">天</p>
         </div>
 
-        {/* 簽到按鈕 */}
-        <button
-          onClick={handleCheckin}
-          disabled={already || loading}
-          className={`w-full py-4 rounded-2xl font-black text-lg transition-all
-            ${already
-              ? "bg-white/10 text-white/40 cursor-not-allowed"
-              : "bg-gradient-to-r from-[#89f5a2] to-[#4ade80] text-[#0d2318] hover:opacity-90 active:scale-[0.99] shadow-lg shadow-[#89f5a2]/25"
-            }`}
-        >
-          {loading ? "簽到中..." : already ? "✅ 今日已簽到" : "📅 立即簽到 +1點"}
-        </button>
-
-        {/* 簽到成功提示 */}
-        {result && (
-          <div className="bg-[#89f5a2]/10 border border-[#89f5a2]/30 rounded-2xl p-4 text-center animate-in fade-in duration-300">
-            <p className="text-[#89f5a2] font-black text-lg">✅ 簽到成功！</p>
-            <p className="text-white/60 text-sm mt-1">
-              獲得 <span className="text-[#89f5a2] font-black">{result.creditsEarned} 點</span>
-              {result.bonusCredits > 0 && (
-                <span className="text-yellow-300 font-black">（含連續獎勵 +{result.bonusCredits}點 🎉）</span>
-              )}
-            </p>
-            {result.bonusVideo && (
-              <p className="text-purple-300 font-black text-sm mt-2">🎬 今日影片額度已重置，可再生成 1 支！</p>
-            )}
+        {/* 轉盤簽到區塊 */}
+        <div className="bg-black/25 backdrop-blur-xl rounded-3xl border border-white/10 p-5 flex flex-col items-center">
+          {/* 轉盤 Canvas */}
+          <div className="relative mb-4">
+            <div className="absolute top-[-14px] left-1/2 -translate-x-1/2 w-0 h-0"
+              style={{ borderLeft:'10px solid transparent', borderRight:'10px solid transparent', borderTop:'20px solid #89f5a2', zIndex:10 }} />
+            <canvas
+              id="checkinWheel"
+              width={220}
+              height={220}
+              className="rounded-full border-4 border-[#89f5a2]"
+            />
           </div>
-        )}
+
+          {/* 簽到按鈕 */}
+          <button
+            onClick={async () => {
+              if (already || loading || spinning) return;
+              // 先畫好轉盤
+              const canvas = document.getElementById('checkinWheel') as HTMLCanvasElement;
+              const ctx = canvas?.getContext('2d');
+              if (!ctx) return;
+
+              const segs = [
+                { label:'+1 點', color:'#1a3a25', textColor:'#89f5a2' },
+                { label:'+2 點', color:'#2d5a3d', textColor:'#89f5a2' },
+                { label:'+3 點', color:'#1a4a2a', textColor:'#5DF5A5' },
+                { label:'+4 點', color:'#0d3320', textColor:'#5DF5A5' },
+                { label:'+5 點', color:'#0a2818', textColor:'#FFE566' },
+              ];
+              const n = segs.length;
+              const cx = 110, cy = 110, r = 105;
+
+              const drawWheel = (angle: number) => {
+                ctx.clearRect(0,0,220,220);
+                for(let i=0;i<n;i++) {
+                  const start = angle + (i/n)*2*Math.PI;
+                  const end = angle + ((i+1)/n)*2*Math.PI;
+                  ctx.beginPath(); ctx.moveTo(cx,cy);
+                  ctx.arc(cx,cy,r,start,end); ctx.closePath();
+                  ctx.fillStyle = segs[i].color; ctx.fill();
+                  ctx.strokeStyle='#89f5a2'; ctx.lineWidth=1.5; ctx.stroke();
+                  ctx.save(); ctx.translate(cx,cy);
+                  ctx.rotate(start+(end-start)/2);
+                  ctx.textAlign='right'; ctx.fillStyle=segs[i].textColor;
+                  ctx.font='bold 13px sans-serif';
+                  ctx.fillText(segs[i].label, r-10, 5);
+                  ctx.restore();
+                }
+                ctx.beginPath(); ctx.arc(cx,cy,16,0,2*Math.PI);
+                ctx.fillStyle='#0d2318'; ctx.fill();
+                ctx.strokeStyle='#89f5a2'; ctx.lineWidth=2; ctx.stroke();
+              };
+
+              drawWheel(spinAngle);
+              setSpinning(true);
+              setLoading(true);
+
+              // 呼叫 API 取得結果
+              const res = await fetch("/api/checkin", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: session?.user?.email }),
+              });
+              const data = await res.json();
+              setLoading(false);
+
+              if (data.error) { setError(data.error); setSpinning(false); return; }
+
+              // 根據 spinCredits 決定停在哪個格子
+              const spinCredits = data.spinCredits || 1;
+              const segIdx = [1,2,3,4,5].indexOf(spinCredits);
+              const targetIdx = segIdx >= 0 ? segIdx : 0;
+              const segAngle = (2*Math.PI)/n;
+              const targetAngle = 2*Math.PI*8 + (Math.PI*1.5) - (targetIdx*segAngle) - segAngle/2;
+              const duration = 3500;
+              const start = performance.now();
+              const startAngle = spinAngle;
+
+              const animate = (now: number) => {
+                const elapsed = now - start;
+                const progress = Math.min(elapsed/duration, 1);
+                const ease = 1 - Math.pow(1-progress, 4);
+                const angle = startAngle + targetAngle * ease;
+                drawWheel(angle);
+                if(progress < 1) {
+                  requestAnimationFrame(animate);
+                } else {
+                  setSpinAngle(angle % (2*Math.PI));
+                  setSpinning(false);
+                  setAlready(true);
+                  setStreak(data.streak);
+                  setResult({ creditsEarned: data.creditsEarned, spinCredits: data.spinCredits, bonusCredits: data.bonusCredits, bonusVideo: !!data.bonusVideo });
+                }
+              };
+              requestAnimationFrame(animate);
+            }}
+            disabled={already || loading || spinning}
+            className={`px-10 py-3 rounded-2xl font-black text-base transition-all
+              ${already
+                ? "bg-white/10 text-white/40 cursor-not-allowed"
+                : spinning
+                ? "bg-white/10 text-white/40 cursor-not-allowed"
+                : "bg-[#89f5a2] text-[#0d2318] hover:opacity-90 active:scale-[0.98]"
+              }`}
+          >
+            {spinning ? "轉動中..." : already ? "✅ 今日已簽到" : "🎰 轉動幸運輪盤"}
+          </button>
+
+          {/* 簽到成功提示 */}
+          {result && (
+            <div className="mt-4 w-full bg-[#89f5a2]/10 border border-[#89f5a2]/30 rounded-2xl p-4 text-center">
+              <p className="text-[#89f5a2] font-black text-lg">✅ 簽到成功！</p>
+              <p className="text-white/60 text-sm mt-1">
+                轉到 <span className="text-[#89f5a2] font-black">+{result.spinCredits} 點</span>
+                {result.bonusCredits > 0 && (
+                  <span className="text-yellow-300 font-black">（含連續獎勵 +{result.bonusCredits}點 🎉）</span>
+                )}
+              </p>
+              {result.bonusVideo && (
+                <p className="text-purple-300 font-black text-sm mt-2">🎬 今日影片額度已重置，可再生成 1 支！</p>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* 錯誤訊息 */}
         {error && (

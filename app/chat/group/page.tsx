@@ -74,6 +74,9 @@ const VOICE_OPTIONS = [
   const autoMessageTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastUserMessageTime = useRef<number>(Date.now());
   // [DNA_PATCH_START] 搜尋功能 state
+  const [showStylePanel, setShowStylePanel] = useState(false);
+const [chatStyle, setChatStyle] = useState("療癒");
+const [writingStyle, setWritingStyle] = useState("直白");
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchIndex, setSearchIndex] = useState(0);
@@ -311,12 +314,14 @@ const VOICE_OPTIONS = [
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userEmail: session.user.email,
-          characters: selectedIds,
-          sessionId,
-          message: userMsg,
-          imageUrl: imageUrl || undefined,
-        }),
+  userEmail: session.user.email,
+  characters: selectedIds,
+  sessionId,
+  message: userMsg,
+  imageUrl: imageUrl || undefined,
+  chatStyle,
+  writingStyle,
+}),
       });
 
       const data = await res.json();
@@ -733,9 +738,48 @@ const VOICE_OPTIONS = [
               />
             </label>
             <button onClick={handleSuggest} title="推薦開場白"
-              className="flex-shrink-0 w-11 h-11 rounded-2xl bg-purple-500/15 border border-purple-500/30 text-purple-300 text-lg hover:bg-purple-500/25 transition-all flex items-center justify-center">
-              💬
-            </button>
+  className="flex-shrink-0 w-11 h-11 rounded-2xl bg-purple-500/15 border border-purple-500/30 text-purple-300 text-lg hover:bg-purple-500/25 transition-all flex items-center justify-center">
+  💬
+</button>
+<button
+  onClick={() => setShowStylePanel(p => !p)}
+  title="切換說話風格"
+  className={`flex-shrink-0 w-11 h-11 rounded-2xl text-lg transition-all flex items-center justify-center ${showStylePanel || chatStyle !== "療癒" || writingStyle !== "直白" ? "bg-[#89f5a2]/15 border border-[#89f5a2]/60 text-[#89f5a2]" : "bg-white/5 border border-white/10 text-white/40 hover:border-white/25"}`}
+>
+  🎨
+</button>
+{showStylePanel && (
+  <div className="mb-2 bg-[#0a1e12] border border-[#89f5a2]/15 rounded-2xl p-3">
+    <div className="bg-[#0d2318] border border-[#89f5a2]/10 rounded-xl p-3 mb-3">
+      <p className="text-[#89f5a2]/50 text-[10px] tracking-widest mb-2">參與角色</p>
+      <div className="space-y-1.5">
+        {selectedChars.map(c => (
+          <div key={c.id} className="flex gap-2 items-center">
+            <img src={c.image_url} className="w-5 h-5 rounded-full object-cover border border-white/20 shrink-0" />
+            <span className="text-white/80 text-[11px] font-bold">{c.name}</span>
+            {c.description && <span className="text-white/35 text-[11px]">· {c.description}</span>}
+          </div>
+        ))}
+      </div>
+    </div>
+    <p className="text-white/30 text-[10px] mb-2">選擇口吻與文風</p>
+    <div className="flex gap-2 flex-wrap items-center">
+      {["療癒", "毒舌", "刺激"].map(s => (
+        <button key={s} onClick={() => setChatStyle(s)}
+          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${chatStyle === s ? "bg-[#89f5a2] text-[#0d2318]" : "bg-white/5 border border-white/15 text-white/50 hover:border-white/30"}`}>
+          {s}
+        </button>
+      ))}
+      <div className="w-px h-5 bg-white/15 mx-1" />
+      {["直白", "文藝", "輕小說"].map(s => (
+        <button key={s} onClick={() => setWritingStyle(s)}
+          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${writingStyle === s ? "bg-[#89f5a2] text-[#0d2318]" : "bg-white/5 border border-white/15 text-white/50 hover:border-white/30"}`}>
+          {s}
+        </button>
+      ))}
+    </div>
+  </div>
+)}
             <textarea
               value={input}
               onChange={e => setInput(e.target.value)}
