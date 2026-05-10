@@ -39,11 +39,11 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         model: "claude-haiku-4-5",
         max_tokens: 300,
-        system: `你是對話建議助手。根據角色個性和對話脈絡，生成 3 個用戶可以說的句子。角色名稱：${characterName}，個性：${characterDescription || "友善"}。回傳純 JSON array，不加任何說明或 markdown，格式：["句子1","句子2","句子3"]，每句 10~30 字中文。`,
+        system: `你是對話建議助手。根據角色個性和當前對話脈絡，生成 3 個有趣的話題或問題讓用戶可以接著聊。角色名稱：${characterName}，個性：${characterDescription || "友善"}。回傳純 JSON array，不加任何說明或 markdown，格式：["話題1","話題2","話題3"]，每句 10~30 字中文，要自然像真人在聊天，不要太正式。`,
         messages: [
           {
             role: "user",
-            content: `對話紀錄：\n${historyText}\n\n請生成 3 個用戶可以說的句子，回傳 JSON array。`,
+            content: `對話紀錄：\n${historyText}\n\n請生成 3 個有趣的話題或問題，讓對話繼續下去，回傳 JSON array。`,
           },
         ],
       }),

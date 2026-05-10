@@ -400,7 +400,7 @@ const searchResults = searchQuery.trim()
               }}
             />
           </label>
-          <button onClick={handleSuggest} title="推薦開場白"
+          <button onClick={handleSuggest} title="推薦話題"
             className="flex-shrink-0 w-11 h-11 rounded-2xl bg-purple-500/15 border border-purple-500/30 text-purple-300 text-lg hover:bg-purple-500/25 transition-all flex items-center justify-center">
             💬
           </button>
@@ -425,7 +425,7 @@ const searchResults = searchQuery.trim()
         {showSuggest && (
             <div className="mt-2 bg-[#0d2318]/90 border border-purple-500/25 rounded-2xl p-3 space-y-2">
               <div className="flex items-center justify-between mb-1">
-                <p className="text-purple-300/60 text-[10px] font-bold">💬 推薦開場白</p>
+                <p className="text-purple-300/60 text-[10px] font-bold">💬 推薦話題</p>
                 <button onClick={() => setShowSuggest(false)} className="text-white/20 text-xs hover:text-white/50">✕</button>
               </div>
               {suggestLoading && <p className="text-white/30 text-xs text-center py-2">生成中...</p>}

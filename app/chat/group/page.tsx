@@ -110,7 +110,7 @@ const [writingStyle, setWritingStyle] = useState("直白");
     setSuggestLoading(false);
   };
   const randomDelay = () => Math.floor(Math.random() * 3000) + 2000;
-  const selfieDelay = () => Math.floor(Math.random() * 150000) + 30000; // 群組：30秒~3分鐘
+  const selfieDelay = () => Math.floor(Math.random() * 7000) + 3000; // 3~10秒
 
   useEffect(() => {
     if (!session?.user?.email) return;
@@ -127,7 +127,8 @@ const [writingStyle, setWritingStyle] = useState("直白");
     // 從 localStorage 恢復群組 sessionId
     const savedSession = localStorage.getItem(`chat_session_group_${session.user.email}`);
     if (savedSession) setSessionId(savedSession);
-    const noticeSeen = localStorage.getItem("chat_notice_seen");
+    const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Taipei" });
+    const noticeSeen = localStorage.getItem(`chat_notice_seen_${today}`);
     if (!noticeSeen) setShowNotice(true);
   }, [session]);
 
@@ -141,15 +142,13 @@ const [writingStyle, setWritingStyle] = useState("直白");
       if (autoMessageTimerRef.current) clearTimeout(autoMessageTimerRef.current);
       autoMessageTimerRef.current = setTimeout(async () => {
         if (!session?.user?.email || loading) return;
-        // 隨機選一個角色主動發話
-        const randomCharId = selectedIds[Math.floor(Math.random() * selectedIds.length)];
         try {
           const res = await fetch("/api/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               userEmail: session.user.email,
-              characters: [randomCharId],
+              characters: selectedIds,
               sessionId,
               message: "（系統：請主動發話）",
               isAutoMessage: true,
@@ -157,7 +156,10 @@ const [writingStyle, setWritingStyle] = useState("直白");
           });
           const data = await res.json();
           if (data.responses && Array.isArray(data.responses)) {
-            for (const r of data.responses) {
+            const shuffled = [...data.responses].sort(() => Math.random() - 0.5);
+            const count = Math.floor(Math.random() * shuffled.length) + 1;
+            const picked = shuffled.slice(0, count);
+            for (const r of picked) {
               await new Promise(resolve => setTimeout(resolve, randomDelay()));
               const char = characters.find(c => c.id === r.characterId);
               setMessages(prev => [...prev, {
@@ -363,6 +365,14 @@ const [writingStyle, setWritingStyle] = useState("直白");
             await new Promise(resolve => setTimeout(resolve, randomDelay()));
             const char = characters.find(c => c.id === r.characterId);
             const msgId = `msg-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+            if ((r.selfieIntent === "photo" || r.selfieIntent === "video") && r.selfiePrompt) {
+              selfieQueue.push({
+                intent: r.selfieIntent as "photo" | "video",
+                prompt: r.selfiePrompt as string,
+                msgId,
+                charImgUrl: r.characterImageUrl as string | undefined,
+              });
+            }
             setMessages(prev => {
               const newMsg: Message = {
                 id: msgId,
@@ -372,24 +382,16 @@ const [writingStyle, setWritingStyle] = useState("直白");
                 characterImage: char?.image_url,
                 characterId: r.characterId,
               };
-              if ((r.selfieIntent === "photo" || r.selfieIntent === "video") && r.selfiePrompt) {
-                selfieQueue.push({
-                  intent: r.selfieIntent as "photo" | "video",
-                  prompt: r.selfiePrompt as string,
-                  msgId,
-                  charImgUrl: r.characterImageUrl as string | undefined,
-                });
-              }
               return [...prev, newMsg];
             });
           }
           // 群組自拍：從有意圖的角色中隨機選一個
           if (selfieQueue.length > 0) {
             const chosen = selfieQueue[Math.floor(Math.random() * selfieQueue.length)];
-            const delay = Math.floor(Math.random() * 7000) + 3000;
-            setTimeout(() => {
-              triggerSelfie(chosen.intent, chosen.prompt, chosen.msgId, chosen.charImgUrl);
-            }, delay);
+            const delay = selfieDelay();
+setTimeout(() => {
+  triggerSelfie(chosen.intent, chosen.prompt, chosen.msgId, chosen.charImgUrl);
+}, delay);
           }
         })();
       }
@@ -737,7 +739,7 @@ const [writingStyle, setWritingStyle] = useState("直白");
                 }}
               />
             </label>
-            <button onClick={handleSuggest} title="推薦開場白"
+            <button onClick={handleSuggest} title="推薦話題"
   className="flex-shrink-0 w-11 h-11 rounded-2xl bg-purple-500/15 border border-purple-500/30 text-purple-300 text-lg hover:bg-purple-500/25 transition-all flex items-center justify-center">
   💬
 </button>
@@ -796,7 +798,7 @@ const [writingStyle, setWritingStyle] = useState("直白");
           {showSuggest && (
             <div className="mt-2 bg-[#0d2318]/90 border border-purple-500/25 rounded-2xl p-3 space-y-2">
               <div className="flex items-center justify-between mb-1">
-                <p className="text-purple-300/60 text-[10px] font-bold">💬 推薦開場白</p>
+                <p className="text-purple-300/60 text-[10px] font-bold">💬 推薦話題</p>
                 <button onClick={() => setShowSuggest(false)} className="text-white/20 text-xs hover:text-white/50">✕</button>
               </div>
               {suggestLoading && <p className="text-white/30 text-xs text-center py-2">生成中...</p>}

@@ -81,11 +81,6 @@ const [searchOpen, setSearchOpen] = useState(false);
     }
   }, [session]);
   // [DNA_PATCH_END]
-  useEffect(() => {
-    if (!session?.user?.email) return;
-    const today = new Date().toLocaleDateString("en-CA");
-    if (!localStorage.getItem(`chat_notice_seen_${today}`)) setShowNotice(true);
-  }, [session]);
   const handleSuggest = async () => {
     if (suggestLoading) return;
     setShowSuggest(true);
@@ -699,7 +694,7 @@ const [searchOpen, setSearchOpen] = useState(false);
           {/* 推薦台詞按鈕 */}
           <button
             onClick={handleSuggest}
-            title="推薦開場白"
+            title="推薦話題"
             className="flex-shrink-0 w-11 h-11 rounded-2xl bg-purple-500/15 border border-purple-500/30 text-purple-300 text-lg hover:bg-purple-500/25 transition-all flex items-center justify-center"
           >
             💬
@@ -771,7 +766,7 @@ const [searchOpen, setSearchOpen] = useState(false);
           {showSuggest && (
             <div className="mt-2 bg-[#0d2318]/90 border border-purple-500/25 rounded-2xl p-3 space-y-2">
               <div className="flex items-center justify-between mb-1">
-                <p className="text-purple-300/60 text-[10px] font-bold">💬 推薦開場白</p>
+                <p className="text-purple-300/60 text-[10px] font-bold">💬 推薦話題</p>
                 <button onClick={() => setShowSuggest(false)} className="text-white/20 text-xs hover:text-white/50">✕</button>
               </div>
               {suggestLoading && (

@@ -140,7 +140,7 @@ function detectSelfieIntent(
   characterImageUrl: string,
   history: any[]
 ): { intent: "photo" | "video" | null; selfiePrompt: string | null; characterImageUrl: string } {
-  const photoKeywords = ["拍照", "自拍", "拍張", "傳照片", "照片給我", "看看你", "看看妳", "拍一張", "傳圖", "傳個圖", "照片"];
+  const photoKeywords = ["拍照", "自拍", "拍張", "傳照片", "照片給我", "看看你", "看看妳", "拍一張", "傳圖", "傳個圖", "照片", "你要自拍", "給我看看", "讓我看看", "傳一張", "拍一下", "傳給我看", "給我看", "自拍給我"];
   const videoKeywords = ["錄影", "錄一段", "拍影片", "傳影片", "影片給我", "錄個", "錄段"];
 
   const combinedText = message + aiReply;
