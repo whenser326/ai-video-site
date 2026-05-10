@@ -174,8 +174,19 @@ const searchResults = searchQuery.trim()
     setMessages(prev => [...prev, { role: "user", content: userMsg }]);
     setLoading(true);
 
-    const selfieKeywords = ["拍照", "自拍", "拍張", "傳照片", "照片給我", "看看你", "看看妳", "拍一張", "傳圖", "錄影", "錄一段", "拍影片"];
-    if (selfieKeywords.some(k => userMsg.includes(k))) {
+    const photoKeywords = ["拍照", "自拍", "拍張", "傳照片", "照片給我", "看看你", "看看妳", "拍一張", "傳圖"];
+    const videoKeywords = ["錄影", "錄一段", "拍影片", "拍個影片", "拍段影片"];
+    if (videoKeywords.some(k => userMsg.includes(k))) {
+      await new Promise(r => setTimeout(r, randomDelay()));
+      setMessages(prev => [...prev, {
+        role: "assistant",
+        content: `（想錄影片給你，但這個功能需要收藏角色後才能使用 🎬 快去收藏你喜歡的角色吧！）`,
+        characterName: selectedChars[0]?.name,
+      }]);
+      setLoading(false);
+      return;
+    }
+    if (photoKeywords.some(k => userMsg.includes(k))) {
       await new Promise(r => setTimeout(r, randomDelay()));
       setMessages(prev => [...prev, {
         role: "assistant",
