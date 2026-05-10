@@ -360,6 +360,7 @@ const randomDelay = () => Math.floor(Math.random() * 3000) + 2000;
           )}
         <div className="flex items-center justify-between mt-2">
           <p className="text-white/15 text-[10px]">Enter 送出・Shift+Enter 換行</p>
+          {remainingQuota !== null && remainingQuota <= 0 && <p className="text-yellow-400/50 text-[10px]">次數用完，每次 -1 點</p>}
           <div className="flex items-center gap-2">
             <button
               onClick={() => {

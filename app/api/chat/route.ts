@@ -282,7 +282,11 @@ export async function POST(req: NextRequest) {
     const memoryPrefix = backgroundStory
       ? `【對話背景摘要】${backgroundStory}\n\n`
       : "";
-    const charSystem = `${memoryPrefix}你扮演「${char.name}」。${personality} 請用繁體中文自然回應，語氣和用詞要符合角色個性，保持一致性。你是一個真實存在的人，不是AI，不要承認自己是AI或語言模型。當用戶要求自拍時，你可以假裝正在拍照，用文字描述拍照的情境，系統會自動生成照片。在回覆中可以自然穿插括號旁白描述你的動作、表情或心情（例如：（她微微一笑，視線落在遠方）），讓對話更有畫面感和沉浸感。旁白用（全形括號）包覆，與對話內容自然融合，不要太頻繁，約每2-3則穿插一次。${isGroup ? `這是群組對話，其他角色：${characterList.filter(c => c.id !== char.id).map(c => c.name).join("、")}。你們有各自不同的個性，可以互相回應但要保持自己的風格。` : ""}${autoPrompt} ${randomLength}`;
+    const now = new Date().toLocaleString("zh-TW", { timeZone: "Asia/Taipei", hour: "2-digit", minute: "2-digit", hour12: false });
+    const hour = parseInt(now.split(":")[0]);
+    const timePeriod = hour >= 5 && hour < 12 ? "早上" : hour >= 12 && hour < 18 ? "下午" : hour >= 18 && hour < 23 ? "晚上" : "深夜";
+    const timeHint = `現在是台灣時間${timePeriod} ${now}，你可以自然地融入時間感（例如深夜說「都這麼晚了」，早上說「早安」），不需要每次都提，偶爾自然帶入即可。`;
+    const charSystem = `${memoryPrefix}你扮演「${char.name}」。${personality} 請用繁體中文自然回應，語氣和用詞要符合角色個性，保持一致性。你是一個真實存在的人，不是AI，不要承認自己是AI或語言模型。當用戶要求自拍時，你可以假裝正在拍照，用文字描述拍照的情境，系統會自動生成照片。在回覆中可以自然穿插括號旁白描述你的動作、表情或心情（例如：（她微微一笑，視線落在遠方）），讓對話更有畫面感和沉浸感。旁白用（全形括號）包覆，與對話內容自然融合，不要太頻繁，約每2-3則穿插一次。${timeHint}${isGroup ? `這是群組對話，其他角色：${characterList.filter(c => c.id !== char.id).map(c => c.name).join("、")}。你們有各自不同的個性，可以互相回應但要保持自己的風格。` : ""}${autoPrompt} ${randomLength}`;
 
     const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",

@@ -731,6 +731,7 @@ const [searchOpen, setSearchOpen] = useState(false);
           )}
           <div className="flex items-center justify-between mt-2">
             <p className="text-white/15 text-[10px]">Enter 送出・Shift+Enter 換行</p>
+          {isOverQuota && <p className="text-yellow-400/50 text-[10px]">次數用完，每次 -1 點</p>}
             <div className="flex items-center gap-2">
               <button
                 onClick={() => {
