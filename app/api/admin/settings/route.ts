@@ -31,6 +31,7 @@ export async function GET(req: NextRequest) {
       "seedance_5s_starter", "seedance_5s_standard", "seedance_5s_pro",
       "seedance_10s_starter", "seedance_10s_standard", "seedance_10s_pro",
       "omni_extra_starter", "omni_extra_standard", "omni_extra_pro",
+      "adult_section_enabled",
     ]);
     // [DNA_PATCH_END]
 
@@ -66,29 +67,24 @@ export async function POST(req: NextRequest) {
       "seedance_5s_starter", "seedance_5s_standard", "seedance_5s_pro",
       "seedance_10s_starter", "seedance_10s_standard", "seedance_10s_pro",
       "omni_extra_starter", "omni_extra_standard", "omni_extra_pro",
+      "adult_section_enabled",
   ];
   // [DNA_PATCH_END]
 
-  await Promise.all(
+  const results = await Promise.all(
     keys.map(async (key) => {
-      if (body[key] === undefined) return;
-
-      const { data: updated, error: updateError } = await supabase
+      if (body[key] === undefined) return null;
+      const { error } = await supabase
         .from("admin_settings")
-        .update({ value: String(body[key]), updated_at: new Date().toISOString() })
-        .eq("key", key)
-        .select();
-
-      if (updateError) console.error(`update failed for key=${key}:`, updateError);
-
-      if (!updated || updated.length === 0) {
-        const { error: insertError } = await supabase
-          .from("admin_settings")
-          .insert({ key, value: String(body[key]), updated_at: new Date().toISOString() });
-        if (insertError) console.error(`insert failed for key=${key}:`, insertError);
-      }
+        .upsert(
+          { key, value: String(body[key]), updated_at: new Date().toISOString() },
+          { onConflict: "key" }
+        );
+      if (error) console.error(`upsert failed for key=${key}:`, JSON.stringify(error));
+      return error ? key : null;
     })
   );
+  console.log("failed keys:", results.filter(Boolean));
 
   return NextResponse.json({ ok: true });
 }
