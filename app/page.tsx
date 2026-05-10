@@ -2282,6 +2282,29 @@ return (
         <span>鎖定角色</span>
       </button>
 
+      {/* 解除鎖定 */}
+      <button
+        onClick={async () => {
+          if (!confirm('確定要解除鎖定角色嗎？')) return;
+          await fetch("/api/user/clear-locked-character", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: session?.user?.email }),
+          });
+          setLockedCharacterUrl(null);
+          setLockedCharacterId(null);
+        }}
+        className={`flex flex-col items-center gap-1.5 py-3.5 rounded-2xl text-xs font-black border transition-all active:scale-95 ${
+          lockedCharacterUrl
+            ? 'bg-red-500/5 border-red-500/15 text-red-400/55 hover:bg-red-500/12 hover:border-red-500/30 hover:text-red-400/80'
+            : 'bg-white/2 border-white/6 text-white/15 cursor-not-allowed'
+        }`}
+        disabled={!lockedCharacterUrl}
+      >
+        <span className="text-lg">🔓</span>
+        <span>解除鎖定</span>
+      </button>
+
       {/* 收藏此角色 */}
       <button
         onClick={() => { setSaveCharacterName(""); setShowSaveModal(true); }}
@@ -2313,27 +2336,21 @@ return (
         )}
       </button>
 
-      {/* 解除鎖定 */}
+      {/* 成人專區 */}
       <button
-        onClick={async () => {
-          if (!confirm('確定要解除鎖定角色嗎？')) return;
-          await fetch("/api/user/clear-locked-character", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email: session?.user?.email }),
-          });
-          setLockedCharacterUrl(null);
-          setLockedCharacterId(null);
-        }}
+        onClick={() => adultEnabled && router.push("/adult")}
+        disabled={!adultEnabled}
         className={`flex flex-col items-center gap-1.5 py-3.5 rounded-2xl text-xs font-black border transition-all active:scale-95 ${
-          lockedCharacterUrl
-            ? 'bg-red-500/5 border-red-500/15 text-red-400/55 hover:bg-red-500/12 hover:border-red-500/30 hover:text-red-400/80'
+          adultEnabled
+            ? 'bg-gradient-to-b from-pink-500/15 to-pink-500/5 border-pink-500/35 text-pink-300 hover:from-pink-500/25 hover:border-pink-500/55'
             : 'bg-white/2 border-white/6 text-white/15 cursor-not-allowed'
         }`}
-        disabled={!lockedCharacterUrl}
       >
-        <span className="text-lg">🔓</span>
-        <span>解除鎖定</span>
+        <span className="text-lg">🔞</span>
+        <span>成人專區</span>
+        {!adultEnabled && (
+          <span className="text-[9px] text-white/20 font-normal -mt-0.5">未開放</span>
+        )}
       </button>
     </div>
 
@@ -2367,7 +2384,7 @@ return (
       </div>
       <div className="text-left flex-1 min-w-0">
         <p className={`text-sm font-black leading-tight ${adultEnabled ? "text-pink-300" : "text-white/20"}`}>成人專區</p>
-        <p className="text-white/30 text-[11px] mt-0.5">{adultEnabled ? "點擊進入" : "目前未開放"}</p>
+        <p className="text-white/30 text-[11px] mt-0.5">{adultEnabled ? "想讓你的角色進化嗎？" : "目前未開放"}</p>
       </div>
       {adultEnabled && <span className="text-pink-400/50 text-sm group-hover:translate-x-0.5 transition-transform flex-shrink-0">›</span>}
     </button>
