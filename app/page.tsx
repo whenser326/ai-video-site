@@ -999,8 +999,20 @@ if (!session) return (
 
         {/* CTA 按鈕 */}
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center', position: 'relative', flexWrap: 'wrap' }}>
+          {/Threads|FBAN|FBAV|Instagram|Line\/|MicroMessenger/i.test(typeof navigator !== 'undefined' ? navigator.userAgent : '') && (
+            <div style={{
+              width: '100%', textAlign: 'center',
+              fontSize: 11, color: 'rgba(255,200,100,0.85)',
+              background: 'rgba(255,180,0,0.08)',
+              border: '1px solid rgba(255,180,0,0.2)',
+              borderRadius: 8, padding: '7px 12px',
+              marginBottom: 4, lineHeight: 1.7,
+            }}>
+              ⚠️ 若登入失敗，請用 <strong>Safari</strong> 或 <strong>Chrome</strong> 開啟本頁
+            </div>
+          )}
           <button
-            onClick={() => signIn("google")}
+            onClick={() => signIn("google", {}, { prompt: "select_account" })}
             style={{
               background: 'linear-gradient(135deg, #2d8a42, #3db558)',
               border: 'none',

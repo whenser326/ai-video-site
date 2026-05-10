@@ -12,12 +12,6 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const PLAN_MAP: Record<string, { credits: number; amount: number; desc: string }> = {
-  starter:  { credits: 30,  amount: 250, desc: "入門包 30點" },
-  standard: { credits: 80,  amount: 450, desc: "標準包 80點" },
-  pro:      { credits: 200, amount: 799, desc: "專業包 200點" },
-};
-
 function aesEncrypt(data: string): string {
   const cipher = crypto.createCipheriv("aes-256-cbc", HASH_KEY, HASH_IV);
   return cipher.update(data, "utf8", "hex") + cipher.final("hex");
@@ -34,8 +28,23 @@ function shaEncrypt(data: string): string {
 export async function POST(req: NextRequest) {
   try {
     const { plan, email, referralCode } = await req.json();
-    const item = PLAN_MAP[plan];
-    if (!item) return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
+    if (!["starter", "standard", "pro"].includes(plan)) {
+      return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
+    }
+
+    // 從 admin_settings 動態讀取金額和點數
+    const PLAN_LABEL: Record<string, string> = { starter: "入門包", standard: "標準包", pro: "專業包" };
+    const DEFAULT_CREDITS: Record<string, number> = { starter: 30, standard: 80, pro: 200 };
+    const DEFAULT_AMOUNT: Record<string, number> = { starter: 250, standard: 450, pro: 799 };
+
+    const [creditsRow, priceRow] = await Promise.all([
+      supabase.from("admin_settings").select("value").eq("key", `plan_credits_${plan}`).single(),
+      supabase.from("admin_settings").select("value").eq("key", `plan_price_${plan}`).single(),
+    ]);
+
+    const credits = parseInt(creditsRow.data?.value || "") || DEFAULT_CREDITS[plan];
+    const amount = parseInt(priceRow.data?.value || "") || DEFAULT_AMOUNT[plan];
+    const item = { credits, amount, desc: `${PLAN_LABEL[plan]} ${credits}點` };
 
     // OrderNo 最多 30 字元：CF + 13位時間戳 = 15字元，安全
     const merchantOrderNo = `CF${Date.now()}`;
