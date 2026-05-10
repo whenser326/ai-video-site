@@ -104,6 +104,7 @@ GitHub：whenser326/ai-video-site
 
 ## 4. 已知舊錯誤（每次對話不需理會，不需排查）
 
+admin_settings POST 寫入曾靜默失敗，根本原因是 key 欄位缺少 UNIQUE constraint，已修正（2026/05/10）
 page.tsx 已知 TypeScript 舊錯誤（4個）：
 - validator.ts: Property 'id' is missing in type Promise<{id:string;}>
 - route.ts[Ln 170]: Unterminated string literal

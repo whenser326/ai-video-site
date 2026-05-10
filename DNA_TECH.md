@@ -8,6 +8,7 @@
 表格：user_generations（欄位：id, user_email, image_url, video_url, prompt, status, created_at, character_id）
 表格：saved_characters（欄位：id, user_email, name, image_url, description, voice_id, created_at）
 表格：admin_settings（欄位：key, value, updated_at）
+admin_settings 的 key 欄位已加 UNIQUE constraint（admin_settings_key_unique），upsert onConflict:"key" 才能正確運作（2026/05/10 修正）
 表格：referral_logs（欄位：id, referrer_email, referred_email, plan, credits_awarded, created_at）
 表格：model_tracker（欄位：id, model_id, model_name, status, note, created_at, updated_at）
 表格：pending_orders（欄位：id, order_no, email, plan, referral_code, created_at）
@@ -15,6 +16,7 @@
 表格：feedback_messages（欄位：見 API）
 表格：credit_adjustments（欄位：admin_email, user_email, amount, reason, created_at）
 RLS：已停用，用 Service Role Key
+admin_settings 整張表初始為空，後台儲存才會逐一寫入各 key，不要預設表裡有資料
 plan 預設值：free
 新用戶自動建立 profiles 並給 5 點
 Storage bucket：character-images（Public，已設定 allow all policy）

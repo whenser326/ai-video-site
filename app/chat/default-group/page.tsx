@@ -183,17 +183,30 @@ export default function DefaultGroupChatPage() {
         setSessionId(data.sessionId);
         localStorage.setItem(sessionKey, data.sessionId);
       }
-      if (data.responses && Array.isArray(data.responses)) {
-        for (const r of data.responses) {
-          await new Promise(resolve => setTimeout(resolve, randomDelay()));
-          setMessages(prev => [...prev, { role: "assistant", content: r.content, characterName: r.characterName, characterId: r.characterId }]);
-        }
-      }
       if (data.remainingQuota !== undefined) setRemainingQuota(data.remainingQuota);
+
+      // ✅ 問題1修正：API 回來後立刻解鎖輸入
+      setLoading(false);
+
+      if (data.responses && Array.isArray(data.responses)) {
+        // ✅ 問題2修正：隨機抽取部分角色發言（至少1人，最多3人或全部）
+        const shuffled = [...data.responses].sort(() => Math.random() - 0.5);
+        const maxResponders = Math.min(shuffled.length, 3);
+        const count = Math.floor(Math.random() * maxResponders) + 1;
+        const picked = shuffled.slice(0, count);
+
+        // 不擋主流程，獨立跑顯示邏輯
+        (async () => {
+          for (const r of picked) {
+            await new Promise(resolve => setTimeout(resolve, randomDelay()));
+            setMessages(prev => [...prev, { role: "assistant", content: r.content, characterName: r.characterName, characterId: r.characterId }]);
+          }
+        })();
+      }
     } catch {
       setMessages(prev => [...prev, { role: "assistant", content: "（連線失敗，請重試）" }]);
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

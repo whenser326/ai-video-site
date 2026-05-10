@@ -296,7 +296,6 @@ const VOICE_OPTIONS = [
   const handleSend = async (overrideMessage?: string, imageUrl?: string) => {
     const userMsg = overrideMessage || input.trim();
     if (!userMsg || loading || !session?.user?.email) return;
-    const selfieQueue: { intent: "photo" | "video"; prompt: string; msgId: string; charImgUrl?: string }[] = [];
     // 用戶發話，重置 timer
     lastUserMessageTime.current = Date.now();
     if (autoMessageTimerRef.current) clearTimeout(autoMessageTimerRef.current);
@@ -329,11 +328,11 @@ const VOICE_OPTIONS = [
       }
 
       if (data.sessionId) {
-            setSessionId(data.sessionId);
-            if (session?.user?.email) {
-              localStorage.setItem(`chat_session_group_${session.user.email}`, data.sessionId);
-            }
-          }
+        setSessionId(data.sessionId);
+        if (session?.user?.email) {
+          localStorage.setItem(`chat_session_group_${session.user.email}`, data.sessionId);
+        }
+      }
       if (data.remainingQuota !== undefined) setRemainingQuota(data.remainingQuota);
       if (data.isOverQuota) {
         setIsOverQuota(true);
@@ -342,43 +341,52 @@ const VOICE_OPTIONS = [
           .then(d => { if (d.credits !== undefined) setCredits(d.credits); });
       }
 
+      // ✅ 問題1修正：API 回來後立刻解鎖輸入，不等角色顯示完
       setLoading(false);
 
       if (Array.isArray(data.responses)) {
-        for (const r of data.responses) {
-          await new Promise(resolve => setTimeout(resolve, randomDelay()));
-          const char = characters.find(c => c.id === r.characterId);
-          setMessages(prev => {
+        // ✅ 問題2修正：隨機抽取部分角色發言（至少1人，最多3人或全部）
+        const shuffled = [...data.responses].sort(() => Math.random() - 0.5);
+        const maxResponders = Math.min(shuffled.length, 3);
+        const count = Math.floor(Math.random() * maxResponders) + 1;
+        const picked = shuffled.slice(0, count);
+
+        // 不擋主流程，獨立跑顯示邏輯
+        (async () => {
+          const selfieQueue: { intent: "photo" | "video"; prompt: string; msgId: string; charImgUrl?: string }[] = [];
+          for (const r of picked) {
+            await new Promise(resolve => setTimeout(resolve, randomDelay()));
+            const char = characters.find(c => c.id === r.characterId);
             const msgId = `msg-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-          const newMsg: Message = {
-            id: msgId,
-            role: "assistant",
-            content: r.content,
-            characterName: r.characterName,
-            characterImage: char?.image_url,
-            characterId: r.characterId,
-          };
-          const updated = [...prev, newMsg];
-          if ((r.selfieIntent === "photo" || r.selfieIntent === "video") && r.selfiePrompt) {
-            selfieQueue.push({
-              intent: r.selfieIntent as "photo" | "video",
-              prompt: r.selfiePrompt as string,
-              msgId,
-              charImgUrl: r.characterImageUrl as string | undefined,
+            setMessages(prev => {
+              const newMsg: Message = {
+                id: msgId,
+                role: "assistant",
+                content: r.content,
+                characterName: r.characterName,
+                characterImage: char?.image_url,
+                characterId: r.characterId,
+              };
+              if ((r.selfieIntent === "photo" || r.selfieIntent === "video") && r.selfiePrompt) {
+                selfieQueue.push({
+                  intent: r.selfieIntent as "photo" | "video",
+                  prompt: r.selfiePrompt as string,
+                  msgId,
+                  charImgUrl: r.characterImageUrl as string | undefined,
+                });
+              }
+              return [...prev, newMsg];
             });
           }
-          return updated;
-        });
-      }
-
-      // 群組自拍：從有意圖的角色中隨機選一個，發訊息後3~10秒立即產圖
-      if (selfieQueue.length > 0) {
-        const chosen = selfieQueue[Math.floor(Math.random() * selfieQueue.length)];
-        const delay = Math.floor(Math.random() * 7000) + 3000;
-        setTimeout(() => {
-          triggerSelfie(chosen.intent, chosen.prompt, chosen.msgId, chosen.charImgUrl);
-        }, delay);
-      }
+          // 群組自拍：從有意圖的角色中隨機選一個
+          if (selfieQueue.length > 0) {
+            const chosen = selfieQueue[Math.floor(Math.random() * selfieQueue.length)];
+            const delay = Math.floor(Math.random() * 7000) + 3000;
+            setTimeout(() => {
+              triggerSelfie(chosen.intent, chosen.prompt, chosen.msgId, chosen.charImgUrl);
+            }, delay);
+          }
+        })();
       }
     } catch {
       setMessages(prev => [...prev, { role: "assistant", content: "⚠️ 網路錯誤，請重試" }]);
