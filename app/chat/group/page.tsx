@@ -567,7 +567,13 @@ const VOICE_OPTIONS = [
         )}
         {/* [DNA_PATCH_END] */}
         <div className="text-center py-1 border-b border-white/5 flex-shrink-0">
-          <p className="text-white/20 text-[10px]">支援曖昧互動，明確露骨內容由 AI 自動過濾</p>
+          <p className="text-white/20 text-[10px]">支援曖昧互動，明確露骨內容由 AI 自動過濾
+<span
+  title="由 Anthropic 開發的輕量級 AI 模型，反應快速"
+  className="ml-2 cursor-help border-b border-dotted border-current opacity-60 hover:opacity-100 transition-opacity"
+>
+  · 🤖 Claude Haiku
+</span></p>
         </div>
 
         {isOverQuota && (

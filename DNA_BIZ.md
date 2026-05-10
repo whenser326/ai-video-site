@@ -37,8 +37,8 @@ API 清單：
 - Notify API：app/api/newebpay/notify/route.ts（付款成功自動加點數+更新plan+更新history_limit+分潤）
 - Return API：app/api/newebpay/return/route.ts（付款完成跳轉回/pricing?success=1）
 
-PLAN_BONUS_CREDITS（今日限定加贈）：starter:5, standard:7, pro:10
-addCredits = PLAN_CREDITS + PLAN_BONUS_CREDITS，付款成功後自動入帳
+PLAN_BONUS_CREDITS（今日限定加贈）：starter:5, standard:7, pro:10（fallback預設值）
+checkout 和 notify 均從 admin_settings 動態讀取 plan_credits_${plan}、plan_price_${plan}、plan_bonus_credits_${plan}，後台修改即時生效，無需重新部署
 
 支援付款方式：信用卡、ATM、WebATM、超商條碼、超商代碼、銀聯卡
 藍新 notify 用 POST formData 傳送，不是 JSON，必須用 req.formData() 解析
@@ -64,6 +64,7 @@ Apple Pay：幕前支付已串接（checkout tradeInfo 加入 APPLEPAY:"1"），
 - /admin/models：模型追蹤頁面（搜尋、標記、熱度、比對測試）
 - /admin/feedback：留言管理（查詢+回覆）
 - admin_settings 影片點數 key 清單（共15個）：見 DNA_TECH.md
+後台方案設定（plan_credits/plan_price/plan_bonus_credits）已連動 checkout 和 notify，修改後金流付款金額和入帳點數同步更新
 
 ---
 
@@ -93,8 +94,9 @@ Apple Pay：幕前支付已串接（checkout tradeInfo 加入 APPLEPAY:"1"），
 - 預設角色群組：免費可用最多3個、入門/標準最多3個、專業最多5個
 - 預設角色不支援「讓她說話」說話影片功能（未來再考慮開放）
 - 計費方式：幾個角色回覆算幾次（方案B）
-- 回覆順序：隨機
+- 回覆順序：隨機，且隨機抽取部分角色發言（至少1人，最多3人），不強制全員回覆
 - 角色間可互相回應
+- 送出訊息後立即解鎖輸入欄，角色回覆在背景獨立顯示，不阻塞用戶繼續輸入
 
 AI 自拍：扣1點，在聊天中要求角色傳照片，Flux Kontext Pro 生成
 AI 自拍實作：/api/chat/route.ts 的 detectSelfieIntent 函式負責偵測，回傳 selfieIntent("photo"|"video"|null) 和 selfiePrompt（根據聊天紀錄推斷場景）

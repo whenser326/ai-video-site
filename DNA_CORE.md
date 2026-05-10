@@ -48,7 +48,7 @@ git push
 - 新視窗開始時必須貼入 DNA_CORE.md + DNA_TECH.md + DNA_BIZ.md（三份全貼，缺一不可），否則 Claude 禁止開始開發
 - 修改任何涉及 middleware.ts、auth route、防濫用機制、API 路由、資料庫、AI 模型的程式碼前，Claude 必須先確認已讀取 DNA_TECH.md，未讀取則拒絕動手並要求使用者補貼
 - 修改 GlobalHeader.tsx 前，必須先確認已讀取 DNA_TECH.md 的「GlobalHeader 規範」章節
-- 修改任何聊天相關檔案（/chat/[characterId]/page.tsx、/chat/group/page.tsx、/api/chat/route.ts）前，必須先確認已讀取 DNA_BIZ.md 的「AI 聊天功能規格」章節
+- 修改任何聊天相關檔案（/chat/[characterId]/page.tsx、/chat/group/page.tsx、/chat/default/[characterId]/page.tsx、/chat/default-group/page.tsx、/api/chat/route.ts）前，必須先確認已讀取 DNA_BIZ.md 的「AI 聊天功能規格」章節
 - 修改 /api/chat/route.ts 的 charSystem prompt 前，必須先確認「角色旁白動作描述」格式規範（見 DNA_TECH.md「角色旁白動作描述」），禁止改變括號格式
 - 新增聊天相關功能前，必須先確認 DNA_TECH.md「聊天記憶系統」章節，確保不破壞現有 sessionId localStorage 機制
 

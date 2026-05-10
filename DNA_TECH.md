@@ -66,7 +66,7 @@ TTS Voice IDs：
 影片超過 120 秒顯示「排隊中...」提示，繼續 polling 不中斷
 Gallery 依方案等級顯示：免費5筆、付費方案50筆（同時受天數限制）
 localStorage (key: last_prediction_${userEmail}) 保持最後一次生成狀態（依帳號分開）
-localStorage (key: locked_character) 儲存鎖定角色的 Supabase 永久 URL
+鎖定角色不再用 localStorage，改存於 profiles.locked_character 欄位，透過 /api/user/credits 讀取（2026/05/08 修正）
 
 **靈感畫廊防呆**：`galleryItems.map` 的 onClick 必須永遠包含：
 1. `setPrompt`
@@ -114,11 +114,14 @@ localStorage (key: locked_character) 儲存鎖定角色的 Supabase 永久 URL
 
 ## 後台 admin_settings key 清單
 
-key 清單（共21個，後台沒設定時 route.ts 有 fallback 預設值）：
+key 清單（共27個，後台沒設定時 route.ts 有 fallback 預設值）：
 - 影片點數 key（共12個）：`kling_5s/10s_starter/standard/pro`、`seedance_5s/10s_starter/standard/pro`
 - Omni 加費 key（共3個）：`omni_extra_starter/standard/pro`
 - Avatar 說話影片點數 key（共3個）：`kling_avatar_credits_starter/standard/pro`（預設 10/9/8）
 - 動作參考影片限制 key（共3個）：`motion_max_size_mb`（預設30）、`motion_min_duration_sec`（預設5）、`motion_max_duration_sec`（預設10）
+- 方案點數 key（共3個）：`plan_credits_starter/standard/pro`（預設 30/80/200）
+- 方案售價 key（共3個）：`plan_price_starter/standard/pro`（預設 250/450/799）
+- 方案加贈點數 key（共3個）：`plan_bonus_credits_starter/standard/pro`（預設 5/7/10）
 
 ---
 
@@ -178,7 +181,11 @@ key 清單（共21個，後台沒設定時 route.ts 有 fallback 預設值）：
 - API：app/api/chat/suggest/route.ts（fetch 直接呼叫 Anthropic API，不用 SDK）
 - 涵蓋：單人聊天室、群組聊天室、預設角色聊天室
 
-### ✅ 角色旁白動作描述（2026/05/07 已完成）
+### ✅ 現實時間感知（2026/05/10 已完成）
+- 在 charSystem 加入當前台灣時間和時段（早上/下午/晚上/深夜）
+- 角色可自然融入時間感（深夜說「都這麼晚了」，早上說「早安」），不強制每次提
+- 實作：`const now = new Date().toLocaleString("zh-TW", { timeZone: "Asia/Taipei", hour: "2-digit", minute: "2-digit", hour12: false })`
+- timeHint 插入 charSystem 的旁白描述之後、isGroup 判斷之前
 - 不需新功能，只需更新 /api/chat/route.ts 的 charSystem prompt
 - 在 charSystem 加入：「在回覆中可以自然穿插括號旁白描述你的動作、表情或心情（例如：（他微微一笑，視線落在遠方）），讓對話更有畫面感和沉浸感。旁白用括號包覆，與對話內容自然融合，不要太頻繁，約每2-3則穿插一次。」
 - 注意：旁白格式用（全形括號），避免與程式邏輯衝突
@@ -316,7 +323,7 @@ IP 限流：
 - settings-public route.ts 需放在 app/api/referral/settings-public/route.ts
 - 模型追蹤 route.ts 必須放在 app/api/admin/models/，不能放在 app/admin/models/
 - authOptions 必須從 app/api/auth/[...nextauth]/route.ts export 才能給其他 API 使用
-- Android 用 App 內建瀏覽器登入出現 disallowed_useragent 是 Google OAuth 限制，叫用戶改用 Chrome
+- Android/iOS App 內建瀏覽器（Line/FB/IG/Threads）登入出現 disallowed_useragent 是 Google OAuth 限制，叫用戶改用 Safari 或 Chrome；Landing Page CTA 登入按鈕已加 InApp 瀏覽器偵測提示（偵測 Threads|FBAN|FBAV|Instagram|Line\/|MicroMessenger）
 - 主頁 page.tsx 的 `<main>` 必須保留 `bg-gradient-to-br from-[#0d2318] via-[#1a3a25] to-[#2d5a3d]`，否則背景漸層消失
 - 圖片比例 state 名稱：imageRatio，預設 "1:1"，透過 handleSubmit 傳入 character/route.ts
 - Kling 影片比例受參考圖影響，根本解法是生圖時就選好目標比例，不做裁切
@@ -356,16 +363,6 @@ ANTHROPIC_API_KEY 必須在 Vercel Environment Variables 設定，否則聊天 A
 GlobalHeader 「使用指南」改為直接跳 /guide，不再觸發 open-onboarding 事件（open-onboarding 只有首頁 page.tsx 有監聽）
 群組聊天 plan 判斷必須等 API 回傳後才執行（planLoaded state），否則付費用戶會被短暫顯示封鎖畫面
 聊天室停聊 60 秒後，隨機選一個角色主動發話（autoMessageTimerRef），用戶發話後重置 timer
-
----
-
-## profiles 表新增欄位（2026/05/08）
-
-- `total_generations` (integer, default 0)：用戶累計總生成次數
-- 寫入時機：`/api/history` POST 時自動 +1
-- 用途：後台 `/admin/members` 統計用，獨立於 user_generations 表
-- **重要**：user_generations 表會被 `/api/history` GET 自動清理（免費影片3天/付費影片7天/圖片7-90天），所以後台統計**不能**直接 count user_generations，必須讀 profiles.total_generations
-- 已回填過去歷史資料（2026/05/08 一次性 SQL 更新）
 
 ---
 
