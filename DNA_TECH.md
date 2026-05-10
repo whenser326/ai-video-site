@@ -7,6 +7,7 @@
 表格：profiles（欄位：id, created_at, email, credits, plan, daily_image_count, daily_image_date, daily_video_count, daily_video_date, history_limit, referral_code, referred_by, referral_credits_earned, locked_character, checkin_last_date, checkin_streak）
 表格：user_generations（欄位：id, user_email, image_url, video_url, prompt, status, created_at, character_id）
 表格：saved_characters（欄位：id, user_email, name, image_url, description, voice_id, created_at）
+SaveCharacterModal 關係標籤快選（2026/05/10）：app/components/SaveCharacterModal.tsx，六個標籤（初戀/前輩/青梅竹馬/命中注定/契約戀人/死對頭），state: selectedRelation，選完自動帶入 description 最前面
 表格：admin_settings（欄位：key, value, updated_at）
 admin_settings 的 key 欄位已加 UNIQUE constraint（admin_settings_key_unique），upsert onConflict:"key" 才能正確運作（2026/05/10 修正）
 表格：referral_logs（欄位：id, referrer_email, referred_email, plan, credits_awarded, created_at）
@@ -190,9 +191,16 @@ key 清單（共27個，後台沒設定時 route.ts 有 fallback 預設值）：
 - 在 charSystem 加入：「在回覆中可以自然穿插括號旁白描述你的動作、表情或心情（例如：（他微微一笑，視線落在遠方）），讓對話更有畫面感和沉浸感。旁白用括號包覆，與對話內容自然融合，不要太頻繁，約每2-3則穿插一次。」
 - 注意：旁白格式用（全形括號），避免與程式邏輯衝突
 - 禁止移除或修改括號旁白 prompt，格式必須用（全形括號）
-
+### ✅ 聊天室風格面板（2026/05/10 已完成）
+- 位置：輸入列旁 🎨 按鈕，點擊展開/收合
+- 面板上半：顯示角色底層設定（名稱/個性/聲線，群組版顯示所有參與角色）
+- 面板下半：口吻（療癒/毒舌/刺激）+ 文風（直白/文藝/輕小說）同一排，中間豎線區隔
+- state：showStylePanel / chatStyle / writingStyle
+- 傳遞：handleSend body 帶入 chatStyle / writingStyle → /api/chat/route.ts 注入 system prompt 末尾
+- 涵蓋：單人聊天室、群組聊天室、預設角色聊天室
+- route.ts：styleMap / writingMap / styleHint / writingHint 四個變數，禁止移除
 ### ✅ 聊天室對話搜尋（已完成）
-- 位置：單人/群組聊天室頂部右側 🔍 按鈕
+- 位置：四個聊天室頂部右側 🔍 按鈕（單人/群組/預設角色單人/預設角色群組）
 - 功能：輸入關鍵字，在 messages state 中純前端篩選，高亮匹配訊息（目前匹配亮綠框 ring-2、其他匹配淡綠框 ring-1）並自動捲動
 - 搜尋結果顯示「第 X / Y 筆」，↑↓ 切換，✕ 關閉
 - 相關 state：searchOpen / searchQuery / searchIndex / searchInputRef / messageRefs
@@ -206,6 +214,15 @@ key 清單（共27個，後台沒設定時 route.ts 有 fallback 預設值）：
 - /api/chat 新增 defaultCharacter / defaultCharacters 參數，優先於 saved_characters 查詢
 - 中期待實作：後台管理頁面讓圖片可上傳替換
 - 預設角色區塊預設收合，點標題列展開/收起（defaultExpanded state）
+
+### ✅ 聊天室風格面板（2026/05/10 已完成）
+- 位置：輸入列旁 🎨 按鈕，點擊展開/收合
+- 面板上半：顯示角色底層設定（名稱/個性/聲線，群組版顯示所有參與角色）
+- 面板下半：口吻（療癒/毒舌/刺激）+ 文風（直白/文藝/輕小說）同一排，中間豎線區隔
+- state：showStylePanel / chatStyle / writingStyle
+- 傳遞：handleSend body 帶入 chatStyle / writingStyle → /api/chat/route.ts 注入 system prompt 末尾
+- 涵蓋：單人聊天室、群組聊天室、預設角色單人聊天室、預設角色群組聊天室
+- route.ts：styleMap / writingMap / styleHint / writingHint 四個變數，禁止移除
 
 ### ✅ 聊天內容揭露（2026/05/07 已完成）
 - 頂部固定小字：所有聊天室頂部顯示「支援曖昧互動，明確露骨內容由 AI 自動過濾」
@@ -299,7 +316,7 @@ IP 限流：
 - 防重複帳號改由 auth/[...nextauth]/route.ts 的 signIn callback 處理（Gmail normalize 檢查）
 
 簽到防呆：同帳號每天只能簽一次（比對 checkin_last_date）、同 IP 每天只能一個帳號簽到（比對 checkin_logs）
-簽到獎勵：每日+1點，連續第7天+3點，第14天+5點，第21天+5點，第30天+10點
+簽到獎勵：每日轉盤隨機1-5點（1點50%/2點40%/3點5%/4點4%/5點1%，期望值約1.56點），連續第7天+3點，第14天+5點，第21天+5點，第30天+10點
 簽到額外獎勵（待實作）：免費用戶簽到當日影片額度 +1（從1支→2支），不累積、不轉點數，當日有效
 簽到時區：台灣時區（Asia/Taipei），用 toLocaleDateString("en-CA") 取得 YYYY-MM-DD 格式
 

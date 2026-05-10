@@ -133,7 +133,26 @@ const randomDelay = () => Math.floor(Math.random() * 3000) + 2000;
     startTimer();
     return () => { if (autoMessageTimerRef.current) clearTimeout(autoMessageTimerRef.current); };
   }, [character, session, characterId, sessionId, loading]);
-
+const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchIndex, setSearchIndex] = useState(0);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const messageRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const [showStylePanel, setShowStylePanel] = useState(false);
+  const [chatStyle, setChatStyle] = useState("");
+  const [writingStyle, setWritingStyle] = useState("");
+  const searchResults = searchQuery.trim()
+    ? messages.reduce<number[]>((acc, msg, i) => {
+        if (msg.content.includes(searchQuery.trim())) acc.push(i);
+        return acc;
+      }, [])
+    : [];
+  const handleSearchNav = (dir: 1 | -1) => {
+    if (!searchResults.length) return;
+    const next = (searchIndex + dir + searchResults.length) % searchResults.length;
+    setSearchIndex(next);
+    messageRefs.current[searchResults[next]]?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
   const handleSend = async () => {
     if (!input.trim() || loading || !session?.user?.email || !character) return;
     const userMsg = input.trim();
@@ -165,6 +184,8 @@ const randomDelay = () => Math.floor(Math.random() * 3000) + 2000;
           sessionId,
           message: userMsg,
           defaultCharacter: fakeChar,
+          chatStyle,
+          writingStyle,
         }),
       });
       const data = await res.json();
@@ -216,11 +237,22 @@ const randomDelay = () => Math.floor(Math.random() * 3000) + 2000;
         </div>
         <div className="flex items-center gap-2">
           <span className="text-[10px] bg-[#5bd4f0]/10 border border-[#5bd4f0]/20 rounded-full px-2 py-0.5 text-[#5bd4f0]">預設角色</span>
+          <button onClick={() => { setSearchOpen(p => !p); setSearchQuery(""); setSearchIndex(0); }} className="text-white/30 hover:text-white/60 transition-all text-base">🔍</button>
           {remainingQuota !== null && (
             <span className="text-[10px] text-white/20">{remainingQuota} 次剩餘</span>
           )}
         </div>
       </div>
+      {searchOpen && (
+        <div className="px-4 py-2 bg-black/30 border-b border-white/8 flex items-center gap-2 flex-shrink-0">
+          <input ref={searchInputRef} autoFocus value={searchQuery} onChange={e => { setSearchQuery(e.target.value); setSearchIndex(0); }}
+            placeholder="搜尋對話..." className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 text-white/80 text-xs placeholder-white/20 focus:outline-none focus:border-[#89f5a2]/40" />
+          {searchResults.length > 0 && <span className="text-white/30 text-[10px] whitespace-nowrap">第 {searchIndex + 1} / {searchResults.length} 筆</span>}
+          <button onClick={() => handleSearchNav(-1)} className="text-white/30 hover:text-white/60 text-sm">↑</button>
+          <button onClick={() => handleSearchNav(1)} className="text-white/30 hover:text-white/60 text-sm">↓</button>
+          <button onClick={() => { setSearchOpen(false); setSearchQuery(""); }} className="text-white/30 hover:text-white/60 text-sm">✕</button>
+        </div>
+      )}
 {showNotice && (
         <div className="fixed inset-0 z-50 flex items-end justify-center pb-10 px-4 bg-black/50 backdrop-blur-sm">
           <div className="w-full max-w-sm bg-[#0d2318] border border-[#89f5a2]/25 rounded-3xl p-6 space-y-4 shadow-2xl">
@@ -256,7 +288,8 @@ const randomDelay = () => Math.floor(Math.random() * 3000) + 2000;
       )}
       {/* 內容揭露小字 */}
       <div className="px-4 py-1.5 bg-black/15 border-b border-white/5 flex-shrink-0">
-        <p className="text-[10px] text-white/20 text-center">💬 支援曖昧互動，明確露骨內容由 AI 自動過濾</p>
+        <p className="text-[10px] text-white/20 text-center">💬 支援曖昧互動，明確露骨內容由 AI 自動過濾
+<span title="由 Anthropic 開發的輕量級 AI 模型，反應快速" className="ml-2 cursor-help border-b border-dotted border-current opacity-60 hover:opacity-100 transition-opacity">· 🤖 Claude Haiku</span></p>
       </div>
 
       {/* 訊息區 */}
@@ -272,7 +305,7 @@ const randomDelay = () => Math.floor(Math.random() * 3000) + 2000;
           </div>
         )}
         {messages.map((msg, idx) => (
-          <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} gap-2`}>
+          <div key={idx} ref={el => { messageRefs.current[idx] = el; }} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} gap-2`} style={searchResults.includes(idx) ? { outline: idx === searchResults[searchIndex] ? "2px solid #89f5a2" : "1px solid rgba(137,245,162,0.3)", borderRadius: 16 } : {}}>
             {msg.role === "assistant" && (
               <div className="w-8 h-8 rounded-full flex items-center justify-center text-xl bg-white/8 border border-white/10 flex-shrink-0 mt-1">
                 {emoji}
@@ -329,6 +362,10 @@ const randomDelay = () => Math.floor(Math.random() * 3000) + 2000;
             className="flex-shrink-0 w-11 h-11 rounded-2xl bg-purple-500/15 border border-purple-500/30 text-purple-300 text-lg hover:bg-purple-500/25 transition-all flex items-center justify-center">
             💬
           </button>
+          <button onClick={() => setShowStylePanel(p => !p)} title="風格設定"
+            className={`flex-shrink-0 w-11 h-11 rounded-2xl border text-lg transition-all flex items-center justify-center ${showStylePanel ? "bg-[#89f5a2]/20 border-[#89f5a2]/50 text-[#89f5a2]" : "bg-white/5 border-white/15 text-white/50 hover:border-white/30"}`}>
+            🎨
+          </button>
           <textarea
             value={input}
             onChange={e => setInput(e.target.value)}
@@ -358,6 +395,28 @@ const randomDelay = () => Math.floor(Math.random() * 3000) + 2000;
               ))}
             </div>
           )}
+          {showStylePanel && (
+          <div className="mt-2 bg-[#0d2318]/90 border border-[#89f5a2]/20 rounded-2xl p-3">
+            <div className="mb-2">
+              <p className="text-white/30 text-[10px] font-bold mb-1">🎭 {character?.name} · {character?.description || "無個性設定"}</p>
+            </div>
+            <div className="flex flex-wrap gap-2 items-center">
+              {["療癒", "毒舌", "刺激"].map(s => (
+                <button key={s} onClick={() => setChatStyle(p => p === s ? "" : s)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${chatStyle === s ? "bg-[#89f5a2] text-[#0d2318]" : "bg-white/5 border border-white/15 text-white/50 hover:border-white/30"}`}>
+                  {s}
+                </button>
+              ))}
+              <div className="w-px h-5 bg-white/15 mx-1" />
+              {["直白", "文藝", "輕小說"].map(s => (
+                <button key={s} onClick={() => setWritingStyle(p => p === s ? "" : s)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${writingStyle === s ? "bg-[#89f5a2] text-[#0d2318]" : "bg-white/5 border border-white/15 text-white/50 hover:border-white/30"}`}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="flex items-center justify-between mt-2">
           <p className="text-white/15 text-[10px]">Enter 送出・Shift+Enter 換行</p>
           {remainingQuota !== null && remainingQuota <= 0 && <p className="text-yellow-400/50 text-[10px]">次數用完，每次 -1 點</p>}
