@@ -32,6 +32,7 @@ export async function GET(req: NextRequest) {
       "seedance_10s_starter", "seedance_10s_standard", "seedance_10s_pro",
       "omni_extra_starter", "omni_extra_standard", "omni_extra_pro",
       "adult_section_enabled",
+    "plan_bonus_credits_starter", "plan_bonus_credits_standard", "plan_bonus_credits_pro",
     ]);
     // [DNA_PATCH_END]
 
@@ -68,6 +69,7 @@ export async function POST(req: NextRequest) {
       "seedance_10s_starter", "seedance_10s_standard", "seedance_10s_pro",
       "omni_extra_starter", "omni_extra_standard", "omni_extra_pro",
       "adult_section_enabled",
+      "plan_bonus_credits_starter", "plan_bonus_credits_standard", "plan_bonus_credits_pro",
   ];
   // [DNA_PATCH_END]
 
