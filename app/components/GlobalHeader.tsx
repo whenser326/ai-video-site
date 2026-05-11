@@ -4,11 +4,17 @@ import { useSession, signOut, signIn } from "next-auth/react";
 import { useRouter, usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from 'react';
 import FeedbackModal from './FeedbackModal';
+import ReferralModal from './ReferralModal';
 
 export default function GlobalHeader() {
   const { data: session } = useSession();
   const router = useRouter();
   const pathname = usePathname();
+  const [showReferralModal, setShowReferralModal] = useState(false);
+  const [referralCode, setReferralCode] = useState<string | null>(null);
+  const [referralCredits, setReferralCredits] = useState<{ starter: string; standard: string; pro: string } | null>(null);
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [credits, setCredits] = useState<number | null>(null);
@@ -17,6 +23,27 @@ export default function GlobalHeader() {
   const [showLowCreditToast, setShowLowCreditToast] = useState(false);
 const hasShownLowCreditToast = useRef(false);
 
+useEffect(() => {
+    if (!showReferralModal) return;
+    if (session?.user?.email && !referralCode) {
+      fetch(`/api/user/credits?email=${session.user.email}`)
+        .then(res => res.json())
+        .then(data => { if (data.referral_code) setReferralCode(data.referral_code); });
+    }
+    if (!referralCredits) {
+      fetch("/api/referral/settings")
+        .then(res => res.json())
+        .then(data => {
+          if (data.settings) {
+            setReferralCredits({
+              starter: data.settings.referral_credits_starter || "?",
+              standard: data.settings.referral_credits_standard || "?",
+              pro: data.settings.referral_credits_pro || "?",
+            });
+          }
+        });
+    }
+  }, [showReferralModal]);
   useEffect(() => {
     if (!session?.user?.email) return;
     const checkUnread = async () => {
@@ -117,10 +144,8 @@ if (!session) return (
   </>
 );
 // [DNA_PATCH_END]
-  if (pathname === '/pricing') return null;
-
   const handleTopUp = () => { router.push('/pricing#plans'); setMenuOpen(false); };
-  const handleReferral = () => { window.dispatchEvent(new CustomEvent("open-referral-modal")); setMenuOpen(false); };
+  const handleReferral = () => { setShowReferralModal(true); setMenuOpen(false); };
 
   const menuItems = [
     {
@@ -282,7 +307,17 @@ if (!session) return (
 
       {/* Header 佔位高度（防止內容被蓋住） */}
       <div className="h-12" />
-
+{showReferralModal && (
+        <ReferralModal
+          referralCode={referralCode}
+          referralCredits={referralCredits}
+          copiedCode={copiedCode}
+          setCopiedCode={setCopiedCode}
+          copiedLink={copiedLink}
+          setCopiedLink={setCopiedLink}
+          onClose={() => setShowReferralModal(false)}
+        />
+      )}
       {/* FeedbackModal */}
       {showFeedback && session?.user?.email && (
         <FeedbackModal

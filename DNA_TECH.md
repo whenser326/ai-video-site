@@ -379,7 +379,8 @@ Vercel 已升級為 Pro 方案（$20 USD/月，timeout 60 秒）（2026/05/05）
 ANTHROPIC_API_KEY 必須在 Vercel Environment Variables 設定，否則聊天 API 回傳「（無回應）」
 GlobalHeader 「使用指南」改為直接跳 /guide，不再觸發 open-onboarding 事件（open-onboarding 只有首頁 page.tsx 有監聽）
 群組聊天 plan 判斷必須等 API 回傳後才執行（planLoaded state），否則付費用戶會被短暫顯示封鎖畫面
-聊天室停聊 60 秒後，隨機選一個角色主動發話（autoMessageTimerRef），用戶發話後重置 timer
+聊天室停聊 60 秒後，隨機選一個角色主動發話（autoMessageTimerRef），用戶發話後重置 timer（群組聊天室：傳入全部角色，回應後隨機抽取數量逐一顯示，每人間隔 2-5 秒）
+預設角色聊天室（單人/群組）：照片關鍵字和影片關鍵字分開攔截，顯示對應付費提示（照片📸/影片🎬），不支援實際自拍生成
 
 ---
 

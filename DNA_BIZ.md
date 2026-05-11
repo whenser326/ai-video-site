@@ -149,7 +149,7 @@ AI 自拍媒體類型與扣點：
 - ✅ 動作參考影片上傳（對標 Viggle AI）：已完成。/api/upload-video 上傳到 Supabase Storage、/api/motion-control 呼叫 kwaivgi/kling-v3-motion-control，免費用戶不開放，付費用戶沿用 Kling 5秒點數（入門6/標準5/專業4）。Upload Modal 已重構為「先選功能、自動選模型」漢堡下拉選單設計（B+ 方案），三個功能：🎬 隨意動作（Kling）、💃 套用動作參考影片（Kling Motion Control）、🎨 多重參考圖（Seedance + omniRefs）。
 
 ### 從競品提煉的待實作功能（中期）
-- ✅ **聊天推薦台詞按鈕**（對標 ReelTalk）：輸入欄旁加「💬 推薦開場白」，根據角色個性和當前對話context動態生成3個回話選項讓用戶點選，解決新手冷場問題。API：/api/chat/suggest，單人+群組+預設角色聊天室均已完成。
+- ✅ **聊天推薦話題按鈕**（對標 ReelTalk）：輸入欄旁加「💬 推薦話題」，根據角色個性和當前對話context動態生成3個話題或問題讓用戶點選，解決新手冷場問題。API：/api/chat/suggest，單人+群組+預設角色聊天室均已完成。
 - ⬜ **角色旁白動作描述**（對標 MiraiMind「內心想法」）：在 system prompt 加入指引，讓角色在回覆中自然穿插括號旁白描述動作和心情（例如：「（他微微一笑，眼神閃過一絲溫柔）」），增加沉浸感。不需要額外功能，只需更新 charSystem prompt。
 - ✅ 聊天室顯示當前AI模型名稱（2026/05/10 完成）：頂部小字顯示「· 🤖 Claude Haiku」，hover tooltip 說明「由 Anthropic 開發的輕量級 AI 模型，反應快速」，涵蓋單人/群組/預設角色聊天室。
 - ⬜ **公開角色市場**（對標 ParadiseAI / Floze）：用戶可選擇公開自己建立的角色，其他用戶可瀏覽和使用。需 public_gallery 資料表，角色三選項（私人/匿名/公開），預設私人。已列入中期規劃，優先度提升。

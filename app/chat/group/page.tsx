@@ -634,7 +634,7 @@ setTimeout(() => {
 
                 {msg.selfieLoading && (
                   <div className="px-4 py-2 rounded-2xl bg-black/20 border border-[#89f5a2]/15 text-[#89f5a2]/60 text-xs">
-                    {msg.selfieType === "photo" ? "📸 生成中，扣1點..." : "🎬 生成中，扣點..."}
+                    {msg.selfieType === "photo" ? "📸 生成中，扣1點..." : "🎬 影片生成中，扣4-6點..\n請耐心等候，不要關閉視窗！"}
                   </div>
                 )}
 
