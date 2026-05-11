@@ -152,6 +152,8 @@ AI 自拍媒體類型與扣點：
 - ✅ **聊天推薦話題按鈕**（對標 ReelTalk）：輸入欄旁加「💬 推薦話題」，根據角色個性和當前對話context動態生成3個話題或問題讓用戶點選，解決新手冷場問題。API：/api/chat/suggest，單人+群組+預設角色聊天室均已完成。
 - ⬜ **角色旁白動作描述**（對標 MiraiMind「內心想法」）：在 system prompt 加入指引，讓角色在回覆中自然穿插括號旁白描述動作和心情（例如：「（他微微一笑，眼神閃過一絲溫柔）」），增加沉浸感。不需要額外功能，只需更新 charSystem prompt。
 - ✅ 聊天室顯示當前AI模型名稱（2026/05/10 完成）：頂部小字顯示「· 🤖 Claude Haiku」，hover tooltip 說明「由 Anthropic 開發的輕量級 AI 模型，反應快速」，涵蓋單人/群組/預設角色聊天室。
+- ✅ 訊息回覆功能（2026/05/11 完成）：四個聊天室訊息氣泡新增「↩ 回覆」按鈕，點擊後輸入框上方顯示引用提示，送出時引用文字拼入 message 一起送給 Claude，不需改 API
+- ✅ 群組聊天 @Tag 角色（2026/05/11 完成）：群組自建+預設群組聊天室輸入框打 @ 自動彈出角色選單，點選插入 @角色名，送出時偵測並傳 taggedCharacter 參數給 API，API 端只讓被 tag 的角色回覆；找不到角色名時 fallback 隨機回覆
 - ⬜ **公開角色市場**（對標 ParadiseAI / Floze）：用戶可選擇公開自己建立的角色，其他用戶可瀏覽和使用。需 public_gallery 資料表，角色三選項（私人/匿名/公開），預設私人。已列入中期規劃，優先度提升。
 - ⬜ **AI語音通話模式**（對標 Chatto）：用戶點擊通話按鈕，進入語音對話介面，TTS 即時朗讀角色回覆。需評估 ElevenLabs streaming API。
 
@@ -210,3 +212,4 @@ AI 自拍媒體類型與扣點：
 - pricing 頁面介紹碼自動讀取 URL ref 參數，存入 localStorage（關頁面後仍記住，付款後自動清除）
 - 推薦賺點 Modal：顯示專屬介紹碼、一鍵複製介紹碼/連結、三方案獎勵對照（從 admin_settings 動態抓取）
 - ReferralModal 已移至 GlobalHeader.tsx 統一管理，所有頁面均可開啟，不再依賴 page.tsx 事件監聽
+- ✅ 分潤系統全流程確認正常（2026/05/11）：notify/route.ts TradeSha驗證、防重複payment_logs、動態讀取referral_credits_${plan}、寫入referral_logs 均正確。ReferralModal 顯示邏輯正確。settings-public/route.ts 讀取三個方案分潤點數正確。admin_settings 表需先初始化才能正常運作（見 DNA_TECH.md）。

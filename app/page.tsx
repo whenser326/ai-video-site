@@ -2576,7 +2576,9 @@ return (
             <textarea
               value={videoPrompt}
               onChange={(e) => { setVideoPrompt(e.target.value); setVideoTranslatedPrompt(null); }}
-              placeholder="描述想要的動作或場景（選填，中文也可以！即時翻譯！）&#10;例如：walking in a park, waving hand, dancing"
+              placeholder={selectedFunction === "motion_video" 
+                ? "補充畫面風格（選填）\n例如：cinematic quality, 4K, natural lighting\n⚠️ 動作以參考影片為主，文字不影響動作"
+                : "描述想要的動作或場景（選填，中文也可以！即時翻譯！）\n例如：walking in a park, waving hand, dancing"}
               className="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/25 text-xs resize-none focus:outline-none focus:ring-1 focus:ring-[#89f5a2]/40"
               rows={3}
             />
@@ -2785,6 +2787,7 @@ return (
                 )}
                 {motionVideoError && <p className="text-red-400 text-[11px] text-center">{motionVideoError}</p>}
                 <p className="text-white/25 text-[10px] text-center">💡 點數和 5 秒影片相同</p>
+                <p className="text-white/30 text-[10px] text-center leading-relaxed">⚠️ 動作以參考影片為主，文字輸入框建議填畫面風格（如：cinematic、4K），不影響動作本身</p>
               </div>
             </div>
           )}
@@ -2912,12 +2915,63 @@ return (
                 setTermsChecked(false);
 
                 if (selectedFunction === "motion_video" && motionVideoUrl) {
-                  handleMotionControl(uploadedImage, motionVideoUrl, videoTranslatedPrompt || videoPrompt, videoRatio, videoDuration);
+                  (async () => {
+                    let mainUrl = uploadedImage;
+                    if (mainUrl && mainUrl.startsWith("data:")) {
+                      try {
+                        const res = await fetch("/api/upload-image", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ imageUrl: mainUrl, email: session?.user?.email }),
+                        });
+                        const data = await res.json();
+                        mainUrl = data.url || mainUrl;
+                      } catch {}
+                    }
+                    handleMotionControl(mainUrl!, motionVideoUrl, videoTranslatedPrompt || videoPrompt, videoRatio, videoDuration);
+                  })();
                 } else if (selectedFunction === "multi_reference") {
-                  handleGenerateVideo(uploadedImage, videoTranslatedPrompt || videoPrompt, videoRatio, videoDuration, "seedance", [omniRef1, omniRef2, omniRef3]);
-                  setOmniRef1(null); setOmniRef2(null); setOmniRef3(null);
+                  // 先上傳主圖和所有 omniRef（base64 → https URL）
+                  (async () => {
+                    const uploadBase64 = async (b64: string | null): Promise<string | null> => {
+                      if (!b64 || !b64.startsWith("data:")) return b64;
+                      try {
+                        const res = await fetch("/api/upload-image", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ imageUrl: b64, email: session?.user?.email }),
+                        });
+                        const data = await res.json();
+                        return data.url || null;
+                      } catch { return null; }
+                    };
+                    const [mainUrl, r1, r2, r3] = await Promise.all([
+                      uploadBase64(uploadedImage),
+                      uploadBase64(omniRef1),
+                      uploadBase64(omniRef2),
+                      uploadBase64(omniRef3),
+                    ]);
+                    if (!mainUrl) { alert("⚠️ 圖片上傳失敗，請重試"); return; }
+                    handleGenerateVideo(mainUrl, videoTranslatedPrompt || videoPrompt, videoRatio, videoDuration, "seedance", [r1, r2, r3]);
+                    setOmniRef1(null); setOmniRef2(null); setOmniRef3(null);
+                  })();
                 } else {
-                  handleGenerateVideo(uploadedImage, videoTranslatedPrompt || videoPrompt, videoRatio, videoDuration, "kling", []);
+                  // free_motion / motion_video 也需要上傳主圖
+                  (async () => {
+                    let mainUrl = uploadedImage;
+                    if (mainUrl && mainUrl.startsWith("data:")) {
+                      try {
+                        const res = await fetch("/api/upload-image", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ imageUrl: mainUrl, email: session?.user?.email }),
+                        });
+                        const data = await res.json();
+                        mainUrl = data.url || mainUrl;
+                      } catch {}
+                    }
+                    handleGenerateVideo(mainUrl!, videoTranslatedPrompt || videoPrompt, videoRatio, videoDuration, "kling", []);
+                  })();
                 }
 
                 setMotionVideoUrl(null);

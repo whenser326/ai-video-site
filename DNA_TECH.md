@@ -17,7 +17,7 @@ admin_settings 的 key 欄位已加 UNIQUE constraint（admin_settings_key_uniqu
 表格：feedback_messages（欄位：見 API）
 表格：credit_adjustments（欄位：admin_email, user_email, amount, reason, created_at）
 RLS：已停用，用 Service Role Key
-admin_settings 整張表初始為空，後台儲存才會逐一寫入各 key，不要預設表裡有資料
+admin_settings 整張表初始為空，後台儲存才會逐一寫入各 key。注意：upsert onConflict:"key" 需要 UNIQUE constraint 存在才能運作（已建立 admin_settings_key_unique）。首次部署時必須先執行初始化 SQL 把所有 key 寫入，否則後台儲存會靜默失敗只存入部分 key（已知：未初始化時只有 adult_section_enabled 能成功寫入）。初始化 SQL 已記錄於開發紀錄，執行後再按一次後台「儲存設定」即可正常運作。
 plan 預設值：free
 新用戶自動建立 profiles 並給 5 點
 Storage bucket：character-images（Public，已設定 allow all policy）
@@ -223,6 +223,11 @@ key 清單（共27個，後台沒設定時 route.ts 有 fallback 預設值）：
 - 傳遞：handleSend body 帶入 chatStyle / writingStyle → /api/chat/route.ts 注入 system prompt 末尾
 - 涵蓋：單人聊天室、群組聊天室、預設角色單人聊天室、預設角色群組聊天室
 - route.ts：styleMap / writingMap / styleHint / writingHint 四個變數，禁止移除
+
+### ✅ 訊息回覆 + 群組 @Tag（2026/05/11 已完成）
+- 回覆功能：四個聊天室新增 `replyTo` state（{ characterName, content }），assistant 氣泡下方顯示「↩ 回覆」按鈕，點擊後輸入框上方顯示引用卡片，送出時 message 拼入「（回覆 XXX：「前30字...」）\n用戶訊息」，顯示訊息加「↩ 回覆 XXX：」前綴，送出後清除 replyTo
+- @Tag 功能（群組自建+預設群組）：新增 `tagMenu` state，輸入框 onChange 偵測結尾為 @ 時自動展開角色選單，點選插入 @角色名；訊息氣泡下方額外顯示「@ Tag」按鈕可快速插入；handleSend 送出時用 IIFE 偵測 message 包含哪個 @角色名 傳 taggedCharacter；送出後清除 tagMenu
+- API（/api/chat/route.ts）：body 新增 `taggedCharacter` 參數，shuffledChars 邏輯：有 taggedCharacter 時 filter 只留該角色，找不到時 fallback 隨機；單人聊天不受影響
 
 ### ✅ 聊天內容揭露（2026/05/07 已完成）
 - 頂部固定小字：所有聊天室頂部顯示「支援曖昧互動，明確露骨內容由 AI 自動過濾」
