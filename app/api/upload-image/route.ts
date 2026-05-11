@@ -11,11 +11,17 @@ export async function POST(req: NextRequest) {
   try {
     const { imageUrl, email } = await req.json();
 
-    // 從 Replicate URL 下載圖片
-    const response = await fetch(imageUrl);
-    const blob = await response.blob();
-    const arrayBuffer = await blob.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    // 從 Replicate URL 下載圖片（支援 base64 Data URL）
+    let buffer: Buffer;
+    if (imageUrl.startsWith("data:")) {
+      const base64Data = imageUrl.split(",")[1];
+      buffer = Buffer.from(base64Data, "base64");
+    } else {
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      const arrayBuffer = await blob.arrayBuffer();
+      buffer = Buffer.from(arrayBuffer);
+    }
 
     // 上傳到 Supabase Storage
     const fileName = `${email}-${Date.now()}.png`;
