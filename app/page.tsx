@@ -924,7 +924,9 @@ const handleUploadWithFaceLock = async (
   setSeconds(0);
   setGenType("image");
   setRetryMessage("步驟 1／2：鎖定臉孔中（Flux Kontext）...");
+  setSeconds(0);
   setTimeout(() => progressRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
+  const faceLockTimer = setInterval(() => setSeconds(prev => prev + 2), 2000);
 
   try {
     // Step 1：Flux Kontext 鎖臉
@@ -1026,6 +1028,7 @@ const handleUploadWithFaceLock = async (
     }
 
     // Step 2：用鎖臉圖生成影片
+    clearInterval(faceLockTimer);
     setRetryMessage("步驟 2／2：生成影片中（Kling 3.0）...");
     setGenType("video");
     setSeconds(0);
@@ -1044,6 +1047,7 @@ const handleUploadWithFaceLock = async (
     }
     setRetryMessage("");
   } catch {
+    clearInterval(faceLockTimer);
     setError("連線失敗，請重試");
     setRetryMessage("");
     setLoading(false);
