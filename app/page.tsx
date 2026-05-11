@@ -955,7 +955,7 @@ const handleUploadWithFaceLock = async (
     let attempts = 0;
     let retried = false;
     let currentPredId = fluxData.id;
-    while (!faceLockUrl && attempts < 30) {
+    while (!faceLockUrl && attempts < 45) {
       await new Promise(r => setTimeout(r, 2000));
       attempts++;
       const pollRes = await fetch(`/api/character?id=${currentPredId}&email=${session?.user?.email}`);
@@ -2257,7 +2257,7 @@ return (
   ? seconds >= 120 
     ? "⚠️ 目前影片需求較多，正在排隊中，請繼續耐心等候，請勿關閉頁面" 
     : "影片生成約需 60～120 秒，請耐心等候"
-  : "圖片生成約需 15～30 秒"}
+  : genType === "image" && seconds >= 30 ? "⚠️ 仍在處理中，請耐心等候，勿關閉頁面" : "圖片生成約需 15～30 秒"}
             </p>
           </div>
         )}
