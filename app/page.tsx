@@ -2905,10 +2905,7 @@ return (
                   alert("⚠️ 請先上傳動作參考影片");
                   return;
                 }
-                if (selectedFunction === "multi_reference" && !omniRef1 && !omniRef2 && !omniRef3) {
-                  alert("⚠️ 請至少上傳一張參考圖");
-                  return;
-                }
+                // omniRef 為選填，主圖本身即為 @image1 鎖臉基準
                 // [DNA_PATCH_END]
                 setShowUploadModal(false);
                 setAgreedToTerms(false);
