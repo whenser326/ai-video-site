@@ -333,7 +333,19 @@ userEmail,
                 <p className="text-white/40 text-xs">用鎖定角色的照片直接生成說話影片，無需影片素材</p>
                 <p className="text-white/40 text-xs">扣 {avatarCredits} 點，失敗自動退點</p>
 
-                {avatarStatus && (
+                {isAvatarLoading && (
+                  <div className="p-3 bg-black/25 rounded-xl border border-purple-400/20 space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-purple-300 text-xs font-black">🎭 生成中</span>
+                      <span className="text-white/50 text-xs">{avatarStatus}</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full animate-pulse" style={{ width: '60%' }} />
+                    </div>
+                    <p className="text-white/25 text-[10px] text-center">說話影片約需 3-5 分鐘，請勿關閉視窗</p>
+                  </div>
+                )}
+                {!isAvatarLoading && avatarStatus && (
                   <p className="text-purple-300/70 text-xs text-center">{avatarStatus}</p>
                 )}
 
