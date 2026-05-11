@@ -376,6 +376,9 @@ IP 限流：
 - SEO keywords meta tag 對 Google 無效（2009年起），真正有效的是 og:title/og:description
 - 換域名後必須同步更新：NEXTAUTH_URL、Google OAuth 授權URI、藍新金流 Notify URL / Return URL
 聊天頁面（/chat/[characterId]、/chat/group）必須用 h-screen + overflow-hidden，否則 Footer 會撐破畫面
+Seedance E005 錯誤：Replicate bytedance/seedance-2.0 不支援真實人臉輸入，上傳真實照片會觸發 E005 封鎖。解法：先用 Flux Kontext Pro 鎖臉生成 AI 圖，再把 AI 圖傳給 Seedance，可繞過限制
+Upload Modal 兩段式流程（2026/05/11）：handleUploadWithFaceLock 函式負責執行，Step1 呼叫 /api/character mode:image + selfieCharacterImage 做 Flux Kontext 鎖臉，Step2 用 faceLockUrl（非原始照片）呼叫 handleGenerateVideo 或 handleMotionControl。multi_reference 走 seedance，其他三個功能走 kling。Seedance 的 image 參數必須傳 faceLockUrl 不能傳原始照片
+scrollIntoView 補漏：Upload Modal 生成按鈕 onClick 關閉 Modal 後需加 setTimeout(() => progressRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 300)，此行在修改一已確認但尚未貼入
 wav2lip/route.ts 支援 mediaUrl 參數（圖片或影片皆可），向下相容舊的 videoUrl 參數
 TtsModal 新增 mediaUrl prop，優先用 mediaUrl，沒有才用 prediction?.output
 聊天室 triggerSelfie 呼叫 /api/generate-image 必須帶 userEmail 參數，否則 output 回傳空物件 {}
