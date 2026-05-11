@@ -147,6 +147,7 @@ AI 自拍媒體類型與扣點：
 - ✅ 預設角色系統（2026/05/07 完成）：20位男女各10位，寫死在前端，單人+群組聊天，不支援自拍，次數累計同一計數器
 - ✅ 聊天內容揭露（2026/05/07 完成）：頂部固定小字 + 一次性提示框（localStorage: chat_notice_seen）
 - ✅ 動作參考影片上傳（對標 Viggle AI）：已完成。/api/upload-video 上傳到 Supabase Storage、/api/motion-control 呼叫 kwaivgi/kling-v3-motion-control，免費用戶不開放，付費用戶沿用 Kling 5秒點數（入門6/標準5/專業4）。Upload Modal 已重構為「先選功能、自動選模型」漢堡下拉選單設計（B+ 方案），三個功能：🎬 隨意動作（Kling）、💃 套用動作參考影片（Kling Motion Control）、🎨 多重參考圖（Seedance + omniRefs）。
+✅ 上傳照片轉影片 base64 修正（2026/05/11）：Upload Modal 三個功能（隨意動作/套用動作參考影片/多重參考圖）的主圖和 omniRef 在送出前先上傳 Supabase 換成 https URL，再傳給 Replicate；motion_video 的文字輸入框 placeholder 依選擇功能動態顯示提示
 
 ### 從競品提煉的待實作功能（中期）
 - ✅ **聊天推薦話題按鈕**（對標 ReelTalk）：輸入欄旁加「💬 推薦話題」，根據角色個性和當前對話context動態生成3個話題或問題讓用戶點選，解決新手冷場問題。API：/api/chat/suggest，單人+群組+預設角色聊天室均已完成。

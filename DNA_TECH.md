@@ -332,6 +332,8 @@ IP 限流：
 - Supabase RLS 已停用，用 Service Role Key
 - history 變數在所有地方強制 Array.isArray 檢查
 - Replicate 圖片 URL 有效期約 24 小時，鎖定角色時已改為上傳到 Supabase Storage 永久保存
+- /api/upload-image 支援兩種輸入格式：https URL（fetch下載再上傳）和 base64 Data URL（直接decode上傳），2026/05/11 修正
+- Upload Modal 的本機上傳圖片（主圖、omniRef1/2/3）皆為 base64，送出生成前必須先呼叫 /api/upload-image 換成 https URL，再傳給 Replicate，禁止直接傳 base64 給任何 Replicate 模型
 - `// [DNA_PATCH_START]` 標記不能放在 JSX return 區塊內，否則會顯示在畫面上
 - 從聊天介面複製含 `<a` 標籤的程式碼時，`<a` 可能被吃掉，貼上後需手動確認
 - PowerShell 不支援 rm -rf，改用 `Remove-Item -Recurse -Force .next`
