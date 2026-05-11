@@ -938,7 +938,7 @@ const handleUploadWithFaceLock = async (
         mode: "image",
         userEmail: session?.user?.email,
         selfieCharacterImage: imageUrl,
-        prompt: `anime illustration style, same person from reference image, ${videoTranslatedPrompt || videoPrompt || "natural standing pose"}`,
+        prompt: `digital art style, realistic face, same person from reference image, ${videoTranslatedPrompt || videoPrompt || "natural standing pose"}`,
         imageRatio: videoRatio || "1:1",
       }),
     });
@@ -1000,7 +1000,7 @@ const handleUploadWithFaceLock = async (
               mode: "image",
               userEmail: session?.user?.email,
               selfieCharacterImage: imageUrl,
-              prompt: `anime illustration style, same person from reference image, ${videoTranslatedPrompt || videoPrompt || "natural standing pose"}`,
+              prompt: `digital art style, realistic face, same person from reference image, ${videoTranslatedPrompt || videoPrompt || "natural standing pose"}`,
               imageRatio: videoRatio || "1:1",
             }),
           });
