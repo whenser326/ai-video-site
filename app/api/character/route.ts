@@ -223,15 +223,21 @@ export async function POST(req: Request) {
       if (videoModel === "seedance") {
         // [DNA_PATCH_START] Seedance + Omni-Reference
         const validOmniRefs = hasOmniRef && Array.isArray(omniRefs) ? omniRefs.filter(Boolean) : [];
-const validOmniOnly = hasOmniRef && Array.isArray(omniRefs) ? omniRefs.filter(Boolean) : [];
+const allRefs = [image, ...validOmniRefs].filter(Boolean);
+const refTags = allRefs.map((_, i) => `@image${i + 1}`);
+const faceTag = refTags[0];
+const extraTagDesc = refTags.slice(1).length > 0
+  ? ` Reference ${refTags.slice(1).join(', ')} for scene and motion style.`
+  : '';
 
 const seedanceInput: any = {
   image: image,
-  prompt: `Keep the main character's face, identity and appearance strictly consistent throughout the entire video. ${videoPrompt || "animate with smooth natural motion, cinematic quality"}`,
+  prompt: `${faceTag} is the main character. Keep ${faceTag}'s face and identity consistent throughout the entire video. ${videoPrompt || "animate with smooth natural motion, cinematic quality"}${extraTagDesc}`,
   duration: duration || 5,
   aspect_ratio: aspectRatio || "1:1",
   resolution: "720p",
   generate_audio: true,
+  reference_images: allRefs,
 };
         prediction = await replicate.predictions.create({
           model: "bytedance/seedance-2.0",

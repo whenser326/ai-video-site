@@ -553,7 +553,11 @@ if (session?.user?.email) fetch(`/api/history?email=${session.user.email}`).then
           setError("角色一致性生成失敗，點數已退還");
           setLoading(false);
         } else {
-          setError("生成失敗，請檢查點數或重試");
+          const errMsg = data.error || "";
+          const isE005 = errMsg.includes("E005") || errMsg.includes("flagged as sensitive");
+          setError(isE005
+            ? "影片生成失敗：偵測到真實人臉，違反 Seedance 使用政策。請改用 AI 生成圖作為主角，或改用其他模式。"
+            : "生成失敗，請檢查點數或重試");
           setLoading(false);
         }
       // [DNA_PATCH_END]
