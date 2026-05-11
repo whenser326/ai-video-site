@@ -910,7 +910,118 @@ const handleGenerateVideo = async (imageUrl: string, prompt?: string, ratio?: st
     } catch { setError('連線失敗'); setLoading(false); }
   };
   // [DNA_PATCH_END]
+// [DNA_PATCH_START] handleUploadWithFaceLock：上傳照片兩段式流程（Flux Kontext 鎖臉 → Kling 轉影片）
+const handleUploadWithFaceLock = async (
+  imageUrl: string,
+  mode: "free_motion" | "motion_video" | "multi_reference",
+  motionUrl?: string | null,
+  omniRefs?: (string | null)[]
+) => {
+  setLoading(true);
+  setError("");
+  setSeconds(0);
+  setGenType("image");
+  setRetryMessage("步驟 1／2：鎖定臉孔中（Flux Kontext）...");
+  setTimeout(() => progressRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
 
+  try {
+    // Step 1：Flux Kontext 鎖臉
+    const fluxRes = await fetch("/api/character", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mode: "image",
+        userEmail: session?.user?.email,
+        selfieCharacterImage: imageUrl,
+        prompt: `${videoTranslatedPrompt || videoPrompt || "natural standing pose, same person from reference image"}`,
+        imageRatio: videoRatio || "1:1",
+      }),
+    });
+    const fluxData = await fluxRes.json();
+    if (!fluxData.id) {
+      setError(fluxData.error || "臉孔鎖定失敗，請重試");
+      setRetryMessage("");
+      setLoading(false);
+      return;
+    }
+
+    // Polling Flux Kontext 結果
+    let faceLockUrl: string | null = null;
+    let attempts = 0;
+    while (!faceLockUrl && attempts < 30) {
+      await new Promise(r => setTimeout(r, 2000));
+      attempts++;
+      const pollRes = await fetch(`/api/character?id=${fluxData.id}&email=${session?.user?.email}`);
+      const pollData = await pollRes.json();
+      if (pollData.status === "succeeded") {
+        const raw = Array.isArray(pollData.output) ? pollData.output[0] : pollData.output;
+        // 上傳到 Supabase 永久保存
+        try {
+          const upRes = await fetch("/api/upload-image", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ imageUrl: raw, email: session?.user?.email }),
+          });
+          const upData = await upRes.json();
+          faceLockUrl = upData.url || raw;
+        } catch { faceLockUrl = raw; }
+        // 顯示鎖臉圖結果
+        setPrediction({ output: faceLockUrl, status: "succeeded" });
+        setGenType("image");
+        if (session?.user?.email) {
+          fetch(`/api/user/credits?email=${session.user.email}`).then(r => r.json()).then(d => setCredits(d.credits));
+          await fetch("/api/history", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              user_email: session.user.email,
+              image_url: faceLockUrl,
+              video_url: null,
+              prompt: videoTranslatedPrompt || videoPrompt || "face lock",
+              character_id: lockedCharacterId || null,
+            }),
+          });
+        }
+      } else if (pollData.status === "failed") {
+        setError("臉孔鎖定失敗，請重試");
+        setRetryMessage("");
+        setLoading(false);
+        return;
+      }
+    }
+
+    if (!faceLockUrl) {
+      setError("臉孔鎖定逾時，請重試");
+      setRetryMessage("");
+      setLoading(false);
+      return;
+    }
+
+    // Step 2：用鎖臉圖生成影片
+    setRetryMessage("步驟 2／2：生成影片中（Kling 3.0）...");
+    setGenType("video");
+    setSeconds(0);
+
+    if (mode === "motion_video" && motionUrl) {
+      handleMotionControl(faceLockUrl, motionUrl, videoTranslatedPrompt || videoPrompt, videoRatio, videoDuration);
+    } else {
+      handleGenerateVideo(
+        faceLockUrl,
+        videoTranslatedPrompt || videoPrompt,
+        videoRatio,
+        videoDuration,
+        mode === "multi_reference" ? "seedance" : "kling",
+        omniRefs ? omniRefs.filter(Boolean) : []
+      );
+    }
+    setRetryMessage("");
+  } catch {
+    setError("連線失敗，請重試");
+    setRetryMessage("");
+    setLoading(false);
+  }
+};
+// [DNA_PATCH_END]
   // [DNA_PATCH_START] 未登入直接 return Landing Page，不渲染主工作室
 // [DNA_PATCH_START] 未登入 Landing Page — 美化版
 if (status === 'loading') return null;
@@ -2908,68 +3019,56 @@ return (
                 // omniRef 為選填，主圖本身即為 @image1 鎖臉基準
                 // [DNA_PATCH_END]
                 setShowUploadModal(false);
-                setAgreedToTerms(false);
-                setTermsChecked(false);
+setAgreedToTerms(false);
+setTermsChecked(false);
+setTimeout(() => progressRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
 
-                if (selectedFunction === "motion_video" && motionVideoUrl) {
-                  (async () => {
-                    let mainUrl = uploadedImage;
-                    if (mainUrl && mainUrl.startsWith("data:")) {
-                      try {
-                        const res = await fetch("/api/upload-image", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ imageUrl: mainUrl, email: session?.user?.email }),
-                        });
-                        const data = await res.json();
-                        mainUrl = data.url || mainUrl;
-                      } catch {}
-                    }
-                    handleMotionControl(mainUrl!, motionVideoUrl, videoTranslatedPrompt || videoPrompt, videoRatio, videoDuration);
-                  })();
-                } else if (selectedFunction === "multi_reference") {
-                  // 先上傳主圖和所有 omniRef（base64 → https URL）
-                  (async () => {
-                    const uploadBase64 = async (b64: string | null): Promise<string | null> => {
-                      if (!b64 || !b64.startsWith("data:")) return b64;
-                      try {
-                        const res = await fetch("/api/upload-image", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ imageUrl: b64, email: session?.user?.email }),
-                        });
-                        const data = await res.json();
-                        return data.url || null;
-                      } catch { return null; }
-                    };
-                    const [mainUrl, r1, r2, r3] = await Promise.all([
-                      uploadBase64(uploadedImage),
-                      uploadBase64(omniRef1),
-                      uploadBase64(omniRef2),
-                      uploadBase64(omniRef3),
-                    ]);
-                    if (!mainUrl) { alert("⚠️ 圖片上傳失敗，請重試"); return; }
-                    handleGenerateVideo(mainUrl, videoTranslatedPrompt || videoPrompt, videoRatio, videoDuration, "seedance", [r1, r2, r3]);
-                    setOmniRef1(null); setOmniRef2(null); setOmniRef3(null);
-                  })();
-                } else {
-                  // free_motion / motion_video 也需要上傳主圖
-                  (async () => {
-                    let mainUrl = uploadedImage;
-                    if (mainUrl && mainUrl.startsWith("data:")) {
-                      try {
-                        const res = await fetch("/api/upload-image", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ imageUrl: mainUrl, email: session?.user?.email }),
-                        });
-                        const data = await res.json();
-                        mainUrl = data.url || mainUrl;
-                      } catch {}
-                    }
-                    handleGenerateVideo(mainUrl!, videoTranslatedPrompt || videoPrompt, videoRatio, videoDuration, "kling", []);
-                  })();
-                }
+// 所有功能統一走：上傳主圖 → Flux Kontext 鎖臉 → Kling 轉影片
+(async () => {
+  // Step 1：上傳主圖（base64 → https URL）
+  let mainUrl = uploadedImage;
+  if (mainUrl && mainUrl.startsWith("data:")) {
+    try {
+      const res = await fetch("/api/upload-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl: mainUrl, email: session?.user?.email }),
+      });
+      const d = await res.json();
+      mainUrl = d.url || mainUrl;
+    } catch {}
+  }
+  if (!mainUrl) { alert("⚠️ 圖片上傳失敗，請重試"); return; }
+
+  if (selectedFunction === "motion_video" && motionVideoUrl) {
+    // 套用動作影片：鎖臉後走 Motion Control
+    handleUploadWithFaceLock(mainUrl, "motion_video", motionVideoUrl);
+  } else if (selectedFunction === "multi_reference") {
+    // 多重參考圖：上傳 omniRef 後鎖臉走 Kling
+    const uploadBase64 = async (b64: string | null): Promise<string | null> => {
+      if (!b64 || !b64.startsWith("data:")) return b64;
+      try {
+        const res = await fetch("/api/upload-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ imageUrl: b64, email: session?.user?.email }),
+        });
+        const d = await res.json();
+        return d.url || null;
+      } catch { return null; }
+    };
+    const [r1, r2, r3] = await Promise.all([
+      uploadBase64(omniRef1),
+      uploadBase64(omniRef2),
+      uploadBase64(omniRef3),
+    ]);
+    setOmniRef1(null); setOmniRef2(null); setOmniRef3(null);
+    handleUploadWithFaceLock(mainUrl, "multi_reference", null, [r1, r2, r3]);
+  } else {
+    // 隨意動作 / 文字指定動作：鎖臉後走 Kling
+    handleUploadWithFaceLock(mainUrl, "free_motion");
+  }
+})();
 
                 setMotionVideoUrl(null);
                 setMotionVideoFile(null);
