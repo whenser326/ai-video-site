@@ -1,6 +1,7 @@
 // [DNA_PATCH_START] Wav2Lip 影片語音合成 API
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+export const maxDuration = 60;
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -77,7 +78,6 @@ export async function POST(req: NextRequest) {
       headers: {
         Authorization: `Bearer ${process.env.REPLICATE_API_TOKEN}`,
         "Content-Type": "application/json",
-        "Prefer": "wait",
       },
       body: JSON.stringify({
         input: {

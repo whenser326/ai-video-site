@@ -1,5 +1,6 @@
 // [DNA_PATCH_START] TTS 語音合成 API
 import { NextRequest, NextResponse } from "next/server";
+export const maxDuration = 60;
 
 const VOICE_MAP: Record<string, string> = {
   "male-1": "qwKjxMVO8wNg6qaKKH1k",   // Aliby - 專業男聲
