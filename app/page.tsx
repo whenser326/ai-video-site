@@ -135,6 +135,7 @@ const [selectedFunction, setSelectedFunction] = useState<"free_motion" | "motion
 const [functionDropdownOpen, setFunctionDropdownOpen] = useState(false);
 const [uploadTab, setUploadTab] = useState(0);
 const [uploadTextMode, setUploadTextMode] = useState(false);
+const [faceLockImageUrl, setFaceLockImageUrl] = useState<string | null>(null);
 // [DNA_PATCH_END]
 // [DNA_PATCH_START] 影片提示詞翻譯狀態
 const [videoTranslatedPrompt, setVideoTranslatedPrompt] = useState<string | null>(null);
@@ -937,7 +938,7 @@ const handleUploadWithFaceLock = async (
         mode: "image",
         userEmail: session?.user?.email,
         selfieCharacterImage: imageUrl,
-        prompt: `${videoTranslatedPrompt || videoPrompt || "natural standing pose, same person from reference image"}`,
+        prompt: `anime illustration style, same person from reference image, ${videoTranslatedPrompt || videoPrompt || "natural standing pose"}`,
         imageRatio: videoRatio || "1:1",
       }),
     });
@@ -970,7 +971,8 @@ const handleUploadWithFaceLock = async (
           const upData = await upRes.json();
           faceLockUrl = upData.url || raw;
         } catch { faceLockUrl = raw; }
-        setPrediction({ output: faceLockUrl, status: "succeeded" });
+        setFaceLockImageUrl(faceLockUrl);
+        setPrediction(null);
         setGenType("image");
         if (session?.user?.email) {
           fetch(`/api/user/credits?email=${session.user.email}`).then(r => r.json()).then(d => setCredits(d.credits));
@@ -998,7 +1000,7 @@ const handleUploadWithFaceLock = async (
               mode: "image",
               userEmail: session?.user?.email,
               selfieCharacterImage: imageUrl,
-              prompt: `${videoTranslatedPrompt || videoPrompt || "natural standing pose, same person from reference image"}`,
+              prompt: `anime illustration style, same person from reference image, ${videoTranslatedPrompt || videoPrompt || "natural standing pose"}`,
               imageRatio: videoRatio || "1:1",
             }),
           });
@@ -1029,9 +1031,10 @@ const handleUploadWithFaceLock = async (
 
     // Step 2：用鎖臉圖生成影片
     clearInterval(faceLockTimer);
-    setRetryMessage("步驟 2／2：生成影片中（Kling 3.0）...");
+    setRetryMessage(`步驟 2／2：生成影片中（${mode === "multi_reference" ? "Seedance" : "Kling 3.0"}）...`);
     setGenType("video");
     setSeconds(0);
+    setLoading(true);
 
     if (mode === "motion_video" && motionUrl) {
       handleMotionControl(faceLockUrl, motionUrl, videoTranslatedPrompt || videoPrompt, videoRatio, videoDuration);
@@ -2258,7 +2261,23 @@ return (
             </p>
           </div>
         )}
-
+{/* Step 1 鎖臉圖固定顯示區 */}
+        {faceLockImageUrl && (
+          <div className="mt-4 bg-black/25 backdrop-blur-xl rounded-3xl border border-white/10 overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5">
+              <div className="w-2 h-2 bg-[#89f5a2] rounded-full" />
+              <span className="text-white/50 text-xs font-bold uppercase tracking-widest">鎖臉圖（Step 1）</span>
+              <button onClick={() => setFaceLockImageUrl(null)} className="ml-auto text-white/20 hover:text-white/50 text-xs">✕</button>
+            </div>
+            <div className="p-3">
+              <img src={faceLockImageUrl} alt="Face Lock" className="rounded-2xl w-full shadow-xl" />
+              <button
+                onClick={() => { setTtsText(""); setTtsAudio(null); setShowTtsModal(true); }}
+                className="w-full mt-2 py-2.5 rounded-xl bg-gradient-to-r from-purple-500/20 to-blue-500/20 border border-purple-500/30 text-purple-300 text-xs font-black hover:from-purple-500/30 transition-all"
+              >🎙️ 讓她說話</button>
+            </div>
+          </div>
+        )}
         {/* 結果顯示區 */}
         {prediction?.output && (
           <div className="mt-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -2978,6 +2997,8 @@ return (
                   if (selectedFunction === "motion_video" && !motionVideoUrl) { alert("⚠️ 請先上傳動作參考影片"); setUploadTab(1); return; }
                   setShowUploadModal(false); setAgreedToTerms(false); setTermsChecked(false);
                   setUploadTab(0); setUploadTextMode(false);
+                  setLoading(true);
+setRetryMessage("準備中...");
                   setTimeout(() => progressRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
                   (async () => {
                     let mainUrl = uploadedImage;
@@ -3015,6 +3036,7 @@ return (
                           setShowToast(true); setTimeout(() => setShowToast(false), 8000);
                         }
                       });
+                    setFaceLockImageUrl(null);
                     setUploadedImage(null); setVideoPrompt("");
                     setMotionVideoUrl(null); setMotionVideoFile(null); setMotionExpanded(false);
                     setSelectedFunction("free_motion"); setFunctionDropdownOpen(false);
