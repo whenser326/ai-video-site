@@ -80,6 +80,8 @@ const [writingStyle, setWritingStyle] = useState("直白");
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchIndex, setSearchIndex] = useState(0);
+  const [replyTo, setReplyTo] = useState<{ characterName: string; content: string } | null>(null);
+  const [tagMenu, setTagMenu] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const messageRefs = useRef<Record<number, HTMLDivElement | null>>({});
   // [DNA_PATCH_END]
@@ -305,10 +307,12 @@ const [writingStyle, setWritingStyle] = useState("直白");
     lastUserMessageTime.current = Date.now();
     if (autoMessageTimerRef.current) clearTimeout(autoMessageTimerRef.current);
     if (!overrideMessage) setInput("");
+    setReplyTo(null);
+    setTagMenu(false);
     setLoading(true);
 
     if (!imageUrl) {
-      setMessages(prev => [...prev, { role: "user", content: userMsg }]);
+      setMessages(prev => [...prev, { role: "user", content: replyTo ? `↩ 回覆 ${replyTo.characterName}：${userMsg}` : userMsg }]);
     }
 
     try {
@@ -319,10 +323,16 @@ const [writingStyle, setWritingStyle] = useState("直白");
   userEmail: session.user.email,
   characters: selectedIds,
   sessionId,
-  message: userMsg,
+  message: replyTo ? `（回覆 ${replyTo.characterName}：「${replyTo.content.slice(0, 30)}...」）\n${userMsg}` : userMsg,
   imageUrl: imageUrl || undefined,
   chatStyle,
   writingStyle,
+  taggedCharacter: (() => {
+    for (const c of selectedChars) {
+      if (userMsg.includes(`@${c.name}`)) return c.name;
+    }
+    return undefined;
+  })(),
 }),
       });
 
@@ -675,8 +685,15 @@ setTimeout(() => {
                 )}
 
                 {msg.role === "assistant" && !msg.selfieLoading && (
-                  <button
-                    onClick={() => {
+                  <div className="flex gap-2 flex-wrap">
+                    <button
+                      onClick={() => setReplyTo({ characterName: msg.characterName || "角色", content: msg.content })}
+                      className="px-3 py-1.5 rounded-full text-[10px] font-bold bg-white/5 border border-white/15 text-white/40 hover:bg-white/10 hover:text-white/70 transition-all"
+                    >
+                      ↩ 回覆
+                    </button>
+                    <button
+                      onClick={() => {
   const char = selectedChars.find(c => c.id === (msg.characterId || selectedIds[0]));
   setAvatarVoiceId(char?.voice_id || "female-2");
   setAvatarVideoUrl("");
@@ -692,6 +709,7 @@ setTimeout(() => {
                   >
                     🎬 轉成影片
                   </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -782,9 +800,36 @@ setTimeout(() => {
     </div>
   </div>
 )}
+            {replyTo && (
+              <div className="mb-2 flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/10 rounded-xl">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[#89f5a2]/60 text-[10px] font-bold mb-0.5">↩ 回覆 {replyTo.characterName}</p>
+                  <p className="text-white/30 text-[10px] truncate">{replyTo.content.slice(0, 40)}{replyTo.content.length > 40 ? "..." : ""}</p>
+                </div>
+                <button onClick={() => setReplyTo(null)} className="text-white/20 hover:text-white/50 text-xs flex-shrink-0">✕</button>
+              </div>
+            )}
+            {tagMenu && (
+              <div className="mb-2 bg-[#0a1e12] border border-[#89f5a2]/20 rounded-xl p-2 flex gap-2 flex-wrap">
+                <p className="w-full text-[#89f5a2]/50 text-[10px] mb-1">Tag 誰來回覆？</p>
+                {selectedChars.map(c => (
+                  <button key={c.id} onClick={() => {
+                    setInput(prev => prev + `@${c.name} `);
+                    setTagMenu(false);
+                  }} className="px-3 py-1 bg-white/5 border border-white/15 rounded-full text-white/60 text-xs hover:border-[#89f5a2]/40 hover:text-[#89f5a2] transition-all">
+                    {c.image_url && <img src={c.image_url} className="inline-block w-4 h-4 rounded-full mr-1 object-cover" />}
+                    @{c.name}
+                  </button>
+                ))}
+                <button onClick={() => setTagMenu(false)} className="ml-auto text-white/20 text-xs hover:text-white/50">✕</button>
+              </div>
+            )}
             <textarea
               value={input}
-              onChange={e => setInput(e.target.value)}
+              onChange={e => {
+                setInput(e.target.value);
+                if (e.target.value.endsWith("@")) setTagMenu(true);
+              }}
               onKeyDown={handleKeyDown}
               placeholder="跟大家說點什麼..."
               rows={2}

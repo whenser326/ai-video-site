@@ -209,3 +209,4 @@ AI 自拍媒體類型與扣點：
 - /api/referral/settings-public/route.ts（公開方案價格查詢 API）
 - pricing 頁面介紹碼自動讀取 URL ref 參數，存入 localStorage（關頁面後仍記住，付款後自動清除）
 - 推薦賺點 Modal：顯示專屬介紹碼、一鍵複製介紹碼/連結、三方案獎勵對照（從 admin_settings 動態抓取）
+- ReferralModal 已移至 GlobalHeader.tsx 統一管理，所有頁面均可開啟，不再依賴 page.tsx 事件監聽

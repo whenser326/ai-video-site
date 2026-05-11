@@ -58,6 +58,8 @@ export default function DefaultGroupChatPage() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchIndex, setSearchIndex] = useState(0);
+  const [replyTo, setReplyTo] = useState<{ characterName: string; content: string } | null>(null);
+  const [tagMenu, setTagMenu] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const messageRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -171,7 +173,9 @@ const searchResults = searchQuery.trim()
     if (!input.trim() || loading || !session?.user?.email) return;
     const userMsg = input.trim();
     setInput("");
-    setMessages(prev => [...prev, { role: "user", content: userMsg }]);
+    setReplyTo(null);
+    setTagMenu(false);
+    setMessages(prev => [...prev, { role: "user", content: replyTo ? `↩ 回覆 ${replyTo.characterName}：${userMsg}` : userMsg }]);
     setLoading(true);
 
     const photoKeywords = ["拍照", "自拍", "拍張", "傳照片", "照片給我", "看看你", "看看妳", "拍一張", "傳圖"];
@@ -204,10 +208,16 @@ const searchResults = searchQuery.trim()
         body: JSON.stringify({
           userEmail: session.user.email,
           sessionId,
-          message: userMsg,
+          message: replyTo ? `（回覆 ${replyTo.characterName}：「${replyTo.content.slice(0, 30)}...」）\n${userMsg}` : userMsg,
           defaultCharacters: selectedChars.map(c => ({ id: c.id, name: c.name, description: c.description, image_url: null })),
           chatStyle,
           writingStyle,
+          taggedCharacter: (() => {
+            for (const c of selectedChars) {
+              if (userMsg.includes(`@${c.name}`)) return c.name;
+            }
+            return undefined;
+          })(),
         }),
       });
       const data = await res.json();
@@ -369,6 +379,25 @@ const searchResults = searchQuery.trim()
                 }`}>
                   {msg.content}
                 </div>
+                {msg.role === "assistant" && (
+                  <div className="flex gap-2 mt-1 flex-wrap">
+                    <button
+                      onClick={() => setReplyTo({ characterName: msg.characterName || "角色", content: msg.content })}
+                      className="px-3 py-1 rounded-full text-[10px] font-bold bg-white/5 border border-white/10 text-white/30 hover:bg-white/10 hover:text-white/60 transition-all"
+                    >
+                      ↩ 回覆
+                    </button>
+                    <button
+                      onClick={() => {
+                        const name = msg.characterName;
+                        if (name) setInput(prev => prev + `@${name} `);
+                      }}
+                      className="px-3 py-1 rounded-full text-[10px] font-bold bg-white/5 border border-white/10 text-white/30 hover:bg-white/10 hover:text-[#89f5a2] transition-all"
+                    >
+                      @ Tag
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -419,9 +448,35 @@ const searchResults = searchQuery.trim()
             className={`flex-shrink-0 w-11 h-11 rounded-2xl border text-lg transition-all flex items-center justify-center ${showStylePanel ? "bg-[#89f5a2]/20 border-[#89f5a2]/50 text-[#89f5a2]" : "bg-white/5 border-white/15 text-white/50 hover:border-white/30"}`}>
             🎨
           </button>
+          {replyTo && (
+            <div className="mb-2 flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/10 rounded-xl">
+              <div className="flex-1 min-w-0">
+                <p className="text-[#89f5a2]/60 text-[10px] font-bold mb-0.5">↩ 回覆 {replyTo.characterName}</p>
+                <p className="text-white/30 text-[10px] truncate">{replyTo.content.slice(0, 40)}{replyTo.content.length > 40 ? "..." : ""}</p>
+              </div>
+              <button onClick={() => setReplyTo(null)} className="text-white/20 hover:text-white/50 text-xs flex-shrink-0">✕</button>
+            </div>
+          )}
+          {tagMenu && (
+            <div className="mb-2 bg-[#0a1e12] border border-[#89f5a2]/20 rounded-xl p-2 flex gap-2 flex-wrap">
+              <p className="w-full text-[#89f5a2]/50 text-[10px] mb-1">Tag 誰來回覆？</p>
+              {selectedChars.map(c => (
+                <button key={c.id} onClick={() => {
+                  setInput(prev => prev + `@${c.name} `);
+                  setTagMenu(false);
+                }} className="px-3 py-1 bg-white/5 border border-white/15 rounded-full text-white/60 text-xs hover:border-[#89f5a2]/40 hover:text-[#89f5a2] transition-all">
+                  {getEmoji(c.gender)} @{c.name}
+                </button>
+              ))}
+              <button onClick={() => setTagMenu(false)} className="ml-auto text-white/20 text-xs hover:text-white/50">✕</button>
+            </div>
+          )}
           <textarea
             value={input}
-            onChange={e => setInput(e.target.value)}
+            onChange={e => {
+              setInput(e.target.value);
+              if (e.target.value.endsWith("@")) setTagMenu(true);
+            }}
             onKeyDown={handleKeyDown}
             placeholder="跟大家說點什麼..."
             rows={2}

@@ -170,7 +170,7 @@ function detectSelfieIntent(
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { userEmail, characterId, sessionId, message, characters, imageUrl: chatImageUrl, isAutoMessage, defaultCharacter, defaultCharacters, chatStyle, writingStyle } = body;
+  const { userEmail, characterId, sessionId, message, characters, imageUrl: chatImageUrl, isAutoMessage, defaultCharacter, defaultCharacters, chatStyle, writingStyle, taggedCharacter } = body;
 
   if (!userEmail || !message) {
     return NextResponse.json({ error: "缺少必要參數" }, { status: 400 });
@@ -242,7 +242,12 @@ export async function POST(req: NextRequest) {
   const isGroup = characterList.length > 1;
 
   const shuffledChars = isGroup
-    ? [...characterList].sort(() => Math.random() - 0.5)
+    ? taggedCharacter
+      ? (() => {
+          const tagged = characterList.filter(c => c.name === taggedCharacter);
+          return tagged.length > 0 ? tagged : [...characterList].sort(() => Math.random() - 0.5);
+        })()
+      : [...characterList].sort(() => Math.random() - 0.5)
     : characterList;
 
   const userContent: any = chatImageUrl

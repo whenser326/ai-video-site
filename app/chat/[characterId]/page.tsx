@@ -55,6 +55,7 @@ const [writingStyle, setWritingStyle] = useState("直白");
 const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchIndex, setSearchIndex] = useState(0);
+  const [replyTo, setReplyTo] = useState<{ characterName: string; content: string } | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const messageRefs = useRef<Record<number, HTMLDivElement | null>>({});
   // [DNA_PATCH_END]
@@ -274,7 +275,8 @@ const [searchOpen, setSearchOpen] = useState(false);
     if (autoMessageTimerRef.current) clearTimeout(autoMessageTimerRef.current);
     const userMsg = input.trim();
     setInput("");
-    setMessages(prev => [...prev, { role: "user", content: userMsg }]);
+    setReplyTo(null);
+    setMessages(prev => [...prev, { role: "user", content: replyTo ? `↩ 回覆 ${replyTo.characterName}：${userMsg}` : userMsg }]);
     setLoading(true);
 
     try {
@@ -285,7 +287,7 @@ const [searchOpen, setSearchOpen] = useState(false);
   userEmail: session?.user?.email,
   characterId,
   sessionId,
-  message: userMsg,
+  message: replyTo ? `（回覆 ${replyTo.characterName}：「${replyTo.content.slice(0, 30)}...」）\n${userMsg}` : userMsg,
   chatStyle,
   writingStyle,
 }),
@@ -592,22 +594,30 @@ const [searchOpen, setSearchOpen] = useState(false);
               )}
 
                 {msg.role === "assistant" && !msg.selfieLoading && (
-                  <button
-                    onClick={() => {
-                      setAvatarVoiceId(character?.voice_id || "female-2");
-                      setAvatarVideoUrl("");
-                      setAvatarStatus("");
-                      setVideoModal({
-                        content: msg.content,
-                        characterId,
-                        characterImage: character?.image_url || "",
-                        characterVoiceId: character?.voice_id || "female-2",
-                      });
-                    }}
-                    className="px-3 py-1.5 rounded-full text-[10px] font-bold bg-purple-500/10 border border-purple-500/25 text-purple-300/70 hover:bg-purple-500/20 hover:text-purple-300 transition-all"
-                  >
-                    🎬 轉成影片
-                  </button>
+                  <div className="flex gap-2 flex-wrap">
+                    <button
+                      onClick={() => setReplyTo({ characterName: msg.characterName || character?.name || "角色", content: msg.content })}
+                      className="px-3 py-1.5 rounded-full text-[10px] font-bold bg-white/5 border border-white/15 text-white/40 hover:bg-white/10 hover:text-white/70 transition-all"
+                    >
+                      ↩ 回覆
+                    </button>
+                    <button
+                      onClick={() => {
+                        setAvatarVoiceId(character?.voice_id || "female-2");
+                        setAvatarVideoUrl("");
+                        setAvatarStatus("");
+                        setVideoModal({
+                          content: msg.content,
+                          characterId,
+                          characterImage: character?.image_url || "",
+                          characterVoiceId: character?.voice_id || "female-2",
+                        });
+                      }}
+                      className="px-3 py-1.5 rounded-full text-[10px] font-bold bg-purple-500/10 border border-purple-500/25 text-purple-300/70 hover:bg-purple-500/20 hover:text-purple-300 transition-all"
+                    >
+                      🎬 轉成影片
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -747,6 +757,15 @@ const [searchOpen, setSearchOpen] = useState(false);
     </div>
   </div>
 )}
+          {replyTo && (
+            <div className="mb-2 flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/10 rounded-xl">
+              <div className="flex-1 min-w-0">
+                <p className="text-[#89f5a2]/60 text-[10px] font-bold mb-0.5">↩ 回覆 {replyTo.characterName}</p>
+                <p className="text-white/30 text-[10px] truncate">{replyTo.content.slice(0, 40)}{replyTo.content.length > 40 ? "..." : ""}</p>
+              </div>
+              <button onClick={() => setReplyTo(null)} className="text-white/20 hover:text-white/50 text-xs flex-shrink-0">✕</button>
+            </div>
+          )}
           <textarea
             value={input}
               onChange={e => setInput(e.target.value)}

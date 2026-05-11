@@ -136,6 +136,7 @@ const randomDelay = () => Math.floor(Math.random() * 3000) + 2000;
 const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchIndex, setSearchIndex] = useState(0);
+  const [replyTo, setReplyTo] = useState<{ characterName: string; content: string } | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const messageRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [showStylePanel, setShowStylePanel] = useState(false);
@@ -157,7 +158,8 @@ const [searchOpen, setSearchOpen] = useState(false);
     if (!input.trim() || loading || !session?.user?.email || !character) return;
     const userMsg = input.trim();
     setInput("");
-    setMessages(prev => [...prev, { role: "user", content: userMsg }]);
+    setReplyTo(null);
+    setMessages(prev => [...prev, { role: "user", content: replyTo ? `↩ 回覆 ${replyTo.characterName}：${userMsg}` : userMsg }]);
     setLoading(true);
 
     // 自拍關鍵字偵測 → 顯示付費提示
@@ -193,7 +195,7 @@ const [searchOpen, setSearchOpen] = useState(false);
           userEmail: session.user.email,
           characterId,
           sessionId,
-          message: userMsg,
+          message: replyTo ? `（回覆 ${replyTo.characterName}：「${replyTo.content.slice(0, 30)}...」）\n${userMsg}` : userMsg,
           defaultCharacter: fakeChar,
           chatStyle,
           writingStyle,
@@ -316,7 +318,7 @@ const [searchOpen, setSearchOpen] = useState(false);
           </div>
         )}
         {messages.map((msg, idx) => (
-          <div key={idx} ref={el => { messageRefs.current[idx] = el; }} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} gap-2`} style={searchResults.includes(idx) ? { outline: idx === searchResults[searchIndex] ? "2px solid #89f5a2" : "1px solid rgba(137,245,162,0.3)", borderRadius: 16 } : {}}>
+          <div key={idx} ref={el => { messageRefs.current[idx] = el; }} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} gap-2 items-start`} style={searchResults.includes(idx) ? { outline: idx === searchResults[searchIndex] ? "2px solid #89f5a2" : "1px solid rgba(137,245,162,0.3)", borderRadius: 16 } : {}}>
             {msg.role === "assistant" && (
               <div className="w-8 h-8 rounded-full flex items-center justify-center text-xl bg-white/8 border border-white/10 flex-shrink-0 mt-1">
                 {emoji}
@@ -329,6 +331,14 @@ const [searchOpen, setSearchOpen] = useState(false);
             }`}>
               {msg.content}
             </div>
+            {msg.role === "assistant" && (
+              <button
+                onClick={() => setReplyTo({ characterName: msg.characterName || character?.name || "角色", content: msg.content })}
+                className="mt-1 px-3 py-1 rounded-full text-[10px] font-bold bg-white/5 border border-white/10 text-white/30 hover:bg-white/10 hover:text-white/60 transition-all self-start"
+              >
+                ↩ 回覆
+              </button>
+            )}
           </div>
         ))}
         {loading && (
@@ -377,6 +387,15 @@ const [searchOpen, setSearchOpen] = useState(false);
             className={`flex-shrink-0 w-11 h-11 rounded-2xl border text-lg transition-all flex items-center justify-center ${showStylePanel ? "bg-[#89f5a2]/20 border-[#89f5a2]/50 text-[#89f5a2]" : "bg-white/5 border-white/15 text-white/50 hover:border-white/30"}`}>
             🎨
           </button>
+          {replyTo && (
+            <div className="mb-2 flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/10 rounded-xl">
+              <div className="flex-1 min-w-0">
+                <p className="text-[#89f5a2]/60 text-[10px] font-bold mb-0.5">↩ 回覆 {replyTo.characterName}</p>
+                <p className="text-white/30 text-[10px] truncate">{replyTo.content.slice(0, 40)}{replyTo.content.length > 40 ? "..." : ""}</p>
+              </div>
+              <button onClick={() => setReplyTo(null)} className="text-white/20 hover:text-white/50 text-xs flex-shrink-0">✕</button>
+            </div>
+          )}
           <textarea
             value={input}
             onChange={e => setInput(e.target.value)}
