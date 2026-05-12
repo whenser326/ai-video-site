@@ -131,11 +131,19 @@ const [motionVideoError, setMotionVideoError] = useState<string>('');
 const [motionLimits, setMotionLimits] = useState({ minSec: 5, maxSec: 10, maxMb: 30 });
 const [motionExpanded, setMotionExpanded] = useState(false);
 // [DNA_PATCH_START] Upload Modal 功能下拉 state
-const [selectedFunction, setSelectedFunction] = useState<"free_motion" | "motion_video" | "multi_reference">("free_motion");
+const [selectedFunction, setSelectedFunction] = useState<"free_motion" | "motion_video" | "multi_reference" | "avatar">("free_motion");
 const [functionDropdownOpen, setFunctionDropdownOpen] = useState(false);
 const [uploadTab, setUploadTab] = useState(0);
 const [uploadTextMode, setUploadTextMode] = useState(false);
 const [faceLockImageUrl, setFaceLockImageUrl] = useState<string | null>(null);
+const [avatarText, setAvatarText] = useState("");
+const [avatarVoiceId, setAvatarVoiceId] = useState("female-2");
+const [avatarLoading, setAvatarLoading] = useState(false);
+const [avatarPredictionId, setAvatarPredictionId] = useState<string | null>(null);
+const [avatarTtsAudio, setAvatarTtsAudio] = useState<string | null>(null);
+const [avatarTtsCache, setAvatarTtsCache] = useState<Record<string, string>>({});
+const [avatarTtsPreviewCount, setAvatarTtsPreviewCount] = useState(0);
+const AVATAR_TTS_MAX_PREVIEW = 3;
 // [DNA_PATCH_END]
 // [DNA_PATCH_START] 影片提示詞翻譯狀態
 const [videoTranslatedPrompt, setVideoTranslatedPrompt] = useState<string | null>(null);
@@ -389,11 +397,10 @@ useEffect(() => {
 useEffect(() => {
   if (!session?.user?.email) return;
   if (credits === null) return;
-  const key = `onboarding_done_${session.user.email}`;
-  if (!localStorage.getItem(key) && plan === 'free') {
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
+  const key = `onboarding_done_${session.user.email}_${today}`;
+  if (!localStorage.getItem(key)) {
     setShowOnboarding(true);
-  } else if (plan !== 'free') {
-    localStorage.setItem(key, '1');
   }
 }, [session?.user?.email, plan, credits]);
 
@@ -917,8 +924,102 @@ const handleGenerateVideo = async (imageUrl: string, prompt?: string, ratio?: st
     } catch { setError('連線失敗'); setLoading(false); }
   };
   // [DNA_PATCH_END]
-// [DNA_PATCH_START] handleUploadWithFaceLock：上傳照片兩段式流程（Flux Kontext 鎖臉 → Kling 轉影片）
-const handleUploadWithFaceLock = async (
+  // [DNA_PATCH_START] handleUploadAvatar：說話影片線路（TTS → Kling Avatar）
+const handleUploadAvatar = async (imageUrl: string) => {
+  if (!avatarText.trim()) { alert("⚠️ 請輸入說話文字"); return; }
+  setAvatarLoading(true);
+  setLoading(true);
+  setError("");
+  setSeconds(0);
+  setGenType("video");
+  setRetryMessage("步驟 1／2：語音合成中（ElevenLabs）...");
+  setTimeout(() => progressRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
+
+  let avatarTimer: ReturnType<typeof setInterval> | undefined = undefined;
+  try {
+    // Step 1: TTS
+    const ttsRes = await fetch("/api/tts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: avatarText, voiceId: avatarVoiceId, videoDuration: 5 }),
+    });
+    const ttsData = await ttsRes.json();
+    if (!ttsData.audio) {
+      setError(ttsData.error || "語音合成失敗，請重試");
+      setRetryMessage(""); setLoading(false); setAvatarLoading(false); return;
+    }
+
+    // Step 2: Kling Avatar
+    setRetryMessage("步驟 2／2：說話影片生成中（Kling Avatar）...");
+    const avatarRes = await fetch("/api/kling-avatar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        imageUrl,
+        audioBase64: ttsData.audio,
+        userEmail: session?.user?.email,
+        plan,
+        prompt: "natural talking",
+        mode: "std",
+      }),
+    });
+    const avatarData = await avatarRes.json();
+    if (!avatarData.id) {
+      setError(avatarData.error || "說話影片啟動失敗，請重試");
+      setRetryMessage(""); setLoading(false); setAvatarLoading(false); return;
+    }
+
+    setAvatarPredictionId(avatarData.id);
+    if (session?.user?.email) {
+      fetch(`/api/user/credits?email=${session.user.email}`).then(r => r.json()).then(d => setCredits(d.credits));
+    }
+
+    // Polling
+    let done = false;
+    let attempts = 0;
+    avatarTimer = setInterval(() => setSeconds(prev => prev + 3), 3000);
+    while (!done && attempts < 60) {
+      await new Promise(r => setTimeout(r, 3000));
+      attempts++;
+      const pollRes = await fetch(`/api/kling-avatar?id=${avatarData.id}`);
+      const pollData = await pollRes.json();
+      if (pollData.status === "succeeded") {
+        done = true;
+        const output = Array.isArray(pollData.output) ? pollData.output[0] : pollData.output;
+        setPrediction({ output, status: "succeeded" });
+        setRetryMessage("");
+        if (session?.user?.email) {
+          await fetch("/api/history", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              user_email: session.user.email,
+              image_url: null,
+              video_url: output,
+              prompt: avatarText,
+              character_id: lockedCharacterId || null,
+            }),
+          });
+        }
+      } else if (pollData.status === "failed") {
+        done = true;
+        setError("說話影片生成失敗，請重試");
+        setRetryMessage("");
+      }
+    }
+    if (!done) { setError("說話影片逾時，請重試"); setRetryMessage(""); }
+  } catch {
+    setError("連線失敗，請重試");
+    setRetryMessage("");
+  } finally {
+    if (avatarTimer) clearInterval(avatarTimer);
+    setLoading(false);
+    setAvatarLoading(false);
+  }
+};
+// [DNA_PATCH_END]
+// [DNA_PATCH_START] handleUploadDirect：直接用原圖生成影片（不鎖臉）
+const handleUploadDirect = async (
   imageUrl: string,
   mode: "free_motion" | "motion_video" | "multi_reference",
   motionUrl?: string | null,
@@ -927,124 +1028,16 @@ const handleUploadWithFaceLock = async (
   setLoading(true);
   setError("");
   setSeconds(0);
-  setGenType("image");
-  setRetryMessage("步驟 1／2：鎖定臉孔中（Flux Kontext）...");
-  setSeconds(0);
+  setGenType("video");
+  setRetryMessage(`生成影片中（${mode === "multi_reference" ? "Seedance" : "Kling 3.0"}）...`);
   setTimeout(() => progressRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
-  const faceLockTimer = setInterval(() => setSeconds(prev => prev + 2), 2000);
 
   try {
-    // Step 1：Flux Kontext 鎖臉
-    const fluxRes = await fetch("/api/character", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        mode: "image",
-        userEmail: session?.user?.email,
-        selfieCharacterImage: imageUrl,
-        prompt: `digital art style, realistic face, same person from reference image, ${videoTranslatedPrompt || videoPrompt || "natural standing pose"}`,
-        imageRatio: videoRatio || "1:1",
-      }),
-    });
-    const fluxData = await fluxRes.json();
-    if (!fluxData.id) {
-      setError(fluxData.error || "臉孔鎖定失敗，請重試");
-      setRetryMessage("");
-      setLoading(false);
-      return;
-    }
-
-    // Polling Flux Kontext 結果
-    let faceLockUrl: string | null = null;
-    let attempts = 0;
-    let retried = false;
-    let currentPredId = fluxData.id;
-    while (!faceLockUrl && attempts < 45) {
-      await new Promise(r => setTimeout(r, 2000));
-      attempts++;
-      const pollRes = await fetch(`/api/character?id=${currentPredId}&email=${session?.user?.email}`);
-      const pollData = await pollRes.json();
-      if (pollData.status === "succeeded") {
-        const raw = Array.isArray(pollData.output) ? pollData.output[0] : pollData.output;
-        try {
-          const upRes = await fetch("/api/upload-image", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ imageUrl: raw, email: session?.user?.email }),
-          });
-          const upData = await upRes.json();
-          faceLockUrl = upData.url || raw;
-        } catch { faceLockUrl = raw; }
-        setFaceLockImageUrl(faceLockUrl);
-        setPrediction(null);
-        setGenType("image");
-        if (session?.user?.email) {
-          fetch(`/api/user/credits?email=${session.user.email}`).then(r => r.json()).then(d => setCredits(d.credits));
-          await fetch("/api/history", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              user_email: session.user.email,
-              image_url: faceLockUrl,
-              video_url: null,
-              prompt: videoTranslatedPrompt || videoPrompt || "face lock",
-              character_id: lockedCharacterId || null,
-            }),
-          });
-        }
-      } else if (pollData.status === "failed") {
-        if (!retried) {
-          retried = true;
-          attempts = 0;
-          setRetryMessage("臉孔鎖定重試中...");
-          const retryRes = await fetch("/api/character", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              mode: "image",
-              userEmail: session?.user?.email,
-              selfieCharacterImage: imageUrl,
-              prompt: `digital art style, realistic face, same person from reference image, ${videoTranslatedPrompt || videoPrompt || "natural standing pose"}`,
-              imageRatio: videoRatio || "1:1",
-            }),
-          });
-          const retryData = await retryRes.json();
-          if (retryData.id) {
-            currentPredId = retryData.id;
-          } else {
-            setError("臉孔鎖定失敗，請重試");
-            setRetryMessage("");
-            setLoading(false);
-            return;
-          }
-        } else {
-          setError("臉孔鎖定失敗，請重試");
-          setRetryMessage("");
-          setLoading(false);
-          return;
-        }
-      }
-    }
-
-    if (!faceLockUrl) {
-      setError("臉孔鎖定逾時，請重試");
-      setRetryMessage("");
-      setLoading(false);
-      return;
-    }
-
-    // Step 2：用鎖臉圖生成影片
-    clearInterval(faceLockTimer);
-    setRetryMessage(`步驟 2／2：生成影片中（${mode === "multi_reference" ? "Seedance" : "Kling 3.0"}）...`);
-    setGenType("video");
-    setSeconds(0);
-    setLoading(true);
-
     if (mode === "motion_video" && motionUrl) {
-      handleMotionControl(faceLockUrl, motionUrl, videoTranslatedPrompt || videoPrompt, videoRatio, videoDuration);
+      handleMotionControl(imageUrl, motionUrl, videoTranslatedPrompt || videoPrompt, videoRatio, videoDuration);
     } else {
       handleGenerateVideo(
-        faceLockUrl,
+        imageUrl,
         videoTranslatedPrompt || videoPrompt,
         videoRatio,
         videoDuration,
@@ -1054,7 +1047,6 @@ const handleUploadWithFaceLock = async (
     }
     setRetryMessage("");
   } catch {
-    clearInterval(faceLockTimer);
     setError("連線失敗，請重試");
     setRetryMessage("");
     setLoading(false);
@@ -1399,15 +1391,16 @@ return (
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {[
-          { icon: '🌟', title: '生成我的第一個角色', sub: '選風格 → 設定外觀 → 生成圖片', href: null },
-      { icon: '💬', title: '和 AI 角色聊天或製作說話影片', sub: '選角色 → 設定個性 → 開始對話', href: '/characters' },
-      { icon: '📁', title: '上傳自己的照片轉影片', sub: '上傳照片 → 輸入提示詞 → 生成影片', href: null, openUpload: true },
+          { icon: '🌟', title: '生成 AI 角色', sub: '選風格 → 設定外觀 → 生成圖片或影片', href: null },
+          { icon: '💬', title: '和 AI 角色聊天', sub: '選角色 → 設定個性 → 開始對話・AI 自拍・說話影片', href: '/characters' },
+          { icon: '📁', title: '上傳照片轉影片', sub: '說話影片・自由動作・套用動作・高精度影片', href: null, openUpload: true },
         ].map((opt) => (
           <div
             key={opt.title}
               onClick={() => {
-                const key = `onboarding_done_${session?.user?.email}`;
-                localStorage.setItem(key, '1');
+                const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
+const key = `onboarding_done_${session?.user?.email}_${today}`;
+localStorage.setItem(key, '1');
                 setShowOnboarding(false);
                 setOnboardingDismissed(true);
                 if ((opt as any).openUpload) {
@@ -1449,8 +1442,9 @@ return (
           {/* [DNA_PATCH_START] 查看完整指南按鈕 */}
           <div
             onClick={() => {
-              const key = `onboarding_done_${session?.user?.email}`;
-              localStorage.setItem(key, '1');
+              const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
+const key = `onboarding_done_${session?.user?.email}_${today}`;
+localStorage.setItem(key, '1');
               setShowOnboarding(false);
               setOnboardingDismissed(true);
               window.location.href = '/guide';
@@ -1478,15 +1472,16 @@ return (
             <span style={{ fontSize: 22, flexShrink: 0 }}>📖</span>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: '#d4ffe0', textAlign: 'left' }}>查看完整指南</div>
-            <div style={{ fontSize: 10, color: 'rgba(184,255,200,0.45)', marginTop: 2, textAlign: 'left' }}>四條主線・點數說明・完整功能介紹</div>
+            <div style={{ fontSize: 10, color: 'rgba(184,255,200,0.45)', marginTop: 2, textAlign: 'left' }}>功能詳解・點數說明・方案對照</div>
             </div>
             <span style={{ color: 'rgba(137,245,162,0.4)', fontSize: 14 }}>→</span>
           </div>
           {/* [DNA_PATCH_END] */}
           <span
             onClick={() => {
-              const key = `onboarding_done_${session?.user?.email}`;
-              localStorage.setItem(key, '1');
+              const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
+const key = `onboarding_done_${session?.user?.email}_${today}`;
+localStorage.setItem(key, '1');
               setShowOnboarding(false);
               setOnboardingDismissed(true);
             }}
@@ -2691,7 +2686,7 @@ return (
           {/* ── Header ── */}
           <div className="px-5 pt-5 pb-4 border-b border-white/8">
             <p className="text-white font-black text-base">📁 上傳照片轉影片</p>
-            <p className="text-white/35 text-xs mt-1">選擇功能 → 上傳照片 → 設定，臉孔全程鎖定</p>
+            <p className="text-white/35 text-xs mt-1">選擇功能 → 上傳照片 → 設定，開始生成</p>
           </div>
 
           {/* ── Tab 列 ── */}
@@ -2716,16 +2711,22 @@ return (
           {/* ── Tab 1：選功能 ── */}
           {uploadTab === 0 && (
             <div className="p-5 space-y-3">
-              <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl px-3 py-2.5 text-blue-300 text-xs leading-relaxed">
-                ℹ️ 所有功能都會先用 Flux Kontext 鎖定臉孔（+1點），再生成影片
-              </div>
               {[
+                {
+                  id: "avatar" as const,
+                  icon: "🗣️",
+                  title: "說話影片",
+                  desc: "輸入文字，AI 語音合成 + 嘴型同步，讓角色開口說話",
+                  cost: "Avatar 8–10 點",
+                  orange: false,
+                  requiresPlan: false,
+                },
                 {
                   id: "free_motion" as const,
                   icon: "🪄",
                   title: "AI 自由發揮",
                   desc: "不輸入動作，AI 自動安排最自然的動作",
-                  cost: "鎖臉 1 點 + Kling 4–6 點",
+                  cost: "Kling 4–6 點",
                   orange: false,
                   requiresPlan: false,
                 },
@@ -2734,7 +2735,7 @@ return (
                   icon: "✍️",
                   title: "文字指定動作",
                   desc: "輸入文字描述想要的動作，例如「轉身、揮手」",
-                  cost: "鎖臉 1 點 + Kling 4–6 點",
+                  cost: "Kling 4–6 點",
                   orange: false,
                   requiresPlan: false,
                 },
@@ -2743,7 +2744,7 @@ return (
                   icon: "▶️",
                   title: "套用動作影片",
                   desc: "上傳 MP4，角色模仿影片動作",
-                  cost: "鎖臉 1 點 + Kling 4–6 點",
+                  cost: "Kling 4–6 點",
                   orange: false,
                   requiresPlan: true,
                 },
@@ -2751,8 +2752,8 @@ return (
                   id: "multi_reference" as const,
                   icon: "🖼️",
                   title: "高精度角色影片",
-                  desc: "可加入第二角色、場景或動作參考圖（Seedance）⚠️ 參考圖（Omni-Reference）若含真實人臉很可能生成失敗，建議使用 AI 生成圖",
-                  cost: "鎖臉 1 點 + Seedance 13–17 點 +  Omni-Reference額外17-23點",
+                  desc: "可加入第二角色、場景或動作參考圖（Seedance）⚠️ 參考圖若含真實人臉很可能生成失敗，建議使用 AI 生成圖",
+                  cost: "Seedance 13–17 點（+ Omni-Reference 額外17-23點另計）",
                   orange: true,
                   requiresPlan: true,
                 },
@@ -2823,7 +2824,77 @@ return (
                   }} />
                 </label>
               </div>
-
+{/* 說話文字（avatar 才顯示） */}
+              {selectedFunction === "avatar" && (
+                <div>
+                  <p className="text-white/40 text-xs mb-2">說話文字（必填）</p>
+                  <textarea
+                    value={avatarText}
+                    onChange={(e) => setAvatarText(e.target.value)}
+                    placeholder="輸入角色要說的話，例如：你好！很高興認識你～"
+                    className="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/20 text-xs resize-none focus:outline-none focus:ring-1 focus:ring-[#89f5a2]/40"
+                    rows={3}
+                    maxLength={80}
+                  />
+                  <p className="text-white/25 text-[10px] mt-1">{avatarText.length}/80 字</p>
+                  <p className="text-white/40 text-xs mt-3 mb-2">聲音選擇</p>
+                  {/* 試聽區 */}
+                  {avatarTtsAudio && (
+                    <audio controls className="w-full mt-2" src={`data:audio/mp3;base64,${avatarTtsAudio}`} />
+                  )}
+                  <div className="flex items-center justify-between mt-2 mb-1">
+                    <p className="text-yellow-300 text-[10px] font-bold">⚠️ 免費試聽 {AVATAR_TTS_MAX_PREVIEW} 次（剩餘 {Math.max(AVATAR_TTS_MAX_PREVIEW - avatarTtsPreviewCount, 0)} 次）</p>
+                    <button
+                      type="button"
+                      disabled={!avatarText.trim() || avatarTtsPreviewCount >= AVATAR_TTS_MAX_PREVIEW && !avatarTtsCache[avatarVoiceId]}
+                      onClick={async () => {
+                        if (avatarTtsCache[avatarVoiceId]) { setAvatarTtsAudio(avatarTtsCache[avatarVoiceId]); return; }
+                        if (avatarTtsPreviewCount >= AVATAR_TTS_MAX_PREVIEW) { alert("本影片試聽次數已用完"); return; }
+                        const res = await fetch("/api/tts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: avatarText, voiceId: avatarVoiceId, videoDuration: 5 }) });
+                        const data = await res.json();
+                        if (data.audio) {
+                          setAvatarTtsAudio(data.audio);
+                          setAvatarTtsCache(prev => ({ ...prev, [avatarVoiceId]: data.audio }));
+                          setAvatarTtsPreviewCount(prev => prev + 1);
+                        } else { alert(data.error || "語音生成失敗"); }
+                      }}
+                      className="px-3 py-1 rounded-lg text-xs font-bold border transition-all bg-[#89f5a2]/15 border-[#89f5a2]/40 text-[#89f5a2] hover:bg-[#89f5a2]/25 disabled:opacity-30"
+                    >
+                      {avatarTtsCache[avatarVoiceId] ? "🔄 重新播放" : avatarTtsPreviewCount >= AVATAR_TTS_MAX_PREVIEW ? "🚫 試聽已用完" : "🎙️ 免費試聽"}
+                    </button>
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="flex-1 flex flex-col gap-1.5">
+                      {[
+                        { id: "female-1", label: "👩 低沉女聲" },
+                        { id: "female-2", label: "👩 甜美女聲" },
+                        { id: "female-3", label: "👩 清晰女聲" },
+                        { id: "female-4", label: "👩 活潑女聲" },
+                        { id: "female-5", label: "👩 溫柔女聲" },
+                      ].map((v) => (
+                        <button key={v.id} type="button"
+                          onClick={() => { setAvatarVoiceId(v.id); setAvatarTtsAudio(null); }}
+                          className={`py-1.5 rounded-lg text-xs font-bold border transition-all ${avatarVoiceId === v.id ? "bg-[#89f5a2] text-[#0d2318] border-[#89f5a2]" : "bg-white/5 text-white/50 border-white/10 hover:border-white/30"}`}
+                        >{v.label}</button>
+                      ))}
+                    </div>
+                    <div className="flex-1 flex flex-col gap-1.5">
+                      {[
+                        { id: "male-1", label: "👨 專業男聲" },
+                        { id: "male-2", label: "👨 溫暖男聲" },
+                        { id: "male-3", label: "👨 成熟男聲" },
+                        { id: "male-4", label: "👨 旁白男聲" },
+                        { id: "male-5", label: "👨 深沉男聲" },
+                      ].map((v) => (
+                        <button key={v.id} type="button"
+                          onClick={() => { setAvatarVoiceId(v.id); setAvatarTtsAudio(null); }}
+                          className={`py-1.5 rounded-lg text-xs font-bold border transition-all ${avatarVoiceId === v.id ? "bg-[#89f5a2] text-[#0d2318] border-[#89f5a2]" : "bg-white/5 text-white/50 border-white/10 hover:border-white/30"}`}
+                        >{v.label}</button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
               {/* 動作參考影片（motion_video 才顯示） */}
               {selectedFunction === "motion_video" && (
                 <div>
@@ -2969,8 +3040,10 @@ return (
 
               {/* 預估點數 */}
               <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl px-3 py-2.5 text-blue-300 text-xs">
-                💰 預估消耗：鎖臉 1 點 + 影片 {videoDuration === 5 ? "4–6" : "8–12"} 點
-                {selectedFunction === "multi_reference" && <span className="text-orange-300">（Seedance 另計）</span>}
+                {selectedFunction === "avatar"
+                  ? "💰 預估消耗：Avatar 8–10 點"
+                  : <>💰 預估消耗：影片 {videoDuration === 5 ? "4–6" : "8–12"} 點{selectedFunction === "multi_reference" && <span className="text-orange-300">（Seedance 另計）</span>}</>
+                }
               </div>
             </div>
           )}
@@ -3014,8 +3087,10 @@ setRetryMessage("準備中...");
                     }
                     if (!mainUrl) { alert("⚠️ 圖片上傳失敗，請重試"); return; }
 
-                    if (selectedFunction === "motion_video" && motionVideoUrl) {
-                      handleUploadWithFaceLock(mainUrl, "motion_video", motionVideoUrl);
+                    if (selectedFunction === "avatar") {
+                      handleUploadAvatar(mainUrl);
+                    } else if (selectedFunction === "motion_video" && motionVideoUrl) {
+                      handleUploadDirect(mainUrl, "motion_video", motionVideoUrl);
                     } else if (selectedFunction === "multi_reference") {
                       const uploadBase64 = async (b64: string | null): Promise<string | null> => {
                         if (!b64 || !b64.startsWith("data:")) return b64;
@@ -3023,23 +3098,11 @@ setRetryMessage("準備中...");
                       };
                       const [r1, r2, r3] = await Promise.all([uploadBase64(omniRef1), uploadBase64(omniRef2), uploadBase64(omniRef3)]);
                       setOmniRef1(null); setOmniRef2(null); setOmniRef3(null);
-                      handleUploadWithFaceLock(mainUrl, "multi_reference", null, [r1, r2, r3].filter(Boolean) as string[]);
+                      handleUploadDirect(mainUrl, "multi_reference", null, [r1, r2, r3].filter(Boolean) as string[]);
                     } else {
-                      handleUploadWithFaceLock(mainUrl, "free_motion");
+                      handleUploadDirect(mainUrl, "free_motion");
                     }
 
-                    // 自動鎖定角色
-                    fetch("/api/upload-image", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ imageUrl: uploadedImage, email: session?.user?.email }) })
-                      .then(r => r.json()).then(data => {
-                        if (data.url) {
-                          fetch("/api/user/save-locked-character", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: session?.user?.email ?? '', url: data.url }) });
-                          setLockedCharacterUrl(data.url);
-                          const matched = savedCharacters.find((c: any) => c.image_url === data.url);
-                          if (matched) setLockedCharacterId(matched.id); else setLockedCharacterId(null);
-                          setToastMessage("✅ 已自動鎖定此角色，後續生成將套用同一張臉");
-                          setShowToast(true); setTimeout(() => setShowToast(false), 8000);
-                        }
-                      });
                     setFaceLockImageUrl(null);
                     setUploadedImage(null); setVideoPrompt("");
                     setMotionVideoUrl(null); setMotionVideoFile(null); setMotionExpanded(false);

@@ -468,6 +468,16 @@ Header 結構（未登入）：
 /chat/group：群組聊天頁（已建立）
 /guide：使用指南頁（已建立）
 
+## Upload Modal 五條線路（2026/05/11 重構）
+- 線路一（說話影片）：照片 + 文字 → TTS → Kling Avatar
+- 線路二（AI 自由發揮）：照片 → Kling，無 prompt
+- 線路三（文字指定動作）：照片 + prompt → Kling
+- 線路四（套用動作影片）：照片 + MP4 → Kling Motion Control，付費限定
+- 線路五（高精度角色影片）：照片 + omniRef → Seedance，付費限定，真實人臉⚠️E005
+- 所有線路不鎖臉，無 Flux Kontext Step 1
+- handleUploadWithFaceLock 已重構為 handleUploadDirect
+- 線路一新增 handleUploadAvatar 函式
+
 ## .env.local 必要欄位
 
 ```
