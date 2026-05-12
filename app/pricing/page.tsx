@@ -2,6 +2,7 @@
 import { useSession, signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import React from "react";
+import { WHY_DIFFERENT } from "../data/whyDifferent";
 
 // [DNA_PATCH_START] 今日限定優惠倒數計時元件
 function CountdownBanner() {
@@ -294,7 +295,18 @@ if (data.TradeInfo) {
             </div>
           ))}
         </div>
-
+{/* 為什麼我們不一樣 */}
+        <div className="mb-6 rounded-3xl p-8" style={{ background: 'rgba(29,158,200,0.12)', border: '1px solid rgba(29,158,200,0.35)' }}>
+          <h3 className="font-black text-xl mb-6 text-center" style={{ color: '#5bd4f0' }}>🧠 為什麼我們不一樣？</h3>
+          <div className="space-y-4">
+            {WHY_DIFFERENT.map((text, i) => (
+              <div key={i} className="flex gap-3 items-start">
+                <span className="flex-shrink-0 mt-0.5" style={{ color: '#5bd4f0' }}>✓</span>
+                <span className="text-sm leading-relaxed" style={{ color: 'rgba(180,240,255,0.7)' }}>{text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
         {/* 角色一致性說明 */}
         <div className="bg-black/20 border border-white/10 rounded-3xl p-8">
           <h3 className="text-white font-black text-xl mb-6 text-center">🎯 什麼是角色一致性？</h3>

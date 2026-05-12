@@ -2,6 +2,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { WHY_DIFFERENT } from "../data/whyDifferent";
 
 const lines = [
   {
@@ -207,16 +208,10 @@ export default function GuidePage() {
           borderRadius: 20, padding: '18px 20px',
         }}>
           <p style={{ fontSize: 14, fontWeight: 900, color: '#5bd4f0', marginBottom: 12 }}>🧠 為什麼我們不一樣？</p>
-          {[
-            '🧠 記憶系統：對話超過 50 則自動壓縮，角色永遠記得你說的每一件事——競品最大痛點，只有我們解決了',
-            '圖片＋影片＋說話影片，一站完成，不需要切換平台',
-            '你建立的角色，個性外觀只有你有',
-            '不知道說什麼？點 💬 讓 AI 幫你想開場白',
-            '✅ 支援暖昧互動　🚫 自動過濾露骨內容',
-          ].map((text, i) => (
+          {WHY_DIFFERENT.map((text, i) => (
             <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 8 }}>
-              <span style={{ color: '#5bd4f0', flexShrink: 0, fontSize: 13, marginTop: 1 }}>✓</span>
-              <span style={{ fontSize: 12, color: 'rgba(180,240,255,0.65)', lineHeight: 1.6 }}>{text}</span>
+              <div style={{ color: '#5bd4f0', flexShrink: 0, fontSize: 13, marginTop: 1 }}>✓</div>
+              <div style={{ fontSize: 12, color: 'rgba(180,240,255,0.65)', lineHeight: 1.6 }}>{text}</div>
             </div>
           ))}
         </div>
