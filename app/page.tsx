@@ -2752,7 +2752,7 @@ localStorage.setItem(key, '1');
                   id: "multi_reference" as const,
                   icon: "🖼️",
                   title: "高精度角色影片",
-                  desc: "可加入第二角色、場景或動作參考圖（Seedance）⚠️ 參考圖若含真實人臉很可能生成失敗，建議使用 AI 生成圖",
+                  desc: "可加入第二角色、場景或動作參考圖（Seedance）⚠️ 參考圖若含真實人臉很可能生成失敗，建議使用 AI 生成角色圖，再上傳到這",
                   cost: "Seedance 13–17 點（+ Omni-Reference 額外17-23點另計）",
                   orange: true,
                   requiresPlan: true,
