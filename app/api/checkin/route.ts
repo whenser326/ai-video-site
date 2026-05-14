@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
 
   // 隨機轉盤點數（機率：1點50%/2點40%/3點5%/4點4%/5點1%）
   const rand = Math.random() * 100;
-  const spinCredits = rand < 50 ? 1 : rand < 90 ? 2 : rand < 95 ? 3 : rand < 99 ? 4 : 5;
+  const spinCredits = rand < 65 ? 1 : rand < 90 ? 2 : rand < 95 ? 3 : rand < 99 ? 4 : 5;
 
   // 計算連續獎勵點數
   let bonusCredits = 0;

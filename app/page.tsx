@@ -399,8 +399,10 @@ useEffect(() => {
   if (credits === null) return;
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
   const key = `onboarding_done_${session.user.email}_${today}`;
-  if (!localStorage.getItem(key)) {
-    setShowOnboarding(true);
+  // Onboarding 只由「使用指南」按鈕手動觸發，不自動跳
+  // 付費用戶直接寫入 localStorage 標記，避免重複顯示
+  if (plan !== 'free') {
+    localStorage.setItem(key, '1');
   }
 }, [session?.user?.email, plan, credits]);
 
@@ -594,7 +596,15 @@ const lockedCharacter = lockedCharacterUrl || null;
         headers: { "Content-Type": "application/json" },
         // [DNA_PATCH_START] prompt 組合含自訂欄位
 body: JSON.stringify({ 
-  prompt: [selectedStyle, selectedPersona || customPersona, selectedScene || customScene, selectedShot, prompt].filter(Boolean).join(", "),
+  prompt: [
+  selectedStyle,
+  selectedHair, selectedEye, selectedBody,
+  customAppearance ? (customAppearanceTranslated || customAppearance) : null,
+  selectedPersona || (customPersona ? (customPersonaTranslated || customPersona) : null),
+  selectedScene || (customScene ? (customSceneTranslated || customScene) : null),
+  selectedShot,
+  prompt
+].filter(Boolean).join(", "),
   userEmail: session?.user?.email,
   lockedCharacter: lockedCharacter || null,
   imageRatio: imageRatio,
