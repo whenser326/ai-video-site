@@ -156,7 +156,7 @@ export default function DefaultGroupChatPage() {
     };
     startTimer();
     return () => { if (autoMessageTimerRef.current) clearTimeout(autoMessageTimerRef.current); };
-  }, [selectedChars.length, session, sessionId, loading]);
+  }, [selectedChars.length, session, sessionId]);
 const searchResults = searchQuery.trim()
     ? messages.reduce<number[]>((acc, msg, i) => {
         if (msg.content.includes(searchQuery.trim())) acc.push(i);

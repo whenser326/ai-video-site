@@ -19,16 +19,16 @@ export async function POST(req: NextRequest) {
   const { data: settings } = await supabase
     .from("admin_settings")
     .select("key, value")
-    .in("key", ["kling_avatar_credits_starter", "kling_avatar_credits_standard", "kling_avatar_credits_pro"]);
+    .in("key", ["wav2lip_credits_starter", "wav2lip_credits_standard", "wav2lip_credits_pro"]);
 
   const settingsMap: Record<string, number> = {};
   (settings || []).forEach((s: any) => { settingsMap[s.key] = parseInt(s.value); });
 
   // 預設點數：入門10、標準9、專業8（與 Wav2Lip 相同）
   const creditCost =
-    plan === "starter" ? (settingsMap["kling_avatar_credits_starter"] || 10) :
-    plan === "standard" ? (settingsMap["kling_avatar_credits_standard"] || 9) :
-    (settingsMap["kling_avatar_credits_pro"] || 8);
+    plan === "starter" ? (settingsMap["wav2lip_credits_starter"] || 10) :
+    plan === "standard" ? (settingsMap["wav2lip_credits_standard"] || 9) :
+    (settingsMap["wav2lip_credits_pro"] || 8);
 
   // 2. 檢查點數
   const { data: profile } = await supabase

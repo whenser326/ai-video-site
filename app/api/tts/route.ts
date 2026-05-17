@@ -22,8 +22,11 @@ export async function POST(req: NextRequest) {
 
   // 字數限制：中文150字 / 英文300字
   // [DNA_PATCH_START]
-const limit = videoDuration === 5 ? 40 : 80;
-const trimmedText = text.length > limit ? text.slice(0, limit) + "..." : text;
+const limit = videoDuration === 5 ? 30 : 55;
+if (text.length > limit) {
+  return NextResponse.json({ error: `文字超過上限（${limit}字）` }, { status: 400 });
+}
+const trimmedText = text;
 // [DNA_PATCH_END]
 
   const voice = VOICE_MAP[voiceId] || VOICE_MAP["gentle-female"];

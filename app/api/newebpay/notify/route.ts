@@ -120,9 +120,9 @@ const bonusCredits = parseInt(bonusRow.data?.value || "") || (DEFAULT_BONUS[plan
         .eq("key", `referral_credits_${plan}`)
         .single();
 
-      const bonusCredits = parseInt(setting?.value || "0");
+      const referralBonus = parseInt(setting?.value || "0");
 
-      if (bonusCredits > 0) {
+      if (referralBonus > 0) {
         const { data: referrer } = await supabase
           .from("profiles")
           .select("credits, referral_credits_earned, email")
@@ -133,8 +133,8 @@ const bonusCredits = parseInt(bonusRow.data?.value || "") || (DEFAULT_BONUS[plan
           await supabase
             .from("profiles")
             .update({
-              credits: (referrer.credits ?? 0) + bonusCredits,
-              referral_credits_earned: (referrer.referral_credits_earned ?? 0) + bonusCredits,
+              credits: (referrer.credits ?? 0) + referralBonus,
+              referral_credits_earned: (referrer.referral_credits_earned ?? 0) + referralBonus,
             })
             .eq("referral_code", profile.referred_by);
 
@@ -142,7 +142,7 @@ const bonusCredits = parseInt(bonusRow.data?.value || "") || (DEFAULT_BONUS[plan
             referrer_email: referrer.email,
             referred_email: email,
             plan: plan,
-            credits_awarded: bonusCredits,
+            credits_awarded: referralBonus,
           });
         }
       }

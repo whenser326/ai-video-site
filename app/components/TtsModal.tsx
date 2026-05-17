@@ -402,10 +402,16 @@ userEmail,
                           }
                           if (pollData.status === "failed") throw new Error("影片生成失敗");
                         }
-                        throw new Error("生成逾時");
+                        throw new Error("生成逾時，點數已退還");
                       } catch (err: any) {
                         setAvatarStatus(`❌ ${err.message}`);
                         setIsAvatarLoading(false);
+                        // 逾時或失敗時退還點數
+                        if (userEmail) {
+                          fetch(`/api/user/credits?email=${userEmail}`)
+                            .then((r) => r.json())
+                            .then((d) => setCredits(() => d.credits));
+                        }
                       }
                     }}
                     className="w-full py-2 rounded-xl bg-gradient-to-r from-purple-500 to-blue-500 text-white text-sm font-black hover:opacity-90 transition-all disabled:opacity-40"

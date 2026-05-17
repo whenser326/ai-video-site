@@ -132,7 +132,7 @@ const randomDelay = () => Math.floor(Math.random() * 3000) + 2000;
     };
     startTimer();
     return () => { if (autoMessageTimerRef.current) clearTimeout(autoMessageTimerRef.current); };
-  }, [character, session, characterId, sessionId, loading]);
+  }, [character, session, characterId, sessionId]);
 const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchIndex, setSearchIndex] = useState(0);
