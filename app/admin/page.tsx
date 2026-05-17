@@ -156,6 +156,12 @@ export default function AdminPage() {
   >
     🔭 模型追蹤
   </button>
+  <button
+    onClick={() => router.push('/admin/gallery')}
+    className="px-4 py-2 bg-yellow-500/20 border border-yellow-500/30 rounded-xl text-yellow-300 text-sm font-bold hover:bg-yellow-500/30 transition-all"
+  >
+    🎭 角色上架
+  </button>
 </div>
 {/* [DNA_PATCH_END] */}
         </div>

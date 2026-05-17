@@ -1,0 +1,394 @@
+'use client'
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+
+interface GalleryItem {
+  id: string
+  name: string
+  age: number | null
+  personality_tags: string[]
+  story: string
+  story_type: string
+  image_url: string
+  video_url: string
+  like_count_min: number
+  like_count_max: number
+  chat_count_min: number
+  chat_count_max: number
+  is_featured: boolean
+  is_active: boolean
+  sort_order: number
+  model_label: string
+  created_at: string
+}
+
+const EMPTY_ITEM: Omit<GalleryItem, 'id' | 'created_at'> = {
+  name: '', age: null, personality_tags: [], story: '',
+  story_type: 'mid', image_url: '', video_url: '',
+  like_count_min: 100, like_count_max: 500,
+  chat_count_min: 50, chat_count_max: 300,
+  is_featured: false, is_active: false,
+  sort_order: 0, model_label: '',
+}
+
+export default function AdminGalleryPage() {
+  const { data: session, status } = useSession()
+  const router = useRouter()
+  const [items, setItems] = useState<GalleryItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [editItem, setEditItem] = useState<Partial<GalleryItem> & { id?: string }>(EMPTY_ITEM)
+  const [editMode, setEditMode] = useState(false)
+  const [generating, setGenerating] = useState(false)
+  const [generatingImg, setGeneratingImg] = useState(false)
+  const [imgPrompt, setImgPrompt] = useState('')
+  const [storyLength, setStoryLength] = useState<'short' | 'mid' | 'long'>('mid')
+  const [msg, setMsg] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [tagsInput, setTagsInput] = useState('')
+
+  useEffect(() => {
+    if (status === 'unauthenticated') { router.push('/'); return }
+    if (session?.user?.email !== 'whenser@gmail.com') { router.push('/'); return }
+  }, [session, status])
+
+  const loadItems = async () => {
+    setLoading(true)
+    const res = await fetch(`/api/admin/gallery?email=${session?.user?.email}`)
+    const data = await res.json()
+    setItems(data.items || [])
+    setLoading(false)
+  }
+
+  useEffect(() => { if (session?.user?.email) loadItems() }, [session])
+
+  // 隨機產生角色資料
+  const handleGenerate = async () => {
+    setGenerating(true)
+    setMsg('')
+    try {
+      const genRes = await fetch('/api/admin/gallery/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminEmail: session?.user?.email, storyLength })
+      })
+      const genData = await genRes.json()
+      if (genData.character) {
+        setEditItem(prev => ({ ...prev, ...genData.character, story_type: storyLength }))
+        setTagsInput((genData.character.personality_tags || []).join('、'))
+        const genderHint = genData.character.gender === '男性' ? 'man, male' : 'woman, female'
+        const age = genData.character.age
+        const ageHint = age >= 50 ? 'middle-aged, mature face, visible age' : age >= 35 ? 'adult, mature' : 'young adult'
+        setImgPrompt(`${genderHint}, ${age} years old, ${ageHint}, taiwanese, realistic`)
+      }
+    } catch {
+      setMsg('❌ 產生失敗')
+    }
+    setGenerating(false)
+  }
+
+  // 產圖
+  const handleGenImage = async () => {
+    if (!imgPrompt) { setMsg('請輸入圖片 Prompt'); return }
+    setGeneratingImg(true)
+    setMsg('🎨 產圖中，約30-60秒...')
+    try {
+      const res = await fetch('/api/admin/gallery/generate-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminEmail: session?.user?.email, prompt: imgPrompt })
+      })
+      const data = await res.json()
+      if (data.id) {
+        let attempts = 0
+        const poll = setInterval(async () => {
+          attempts++
+          const pollRes = await fetch(`/api/admin/gallery/generate-image?id=${data.id}`)
+          const pollData = await pollRes.json()
+          if (pollData.status === 'succeeded' && pollData.output) {
+            clearInterval(poll)
+            const imgUrl = Array.isArray(pollData.output) ? pollData.output[0] : pollData.output
+            setEditItem(prev => ({ ...prev, image_url: imgUrl }))
+            setMsg('✅ 圖片產出完成')
+            setGeneratingImg(false)
+          } else if (pollData.status === 'failed' || attempts > 30) {
+            clearInterval(poll)
+            setMsg('❌ 產圖失敗')
+            setGeneratingImg(false)
+          }
+        }, 3000)
+      }
+    } catch {
+      setMsg('❌ 產圖失敗')
+      setGeneratingImg(false)
+    }
+  }
+
+  const handleSave = async () => {
+    if (!editItem.name) { setMsg('角色名稱必填'); return }
+    setSaving(true)
+    const tags = tagsInput ? tagsInput.split(/[,，、]/).map(t => t.trim()).filter(Boolean) : []
+    const payload = { ...editItem, personality_tags: tags, adminEmail: session?.user?.email }
+    const res = await fetch('/api/admin/gallery', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    const data = await res.json()
+    if (data.ok) {
+      setMsg('✅ 儲存成功')
+      setEditMode(false)
+      setEditItem(EMPTY_ITEM)
+      setTagsInput('')
+      await loadItems()
+    } else {
+      setMsg('❌ ' + data.error)
+    }
+    setSaving(false)
+  }
+
+  const handleToggleActive = async (item: GalleryItem) => {
+    await fetch('/api/admin/gallery', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...item, is_active: !item.is_active, adminEmail: session?.user?.email })
+    })
+    await loadItems()
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('確定刪除？')) return
+    await fetch(`/api/admin/gallery?email=${session?.user?.email}&id=${id}`, { method: 'DELETE' })
+    await loadItems()
+  }
+
+  const openEdit = (item: GalleryItem) => {
+    setEditItem(item)
+    setTagsInput((item.personality_tags || []).join('、'))
+    setEditMode(true)
+    setMsg('')
+  }
+
+  if (loading) return <div className="min-h-screen bg-[#0d2318] flex items-center justify-center text-[#89f5a2]">載入中...</div>
+
+  return (
+    <div className="min-h-screen bg-[#0d2318] p-6">
+      <div className="max-w-6xl mx-auto">
+
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <button onClick={() => router.push('/admin')} className="text-[#89f5a2] hover:underline text-sm">← 返回後台</button>
+            <p className="text-[#89f5a2] font-bold text-2xl">🎭 角色上架管理</p>
+          </div>
+          <button onClick={() => { setEditItem(EMPTY_ITEM); setTagsInput(''); setEditMode(true); setMsg('') }}
+            className="px-4 py-2 bg-[#89f5a2]/20 border border-[#89f5a2]/40 rounded-full text-[#89f5a2] text-sm font-bold hover:bg-[#89f5a2]/30 transition">
+            ＋ 新增角色
+          </button>
+        </div>
+
+        {/* 統計列 */}
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          {[
+            { label: '總角色數', value: items.length },
+            { label: '已上架', value: items.filter(i => i.is_active).length },
+            { label: '官方精選', value: items.filter(i => i.is_featured).length },
+          ].map(c => (
+            <div key={c.label} className="bg-[#1a3a28] border border-[#2d5a3d] rounded-2xl p-4 text-center">
+              <p className="text-3xl font-bold text-[#89f5a2]">{c.value}</p>
+              <p className="text-gray-400 text-sm mt-1">{c.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* 角色列表 */}
+        <div className="space-y-3">
+          {items.map(item => (
+            <div key={item.id} className="bg-[#1a3a28] border border-[#2d5a3d] rounded-2xl p-4 flex items-center gap-4">
+              {item.image_url
+                ? <img src={item.image_url} alt={item.name} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
+                : <div className="w-16 h-16 rounded-xl bg-[#0d2318] flex items-center justify-center text-2xl flex-shrink-0">👤</div>
+              }
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-white font-bold">{item.name}</span>
+                  {item.age && <span className="text-white/40 text-xs">{item.age}歲</span>}
+                  {item.is_featured && <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-300 text-xs rounded-full">⭐ 精選</span>}
+                  {item.is_active
+                    ? <span className="px-2 py-0.5 bg-green-500/20 text-green-300 text-xs rounded-full">✅ 上架中</span>
+                    : <span className="px-2 py-0.5 bg-gray-500/20 text-gray-400 text-xs rounded-full">⏸ 未上架</span>
+                  }
+                </div>
+                <div className="flex gap-1 flex-wrap mb-1">
+                  {(item.personality_tags || []).map(t => (
+                    <span key={t} className="px-2 py-0.5 bg-[#89f5a2]/10 text-[#89f5a2] text-xs rounded-full">{t}</span>
+                  ))}
+                </div>
+                <p className="text-white/50 text-xs truncate">{item.story}</p>
+              </div>
+              <div className="flex gap-2 flex-shrink-0">
+                <button onClick={() => openEdit(item)} className="px-3 py-1.5 bg-blue-500/20 border border-blue-500/30 rounded-lg text-blue-300 text-xs hover:bg-blue-500/30 transition">✏️ 編輯</button>
+                <button onClick={() => handleToggleActive(item)}
+                  className={`px-3 py-1.5 rounded-lg text-xs transition border ${item.is_active ? 'bg-red-500/20 border-red-500/30 text-red-300 hover:bg-red-500/30' : 'bg-green-500/20 border-green-500/30 text-green-300 hover:bg-green-500/30'}`}>
+                  {item.is_active ? '下架' : '上架'}
+                </button>
+                <button onClick={() => handleDelete(item.id)} className="px-3 py-1.5 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-xs hover:bg-red-500/20 transition">🗑️</button>
+              </div>
+            </div>
+          ))}
+          {items.length === 0 && (
+            <div className="text-center text-gray-400 py-12">還沒有角色，點右上角新增</div>
+          )}
+        </div>
+
+        {/* 編輯 Modal */}
+        {editMode && (
+          <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/80 backdrop-blur-sm overflow-y-auto py-8">
+            <div className="bg-[#1a3a28] border border-[#2d5a3d] rounded-2xl p-6 w-full max-w-2xl mx-4">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-[#89f5a2] font-bold text-lg">{editItem.id ? '✏️ 編輯角色' : '➕ 新增角色'}</p>
+                <button onClick={() => setEditMode(false)} className="text-white/40 hover:text-white text-xl">✕</button>
+              </div>
+
+              {/* 隨機產生區 */}
+              {!editItem.id && (
+                <div className="mb-4 p-4 bg-[#0d2318]/60 rounded-xl border border-[#2d5a3d]/60">
+                  <p className="text-white/70 text-sm mb-3">🎲 AI 隨機產生角色資料</p>
+                  <div className="flex gap-2 items-center">
+                    <select value={storyLength} onChange={e => setStoryLength(e.target.value as 'short'|'mid'|'long')}
+                      className="bg-[#0d2318] border border-[#2d5a3d] rounded-lg px-3 py-1.5 text-white text-sm">
+                      <option value="short">短故事（20字）</option>
+                      <option value="mid">中故事（100字）</option>
+                      <option value="long">長故事（200字）</option>
+                    </select>
+                    <button onClick={handleGenerate} disabled={generating}
+                      className="px-4 py-1.5 bg-purple-500/20 border border-purple-500/40 rounded-lg text-purple-300 text-sm font-bold hover:bg-purple-500/30 transition disabled:opacity-40">
+                      {generating ? '產生中...' : '🎲 隨機產生'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                  <label className="text-white/60 text-xs mb-1 block">角色名稱 *</label>
+                  <input value={editItem.name || ''} onChange={e => setEditItem(p => ({ ...p, name: e.target.value }))}
+                    className="w-full bg-[#0d2318] border border-[#2d5a3d] rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-[#89f5a2]" />
+                </div>
+                <div>
+                  <label className="text-white/60 text-xs mb-1 block">年齡</label>
+                  <input type="number" value={editItem.age || ''} onChange={e => setEditItem(p => ({ ...p, age: parseInt(e.target.value) || null }))}
+                    className="w-full bg-[#0d2318] border border-[#2d5a3d] rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-[#89f5a2]" />
+                </div>
+              </div>
+
+              <div className="mb-3">
+                <label className="text-white/60 text-xs mb-1 block">個性標籤（用逗號或頓號分隔）</label>
+                <input value={tagsInput} onChange={e => setTagsInput(e.target.value)} placeholder="例：軟萌、初戀、活潑"
+                  className="w-full bg-[#0d2318] border border-[#2d5a3d] rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-[#89f5a2]" />
+              </div>
+
+              <div className="mb-3">
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-white/60 text-xs">背景故事</label>
+                  <select value={editItem.story_type || 'mid'} onChange={e => setEditItem(p => ({ ...p, story_type: e.target.value }))}
+                    className="bg-[#0d2318] border border-[#2d5a3d] rounded-lg px-2 py-1 text-white text-xs">
+                    <option value="short">短</option>
+                    <option value="mid">中</option>
+                    <option value="long">長</option>
+                  </select>
+                </div>
+                <textarea value={editItem.story || ''} onChange={e => setEditItem(p => ({ ...p, story: e.target.value }))}
+                  rows={3} className="w-full bg-[#0d2318] border border-[#2d5a3d] rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-[#89f5a2] resize-none" />
+              </div>
+
+              {/* 產圖區 */}
+              <div className="mb-3 p-3 bg-[#0d2318]/60 rounded-xl border border-[#2d5a3d]/60">
+                <label className="text-white/60 text-xs mb-2 block">🎨 產圖 Prompt</label>
+                <div className="flex gap-2 mb-2">
+                  <input value={imgPrompt} onChange={e => setImgPrompt(e.target.value)} placeholder="輸入圖片描述..."
+                    className="flex-1 bg-[#0d2318] border border-[#2d5a3d] rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-[#89f5a2]" />
+                  <button onClick={handleGenImage} disabled={generatingImg}
+                    className="px-4 py-2 bg-[#89f5a2]/20 border border-[#89f5a2]/40 rounded-xl text-[#89f5a2] text-sm font-bold hover:bg-[#89f5a2]/30 transition disabled:opacity-40">
+                    {generatingImg ? '產圖中...' : '產圖'}
+                  </button>
+                </div>
+                {editItem.image_url && (
+                  <img src={editItem.image_url} alt="預覽" className="w-32 h-32 rounded-xl object-cover" />
+                )}
+                <div className="mt-2">
+                  <label className="text-white/60 text-xs mb-1 block">或直接貼圖片 URL</label>
+                  <input value={editItem.image_url || ''} onChange={e => setEditItem(p => ({ ...p, image_url: e.target.value }))}
+                    placeholder="https://..."
+                    className="w-full bg-[#0d2318] border border-[#2d5a3d] rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-[#89f5a2]" />
+                </div>
+              </div>
+
+              <div className="mb-3">
+                <label className="text-white/60 text-xs mb-1 block">影片 URL（選填）</label>
+                <input value={editItem.video_url || ''} onChange={e => setEditItem(p => ({ ...p, video_url: e.target.value }))}
+                  placeholder="https://..."
+                  className="w-full bg-[#0d2318] border border-[#2d5a3d] rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-[#89f5a2]" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                  <label className="text-white/60 text-xs mb-1 block">按讚數範圍</label>
+                  <div className="flex gap-2">
+                    <input type="number" value={editItem.like_count_min || 0} onChange={e => setEditItem(p => ({ ...p, like_count_min: parseInt(e.target.value) }))}
+                      className="w-full bg-[#0d2318] border border-[#2d5a3d] rounded-xl px-3 py-2 text-white text-sm focus:outline-none" placeholder="min" />
+                    <input type="number" value={editItem.like_count_max || 0} onChange={e => setEditItem(p => ({ ...p, like_count_max: parseInt(e.target.value) }))}
+                      className="w-full bg-[#0d2318] border border-[#2d5a3d] rounded-xl px-3 py-2 text-white text-sm focus:outline-none" placeholder="max" />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-white/60 text-xs mb-1 block">對話數範圍</label>
+                  <div className="flex gap-2">
+                    <input type="number" value={editItem.chat_count_min || 0} onChange={e => setEditItem(p => ({ ...p, chat_count_min: parseInt(e.target.value) }))}
+                      className="w-full bg-[#0d2318] border border-[#2d5a3d] rounded-xl px-3 py-2 text-white text-sm focus:outline-none" placeholder="min" />
+                    <input type="number" value={editItem.chat_count_max || 0} onChange={e => setEditItem(p => ({ ...p, chat_count_max: parseInt(e.target.value) }))}
+                      className="w-full bg-[#0d2318] border border-[#2d5a3d] rounded-xl px-3 py-2 text-white text-sm focus:outline-none" placeholder="max" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                  <label className="text-white/60 text-xs mb-1 block">排列順序（數字越小越前）</label>
+                  <input type="number" value={editItem.sort_order || 0} onChange={e => setEditItem(p => ({ ...p, sort_order: parseInt(e.target.value) }))}
+                    className="w-full bg-[#0d2318] border border-[#2d5a3d] rounded-xl px-3 py-2 text-white text-sm focus:outline-none" />
+                </div>
+                <div>
+                  <label className="text-white/60 text-xs mb-1 block">模型標注（選填）</label>
+                  <input value={editItem.model_label || ''} onChange={e => setEditItem(p => ({ ...p, model_label: e.target.value }))} placeholder="例：Flux 1.1 Pro"
+                    className="w-full bg-[#0d2318] border border-[#2d5a3d] rounded-xl px-3 py-2 text-white text-sm focus:outline-none" />
+                </div>
+              </div>
+
+              <div className="flex gap-4 mb-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={!!editItem.is_featured} onChange={e => setEditItem(p => ({ ...p, is_featured: e.target.checked }))} className="w-4 h-4" />
+                  <span className="text-white/70 text-sm">⭐ 官方精選</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={!!editItem.is_active} onChange={e => setEditItem(p => ({ ...p, is_active: e.target.checked }))} className="w-4 h-4" />
+                  <span className="text-white/70 text-sm">✅ 立即上架</span>
+                </label>
+              </div>
+
+              {msg && <p className="text-sm mb-3">{msg}</p>}
+
+              <div className="flex gap-3">
+                <button onClick={() => setEditMode(false)} className="flex-1 py-2 rounded-xl border border-white/20 text-white/50 text-sm hover:bg-white/5 transition">取消</button>
+                <button onClick={handleSave} disabled={saving}
+                  className="flex-1 py-2 rounded-xl bg-[#89f5a2]/20 border border-[#89f5a2]/40 text-[#89f5a2] font-bold text-sm hover:bg-[#89f5a2]/30 transition disabled:opacity-40">
+                  {saving ? '儲存中...' : '💾 儲存'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  )
+}
