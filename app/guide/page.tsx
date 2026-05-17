@@ -74,7 +74,7 @@ const lines = [
     colorBorder: "rgba(251,191,36,0.25)",
     colorText: "#fbbf24",
     steps: [
-      { icon: "✍️", label: "文字生影片", cost: "13–17點/支", detail: "直接輸入文字描述場景，跳過生圖步驟，Seedance 2.0 引擎，支援 5秒/10秒、多種比例，付費限定" },
+      { icon: "✍️", label: "文字生影片", cost: "4–6點/支", detail: "直接輸入文字描述場景，跳過生圖步驟，Kling 3.0 和 Seedance 2.0（點數另計）雙引擎，支援 5秒/10秒、多種比例，付費限定" },
       { icon: "⚡", label: "批次生成", cost: "1點/張", detail: "一次生成多張圖片，付費限定，快速取得素材" },
     ],
     note: "💡 文字生影片不支援角色一致性，適合快速測試場景或背景素材",
