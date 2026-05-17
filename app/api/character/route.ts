@@ -37,7 +37,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "請求過於頻繁，請稍後再試" }, { status: 429 });
     }
 
-    const { prompt, image, mode, userEmail, videoPrompt, aspectRatio, duration, videoModel, refundCredits, batchPrompts, omniRefs, imageRatio, selfieCharacterImage } = await req.json();
+    const { prompt, image, mode, userEmail, videoPrompt, aspectRatio, duration, videoModel, refundCredits, batchPrompts, omniRefs, imageRatio, selfieCharacterImage, isSingleRetry } = await req.json();
 
     // [DNA_PATCH_START] 退點功能
     if (refundCredits && userEmail) {
@@ -104,8 +104,8 @@ export async function POST(req: Request) {
 
     // [DNA_PATCH_START] 批次生成：提前攔截，不走一般生成流程
     if (batchPrompts && Array.isArray(batchPrompts) && batchPrompts.length > 0) {
-      const batchCost = batchPrompts.length;
-      if (currentCredits < batchCost) {
+      const batchCost = isSingleRetry ? 0 : batchPrompts.length;
+      if (!isSingleRetry && currentCredits < batchCost) {
         return NextResponse.json({ error: `點數不足！批次生成 ${batchCost} 張需要 ${batchCost} 點` }, { status: 403 });
       }
       const lockedCharacter = userProfile.locked_character || null;
@@ -120,7 +120,9 @@ export async function POST(req: Request) {
       if (!imageValid) {
         return NextResponse.json({ error: "鎖定角色圖片已失效，請重新鎖定角色" }, { status: 400 });
       }
-      await supabase.from('profiles').update({ credits: currentCredits - batchCost }).eq('email', userEmail);
+      if (!isSingleRetry) {
+        await supabase.from('profiles').update({ credits: currentCredits - batchCost }).eq('email', userEmail);
+      }
       const predictions = await Promise.all(
         batchPrompts.map(async (item: { prompt: string; note?: string }) => {
           const finalPrompt = `${item.prompt}${item.note ? ', ' + item.note : ''}, same person from reference image`;

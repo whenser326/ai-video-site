@@ -75,7 +75,7 @@ const [searchOpen, setSearchOpen] = useState(false);
 // [DNA_PATCH_START] 每日提示框
   useEffect(() => {
     if (!session?.user?.email) return;
-    const today = new Date().toLocaleDateString("en-CA");
+    const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Taipei" });
     const key = `chat_notice_seen_${today}`;
     if (!localStorage.getItem(key)) {
       setShowNotice(true);
@@ -212,6 +212,20 @@ const [searchOpen, setSearchOpen] = useState(false);
           m.id === msgId ? { ...m, selfieLoading: false, imageUrl } : m
         ));
         setCredits(prev => prev !== null ? prev - photoCost : prev);
+        // 存入歷史
+        if (session?.user?.email && imageUrl) {
+          fetch("/api/history", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              user_email: session.user.email,
+              image_url: imageUrl,
+              video_url: null,
+              prompt: "AI 自拍",
+              character_id: character?.id || null,
+            }),
+          }).catch(() => {});
+        }
         return;
       }
 
@@ -262,6 +276,20 @@ const [searchOpen, setSearchOpen] = useState(false);
         m.id === msgId ? { ...m, selfieLoading: false, videoUrl: videoUrl || undefined } : m
       ));
       setCredits(prev => prev !== null ? prev - photoCost - videoCost : prev);
+      // 存入歷史
+      if (session?.user?.email && videoUrl) {
+        fetch("/api/history", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_email: session.user.email,
+            image_url: null,
+            video_url: videoUrl,
+            prompt: "AI 自拍影片",
+            character_id: character?.id || null,
+          }),
+        }).catch(() => {});
+      }
 
     } catch {
       setMessages(prev => prev.map(m =>
@@ -832,7 +860,18 @@ const [searchOpen, setSearchOpen] = useState(false);
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center px-4">
           <div className="bg-[#0f2318] border border-[#89f5a2]/25 rounded-2xl p-6 w-full max-w-sm space-y-4">
             <p className="text-white font-black text-base">🎬 生成說話影片</p>
-            <p className="text-white/40 text-xs leading-relaxed bg-black/20 rounded-xl p-3 line-clamp-3">{videoModal.content}</p>
+            {(() => {
+              const textLen = videoModal.content.replace(/[^\u4e00-\u9fff]/g, "").length;
+              const isTooLong = textLen > 55;
+              return (
+                <>
+                  <p className="text-white/40 text-xs leading-relaxed bg-black/20 rounded-xl p-3 line-clamp-3">{videoModal.content}</p>
+                  {isTooLong && (
+                    <p className="text-yellow-400 text-[10px] font-bold">⚠️ 文字過長（{textLen} 字），TTS 將自動截斷至約 55 字</p>
+                  )}
+                </>
+              );
+            })()}
             <div className="space-y-1.5">
               <p className="text-white/40 text-xs">🎙️ 聲音</p>
               <select

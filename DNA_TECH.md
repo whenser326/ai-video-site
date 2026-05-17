@@ -57,7 +57,7 @@ TTS Voice IDs：
 - female-4: 9DMBSOAnMDPiFAsz1ZGK（活潑）
 - female-5: GgmlugwQ4LYXBbEXENWm（溫柔）
 
-聊天模型：claude-haiku-4-5（透過 Anthropic API 直接呼叫）
+說話影片合計扣點：TTS + Avatar 兩段合計，入門 18點/次・標準 16點/次・專業 14點/次（tts_credits + wav2lip_credits）
 
 ---
 
@@ -118,7 +118,7 @@ localStorage (key: last_prediction_${userEmail}) 保持最後一次生成狀態�
 key 清單（共27個，後台沒設定時 route.ts 有 fallback 預設值）：
 - 影片點數 key（共12個）：`kling_5s/10s_starter/standard/pro`、`seedance_5s/10s_starter/standard/pro`
 - Omni 加費 key（共3個）：`omni_extra_starter/standard/pro`
-- Avatar 說話影片點數 key（共3個）：`kling_avatar_credits_starter/standard/pro`（預設 10/9/8）
+- Avatar 說話影片點數 key（共3個）：`wav2lip_credits_starter/standard/pro`（預設 10/9/8）（注意：程式統一用 wav2lip_credits，不是 kling_avatar_credits）
 - 動作參考影片限制 key（共3個）：`motion_max_size_mb`（預設30）、`motion_min_duration_sec`（預設5）、`motion_max_duration_sec`（預設10）
 - 方案點數 key（共3個）：`plan_credits_starter/standard/pro`（預設 30/80/200）
 - 方案售價 key（共3個）：`plan_price_starter/standard/pro`（預設 250/450/799）
@@ -168,11 +168,13 @@ key 清單（共27個，後台沒設定時 route.ts 有 fallback 預設值）：
 ### ✅ 長期記憶摘要系統（2026/05/07 已完成）
 - 觸發條件：session 累計超過 50 筆時自動觸發
 - 摘要邏輯：呼叫 Claude Haiku，將最舊 20 筆壓縮存入 chat_sessions.background_story
+- 防並發：寫入前檢查 background_story 是否有 [LOCK] 前綴，有則跳過；摘要過程中寫入 [LOCK] 前綴，完成後覆蓋為新摘要（解鎖），任何錯誤都在 catch 還原並解鎖
 - 使用方式：每次呼叫 /api/chat 先讀 background_story，有值則插入 charSystem 最前面「【對話背景摘要】...」
 - 摘要後刪除：已壓縮的 20 筆從 chat_messages 刪除
 - 不計 chat_count、不扣點數
 - 函式名稱：maybeGenerateSummary(sessionId)，非同步觸發不阻塞回應
 - 注意：修改此區塊前確認 backgroundStory / memoryPrefix / maybeGenerateSummary 三者都存在，缺一報 ts(2304)
+- 注意：讀取 backgroundStory 時必須過濾 [LOCK] 前綴：`rawStory?.startsWith("[LOCK]") ? rawStory.slice(6) : rawStory`
 
 ### ✅ 聊天推薦台詞功能（2026/05/07 已完成）
 - 位置：聊天輸入欄旁「💬」按鈕
@@ -376,6 +378,9 @@ IP 限流：
 - SEO keywords meta tag 對 Google 無效（2009年起），真正有效的是 og:title/og:description
 - 換域名後必須同步更新：NEXTAUTH_URL、Google OAuth 授權URI、藍新金流 Notify URL / Return URL
 聊天頁面（/chat/[characterId]、/chat/group）必須用 h-screen + overflow-hidden，否則 Footer 會撐破畫面
+群組聊天主動發話 timer 的 useEffect dependencies 必須是 [started, selectedIds, session, sessionId, characters]，禁止放 loading，否則 loading 變化會不斷重啟 timer 導致角色永遠不主動發話
+triggerSelfie 生成自拍照片/影片成功後，必須呼叫 /api/history POST 存入歷史（prompt: "AI 自拍" 或 "AI 自拍影片"），否則歷史頁看不到自拍紀錄
+說話影片 Modal 必須顯示文字長度警告（超過 55 中文字提示 TTS 將截斷），單人和群組聊天室均需
 Seedance E005 錯誤：Replicate bytedance/seedance-2.0 不支援真實人臉輸入，上傳真實照片會觸發 E005 封鎖。Upload Modal 線路五（高精度角色影片）已在 UI 標示⚠️警告，用戶自行評估風險
 Upload Modal 直接生成流程（2026/05/12 重構）：handleUploadDirect 函式負責執行，直接用原圖傳給 Kling 或 Seedance，不再有 Flux Kontext 鎖臉步驟。multi_reference 走 seedance，其他三個功能走 kling
 scrollIntoView 補漏：Upload Modal 生成按鈕 onClick 關閉 Modal 後需加 setTimeout(() => progressRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 300)，此行在修改一已確認但尚未貼入

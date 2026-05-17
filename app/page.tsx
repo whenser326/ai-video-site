@@ -500,7 +500,7 @@ if (session?.user?.email && finalUrl) {
       user_email: session.user.email,
       image_url: resolvedGenType === "image" ? permanentUrl : null,
       video_url: resolvedGenType === "video" ? permanentUrl : null,
-      prompt: prompt || videoPrompt,
+      prompt: resolvedGenType === "video" ? (videoPrompt || prompt) : (prompt || videoPrompt),
       character_id: lockedCharacterId || null,
     }),
   });
@@ -1042,25 +1042,19 @@ const handleUploadDirect = async (
   setRetryMessage(`生成影片中（${mode === "multi_reference" ? "Seedance" : "Kling 3.0"}）...`);
   setTimeout(() => progressRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
 
-  try {
-    if (mode === "motion_video" && motionUrl) {
-      handleMotionControl(imageUrl, motionUrl, videoTranslatedPrompt || videoPrompt, videoRatio, videoDuration);
-    } else {
-      handleGenerateVideo(
-        imageUrl,
-        videoTranslatedPrompt || videoPrompt,
-        videoRatio,
-        videoDuration,
-        mode === "multi_reference" ? "seedance" : "kling",
-        omniRefs ? omniRefs.filter(Boolean) : []
-      );
-    }
-    setRetryMessage("");
-  } catch {
-    setError("連線失敗，請重試");
-    setRetryMessage("");
-    setLoading(false);
+  if (mode === "motion_video" && motionUrl) {
+    await handleMotionControl(imageUrl, motionUrl, videoTranslatedPrompt || videoPrompt, videoRatio, videoDuration);
+  } else {
+    await handleGenerateVideo(
+      imageUrl,
+      videoTranslatedPrompt || videoPrompt,
+      videoRatio,
+      videoDuration,
+      mode === "multi_reference" ? "seedance" : "kling",
+      omniRefs ? omniRefs.filter(Boolean) : []
+    );
   }
+  setRetryMessage("");
 };
 // [DNA_PATCH_END]
   // [DNA_PATCH_START] 未登入直接 return Landing Page，不渲染主工作室
@@ -2637,7 +2631,7 @@ localStorage.setItem(key, '1');
     omniRef3={omniRef3}
     setOmniRef3={setOmniRef3}
     predictionOutput={prediction?.output ?? null}
-    onClose={() => setShowVideoModal(false)}
+    onClose={() => { setShowVideoModal(false); setGenerationMode("image"); }}
     onGenerate={(refs) => {
       setShowVideoModal(false);
       handleGenerateVideo(prediction.output, videoTranslatedPrompt || videoPrompt, videoRatio, videoDuration, videoModel, refs);
@@ -2844,9 +2838,9 @@ localStorage.setItem(key, '1');
                     placeholder="輸入角色要說的話，例如：你好！很高興認識你～"
                     className="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/20 text-xs resize-none focus:outline-none focus:ring-1 focus:ring-[#89f5a2]/40"
                     rows={3}
-                    maxLength={80}
-                  />
-                  <p className="text-white/25 text-[10px] mt-1">{avatarText.length}/80 字</p>
+                    maxLength={30}
+  />
+  <p className="text-white/25 text-[10px] mt-1">{avatarText.length}/30 字（說話影片字數上限）</p>
                   <p className="text-white/40 text-xs mt-3 mb-2">聲音選擇</p>
                   {/* 試聽區 */}
                   {avatarTtsAudio && (
@@ -3003,11 +2997,17 @@ localStorage.setItem(key, '1');
               {/* 影片秒數 */}
               <div>
                 <p className="text-white/40 text-xs mb-2">影片長度</p>
-                <div className="flex gap-2">
-                  {[{ s: 5, label: "5 秒", cost: "4–6 點" }, { s: 10, label: "10 秒", cost: "8–12 點" }].map((item) => (
-                    <button key={item.s} onClick={() => setVideoDuration(item.s)} className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all ${videoDuration === item.s ? "bg-[#89f5a2] text-[#0d2318] border-[#89f5a2]" : "bg-white/5 text-white/50 border-white/10 hover:border-white/30"}`}>{item.label} <span className="opacity-60">{item.cost}</span></button>
-                  ))}
-                </div>
+                {selectedFunction === "avatar" ? (
+                  <div className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white/40 text-xs">
+                    🗣️ 說話影片固定 5 秒，字數上限 30 字
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    {[{ s: 5, label: "5 秒", cost: "4–6 點" }, { s: 10, label: "10 秒", cost: "8–12 點" }].map((item) => (
+                      <button key={item.s} onClick={() => setVideoDuration(item.s)} className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all ${videoDuration === item.s ? "bg-[#89f5a2] text-[#0d2318] border-[#89f5a2]" : "bg-white/5 text-white/50 border-white/10 hover:border-white/30"}`}>{item.label} <span className="opacity-60">{item.cost}</span></button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* 動作描述（非 AI 自由發揮才顯示） */}
@@ -3068,6 +3068,8 @@ localStorage.setItem(key, '1');
                 setMotionExpanded(false); setSelectedFunction("free_motion"); setFunctionDropdownOpen(false);
                 setOmniRef1(null); setOmniRef2(null); setOmniRef3(null);
                 setUploadTab(0); setUploadTextMode(false);
+                setAvatarText(""); setAvatarVoiceId("female-2");
+                setAvatarTtsAudio(null); setAvatarTtsCache({}); setAvatarTtsPreviewCount(0);
               }}
               className="px-5 py-2.5 rounded-xl border border-white/10 text-white/50 text-sm font-bold hover:bg-white/5 transition-all"
             >取消</button>
@@ -3102,11 +3104,26 @@ setRetryMessage("準備中...");
                     } else if (selectedFunction === "motion_video" && motionVideoUrl) {
                       handleUploadDirect(mainUrl, "motion_video", motionVideoUrl);
                     } else if (selectedFunction === "multi_reference") {
-                      const uploadBase64 = async (b64: string | null): Promise<string | null> => {
+                      const uploadBase64 = async (b64: string | null, label: string): Promise<string | null> => {
                         if (!b64 || !b64.startsWith("data:")) return b64;
-                        try { const res = await fetch("/api/upload-image", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ imageUrl: b64, email: session?.user?.email }) }); const d = await res.json(); return d.url || null; } catch { return null; }
+                        try {
+                          const res = await fetch("/api/upload-image", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ imageUrl: b64, email: session?.user?.email }) });
+                          const d = await res.json();
+                          if (!d.url) { console.warn(`⚠️ ${label} 上傳失敗，略過此參考圖`); return null; }
+                          return d.url;
+                        } catch { console.warn(`⚠️ ${label} 上傳例外，略過此參考圖`); return null; }
                       };
-                      const [r1, r2, r3] = await Promise.all([uploadBase64(omniRef1), uploadBase64(omniRef2), uploadBase64(omniRef3)]);
+                      const [r1, r2, r3] = await Promise.all([
+                        uploadBase64(omniRef1, "第二角色"),
+                        uploadBase64(omniRef2, "場景風格"),
+                        uploadBase64(omniRef3, "動作參考"),
+                      ]);
+                      const successCount = [r1, r2, r3].filter(Boolean).length;
+                      const failCount = [omniRef1, omniRef2, omniRef3].filter(Boolean).length - successCount;
+                      if (failCount > 0) {
+                        setRetryMessage(`⚠️ ${failCount} 張參考圖上傳失敗，已略過，繼續生成...`);
+                        setTimeout(() => setRetryMessage(""), 3000);
+                      }
                       setOmniRef1(null); setOmniRef2(null); setOmniRef3(null);
                       handleUploadDirect(mainUrl, "multi_reference", null, [r1, r2, r3].filter(Boolean) as string[]);
                     } else {

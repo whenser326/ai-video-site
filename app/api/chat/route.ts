@@ -61,7 +61,7 @@ function extractSceneFromHistory(history: any[]): string {
   const parts = [scene, mood].filter(Boolean);
   return parts.length > 0 ? parts.join(", ") : "";
 }
-// 長期記憶摘要：超過 50 筆時自動壓縮最舊 20 筆
+// 長期記憶摘要：超過 50 筆時自動壓縮最舊 20 筆（含防並發 lock）
 async function maybeGenerateSummary(sessionId: string) {
   const { data: allMsgs } = await supabase
     .from("chat_messages")
@@ -71,64 +71,86 @@ async function maybeGenerateSummary(sessionId: string) {
 
   if (!allMsgs || allMsgs.length <= 50) return;
 
-  // 取最舊的 20 筆準備壓縮
-  const toSummarize = allMsgs.slice(0, 20);
-  const idsToDelete = toSummarize.map((m: any) => m.id);
-
-  // 讀取現有摘要（累加用）
+  // 防並發：讀取現有 background_story，若已有 [LOCK] 前綴則跳過
   const { data: sessionData } = await supabase
     .from("chat_sessions")
     .select("background_story")
     .eq("id", sessionId)
     .single();
+
   const existingSummary = sessionData?.background_story || "";
+  if (existingSummary.startsWith("[LOCK]")) return;
 
-  // 組成摘要用的對話文字
-  const dialogText = toSummarize
-    .map((m: any) => `${m.role === "user" ? "用戶" : "角色"}：${m.content}`)
-    .join("\n");
-
-  const prevSummarySection = existingSummary
-    ? `以下是之前的對話摘要：\n${existingSummary}\n\n`
-    : "";
-
-  // 呼叫 Claude Haiku 生成摘要（不計 chat_count、不扣點）
-  const summaryRes = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": process.env.ANTHROPIC_API_KEY!,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: "claude-haiku-4-5",
-      max_tokens: 500,
-      system: "你是對話摘要助理。請用繁體中文，將以下對話內容壓縮成簡短摘要（200字以內），保留重要的人物關係、事件、情感狀態、用戶說過的重要資訊。摘要要讓角色能記住這段對話的核心內容。只回傳摘要文字，不要加任何前言或說明。",
-      messages: [
-        {
-          role: "user",
-          content: `${prevSummarySection}請摘要以下新的對話內容：\n${dialogText}`,
-        },
-      ],
-    }),
-  });
-
-  const summaryData = await summaryRes.json();
-  const newSummary = summaryData.content?.[0]?.text || "";
-
-  if (!newSummary) return;
-
-  // 更新 background_story
+  // 寫入 lock（保留原有摘要在 lock 後面）
   await supabase
     .from("chat_sessions")
-    .update({ background_story: newSummary, updated_at: new Date().toISOString() })
+    .update({ background_story: `[LOCK]${existingSummary}` })
     .eq("id", sessionId);
 
-  // 刪除已壓縮的舊訊息
-  await supabase
-    .from("chat_messages")
-    .delete()
-    .in("id", idsToDelete);
+  try {
+    const toSummarize = allMsgs.slice(0, 20);
+    const idsToDelete = toSummarize.map((m: any) => m.id);
+
+    const dialogText = toSummarize
+      .map((m: any) => `${m.role === "user" ? "用戶" : "角色"}：${m.content}`)
+      .join("\n");
+
+    const prevSummarySection = existingSummary
+      ? `以下是之前的對話摘要：\n${existingSummary}\n\n`
+      : "";
+
+    const summaryRes = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": process.env.ANTHROPIC_API_KEY!,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5",
+        max_tokens: 500,
+        system: "你是對話摘要助理。請用繁體中文，將以下對話內容壓縮成簡短摘要（200字以內），保留重要的人物關係、事件、情感狀態、用戶說過的重要資訊。摘要要讓角色能記住這段對話的核心內容。只回傳摘要文字，不要加任何前言或說明。",
+        messages: [
+          {
+            role: "user",
+            content: `${prevSummarySection}請摘要以下新的對話內容：\n${dialogText}`,
+          },
+        ],
+      }),
+    });
+
+    const summaryData = await summaryRes.json();
+    const newSummary = summaryData.content?.[0]?.text || "";
+
+    if (!newSummary) {
+      // 摘要失敗，解除 lock 還原原始摘要
+      await supabase
+        .from("chat_sessions")
+        .update({ background_story: existingSummary })
+        .eq("id", sessionId);
+      return;
+    }
+
+    // 寫入新摘要（同時解除 lock）
+    await supabase
+      .from("chat_sessions")
+      .update({ background_story: newSummary, updated_at: new Date().toISOString() })
+      .eq("id", sessionId);
+
+    // 刪除已壓縮的舊訊息
+    await supabase
+      .from("chat_messages")
+      .delete()
+      .in("id", idsToDelete);
+
+  } catch (err) {
+    // 任何錯誤都解除 lock，還原原始摘要
+    await supabase
+      .from("chat_sessions")
+      .update({ background_story: existingSummary })
+      .eq("id", sessionId);
+    throw err;
+  }
 }
 
 // 偵測自拍意圖 + 從對話組場景 prompt
@@ -194,7 +216,9 @@ export async function POST(req: NextRequest) {
     if (profile.credits < 1) {
       return NextResponse.json({ error: "對話次數已用完，點數也不足" }, { status: 400 });
     }
-    creditCost = characters ? characters.length : 1;
+    // 群組最多抽 3 人回覆，超量後最多扣 3 點，不以角色總數計算
+    const maxResponders = characters ? Math.min(characters.length, 3) : 1;
+    creditCost = maxResponders;
   }
   
   let characterList: any[] = [];
@@ -236,7 +260,8 @@ export async function POST(req: NextRequest) {
       .select("background_story")
       .eq("id", sessionId)
       .single();
-    backgroundStory = sessionData?.background_story || null;
+    const rawStory = sessionData?.background_story || null;
+    backgroundStory = rawStory?.startsWith("[LOCK]") ? rawStory.slice(6) : rawStory;
   }
 
   const isGroup = characterList.length > 1;
@@ -361,8 +386,11 @@ const charSystem = `${memoryPrefix}你扮演「${char.name}」。${personality} 
   }
 
   if (finalSessionId) {
+    const userInsertContent = chatImageUrl
+      ? `${message}\n[圖片：${chatImageUrl}]`
+      : message;
     const inserts = [
-      { session_id: finalSessionId, user_email: userEmail, role: "user", content: message },
+      { session_id: finalSessionId, user_email: userEmail, role: "user", content: userInsertContent },
       ...responses.map(r => ({
         session_id: finalSessionId,
         user_email: userEmail,
