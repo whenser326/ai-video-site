@@ -21,8 +21,11 @@ admin_settings 整張表初始為空，後台儲存才會逐一寫入各 key。�
 plan 預設值：free
 新用戶自動建立 profiles 並給 5 點
 Storage bucket：character-images（Public，已設定 allow all policy）
-表格：chat_messages（欄位：id, session_id, user_email, role, character_id, content, created_at）
-表格：chat_sessions（欄位：id, user_email, character_ids, background_story, is_group, created_at, updated_at）
+表格：chat_messages（欄位：id, session_id, user_email, role, character_id(text), content, created_at）
+表格：chat_sessions（欄位：id, user_email, character_ids(text[]), background_story, is_group, created_at, updated_at）
+chat_sessions 和 chat_messages 的 RLS 已關閉（2026/05/20，原本開著導致 insert 失敗）
+chat_messages.character_id 從 uuid 改為 text（2026/05/20，saved_characters.id 為 integer 非 uuid）
+chat_sessions.character_ids 從 uuid[] 改為 text[]（2026/05/20，同上原因）
 表格：public_gallery（欄位：id, name, age, personality_tags(text[]), story, story_type(short/mid/long), image_url, video_url, like_count_min, like_count_max, chat_count_min, chat_count_max, is_featured, is_active, sort_order, model_label, created_at, actual_chat_count, gender, appearance）
 profiles 表新增欄位：chat_count（已使用對話次數，預設0）
 
@@ -217,11 +220,13 @@ key 清單（共40個，後台沒設定時 route.ts 有 fallback 預設值）：
 - DEFAULT_CHARACTERS 陣列寫死在三個檔案：app/characters/page.tsx、app/chat/default/[characterId]/page.tsx、app/chat/default-group/page.tsx
 - 單人路由：/chat/default/[characterId]
 - 群組路由：/chat/default-group?ids=default-f1,default-m3
-- 不支援自拍（偵測到關鍵字回傳付費提示文字）
+- 不支援自拍（偵測到關鍵字回傳付費提示文字），header 顯示「無自拍」小字
+- 支援記憶（DB 修復後自動生效，2026/05/20）
 - sessionId localStorage key：chat_session_default_${email}_${characterId}（單人）/ chat_session_default_group_${email}_${ids}（群組）
 - /api/chat 新增 defaultCharacter / defaultCharacters 參數，優先於 saved_characters 查詢
 - 中期待實作：後台管理頁面讓圖片可上傳替換
 - 預設角色區塊預設收合，點標題列展開/收起（defaultExpanded state）
+- 預設角色聊天室 header 顯示「無記憶・無自拍」小字提示（2026/05/20）
 
 ### ✅ 聊天室風格面板（2026/05/10 已完成）
 - 位置：輸入列旁 🎨 按鈕，點擊展開/收合
@@ -519,7 +524,7 @@ ANTHROPIC_API_KEY=sk-ant-你的金鑰
 ✅ 聊天室 isTyping 統一（2026/05/20）：五個聊天室均已加入 isTyping state，打字動畫改用 loading || isTyping 控制，API回來後立刻解鎖輸入，角色逐則顯示前才顯示打字動畫
 ✅ 聊天室風格面板位置統一（2026/05/20）：五個聊天室風格面板統一移至輸入列下方（showSuggest 之後）
 ✅ 聊天室上傳圖片補角色回應（2026/05/20）：五個聊天室 📎上傳圖片後均會呼叫 /api/chat 讓角色看圖回應
-✅ 聊天室上傳圖片預覽（2026/05/20）：單人/group 已有 mediaUrl 顯示；gallery/default單人/default-group 訊息氣泡缺少 mediaUrl 顯示，待修復
+✅ 聊天室上傳圖片預覽（2026/05/20）：五個聊天室均已補上 mediaUrl 顯示，含 Message interface 補欄位、氣泡補渲染、setMessages 補 mediaUrl
 ✅ GlobalHeader 新增「角色生成」按鈕（2026/05/20）：導向 /create，涵蓋桌面版和手機 Drawer
 ✅ 單人聊天室顏色統一（2026/05/20）：訊息區 bg-black、header 漸層改純黑、無圖時 bg-black/20、textarea bg-black
 ✅ gallery 聊天室新增📎上傳圖片功能（2026/05/19）：對標其他四個聊天室，呼叫 /api/upload-chat-image，帶入 defaultCharacter fakeChar 參數
@@ -529,3 +534,4 @@ ANTHROPIC_API_KEY=sk-ant-你的金鑰
 ✅ Supabase 新表 referral_milestone_logs（2026/05/19）：欄位 id uuid PK, email text, milestone_index integer, credits_awarded integer, created_at timestamptz。UNIQUE INDEX referral_milestone_logs_unique on (email, milestone_index)。RLS停用。
 ✅ /api/referral/milestone/route.ts（2026/05/19）：GET 查詢推薦里程碑進度，回傳 referralCount + milestones 陣列（index/count/credits/claimed/reached）
 ✅ /api/referral/settings-public/route.ts 擴充（2026/05/19）：新增回傳 plan_bonus_credits_* 及所有 promo_* key
+✅ 聊天記憶系統修復（2026/05/20）：修復所有聊天室記憶完全失效的大 bug。根本原因：chat_sessions.character_ids 為 uuid[] 但 saved_characters.id 為 integer；chat_messages.character_id 為 uuid 同樣不相容；兩表 RLS 開著擋住 Service Role Key insert。修復內容：DB schema 改 text[]/text、RLS 關閉、/api/chat/route.ts 加 String(c.id) 轉型、history 讀取改 ascending:false + reverse() 確保帶入最新20筆。
