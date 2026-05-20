@@ -152,7 +152,7 @@ AI 自拍媒體類型與扣點：
 
 ### 從競品提煉的待實作功能（中期）
 - ✅ **聊天推薦話題按鈕**（對標 ReelTalk）：輸入欄旁加「💬 推薦話題」，根據角色個性和當前對話context動態生成3個話題或問題讓用戶點選，解決新手冷場問題。API：/api/chat/suggest，單人+群組+預設角色聊天室均已完成。
-- ⬜ **角色旁白動作描述**（對標 MiraiMind「內心想法」）：在 system prompt 加入指引，讓角色在回覆中自然穿插括號旁白描述動作和心情（例如：「（他微微一笑，眼神閃過一絲溫柔）」），增加沉浸感。不需要額外功能，只需更新 charSystem prompt。
+- ✅ **角色旁白動作描述**（對標 MiraiMind「內心想法」）：已完成。charSystem 已加入括號旁白指引，角色在回覆中自然穿插（全形括號）旁白描述動作和心情，涵蓋所有聊天室。
 - ✅ 聊天室顯示當前AI模型名稱（2026/05/10 完成）：頂部小字顯示「· 🤖 Claude Haiku」，hover tooltip 說明「由 Anthropic 開發的輕量級 AI 模型，反應快速」，涵蓋單人/群組/預設角色聊天室。
 - ✅ 訊息回覆功能（2026/05/11 完成）：四個聊天室訊息氣泡新增「↩ 回覆」按鈕，點擊後輸入框上方顯示引用提示，送出時引用文字拼入 message 一起送給 Claude，不需改 API
 - ✅ 群組聊天 @Tag 角色（2026/05/11 完成）：群組自建+預設群組聊天室輸入框打 @ 自動彈出角色選單，點選插入 @角色名，送出時偵測並傳 taggedCharacter 參數給 API，API 端只讓被 tag 的角色回覆；找不到角色名時 fallback 隨機回覆
@@ -166,7 +166,6 @@ AI 自拍媒體類型與扣點：
 - 避免主打「無審查/尺度」——Bloomi 走這條路，和我們定位不同，且 App Store 風險高
 - 每日簽到＋推薦賺點要在聊天室內更明顯提示，降低用戶「點數焦慮」（Floze/Crushie 最大流失原因）
 
-✅ profiles.total_generations 累計欄位（2026/05/08，後台生成次數獨立於 history 清理）
 ✅ profiles.total_generations 累計欄位（2026/05/08，後台生成次數獨立於 history 清理）
 ✅ /api/saved-characters：POST 新增名稱重複檢查、description 欄位寫入；DELETE 改為 query string
 ✅ saved_characters 表新增 voice_id 欄位（角色預設聲音，建角色時設定）
