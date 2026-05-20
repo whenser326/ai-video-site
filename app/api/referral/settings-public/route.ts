@@ -17,6 +17,13 @@ export async function GET() {
       "omni_extra_starter", "omni_extra_standard", "omni_extra_pro",
       "tts_credits_starter", "tts_credits_standard", "tts_credits_pro",
       "wav2lip_credits_starter", "wav2lip_credits_standard", "wav2lip_credits_pro",
+    "plan_bonus_credits_starter", "plan_bonus_credits_standard", "plan_bonus_credits_pro",
+    "promo_countdown_end",
+    "promo_quota_starter", "promo_quota_standard", "promo_quota_pro",
+    "promo_firstbuy_text",
+    "promo_banner_text",
+    "promo_countdown_text",
+    "promo_badge_starter", "promo_badge_standard", "promo_badge_pro",
     ]);
 
   const settings: Record<string, string> = {};

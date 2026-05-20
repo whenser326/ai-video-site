@@ -23,6 +23,7 @@ plan 預設值：free
 Storage bucket：character-images（Public，已設定 allow all policy）
 表格：chat_messages（欄位：id, session_id, user_email, role, character_id, content, created_at）
 表格：chat_sessions（欄位：id, user_email, character_ids, background_story, is_group, created_at, updated_at）
+表格：public_gallery（欄位：id, name, age, personality_tags(text[]), story, story_type(short/mid/long), image_url, video_url, like_count_min, like_count_max, chat_count_min, chat_count_max, is_featured, is_active, sort_order, model_label, created_at, actual_chat_count, gender, appearance）
 profiles 表新增欄位：chat_count（已使用對話次數，預設0）
 
 ---
@@ -115,7 +116,9 @@ localStorage (key: last_prediction_${userEmail}) 保持最後一次生成狀態�
 
 ## 後台 admin_settings key 清單
 
-key 清單（共27個，後台沒設定時 route.ts 有 fallback 預設值）：
+key 清單（共40個，後台沒設定時 route.ts 有 fallback 預設值）：
+- N03 推薦里程碑 key（共3個）：`referral_milestone_1/2/3`（JSON格式 {"count":N,"credits":N}）
+- N04 優惠控制 key（共10個）：`promo_countdown_end`、`promo_banner_text`、`promo_firstbuy_text`、`promo_countdown_text`、`promo_badge_starter/standard/pro`、`promo_quota_starter/standard/pro`
 - 影片點數 key（共12個）：`kling_5s/10s_starter/standard/pro`、`seedance_5s/10s_starter/standard/pro`
 - Omni 加費 key（共3個）：`omni_extra_starter/standard/pro`
 - Avatar 說話影片點數 key（共3個）：`wav2lip_credits_starter/standard/pro`（預設 10/9/8）（注意：程式統一用 wav2lip_credits，不是 kling_avatar_credits）
@@ -130,6 +133,9 @@ key 清單（共27個，後台沒設定時 route.ts 有 fallback 預設值）：
 - /api/character：主要影片/圖片生成（Kling、Seedance、Flux）
 - /api/upload-video：上傳動作參考影片到 Supabase Storage character-images bucket（從 admin_settings 動態讀取大小/時長限制）
 - /api/motion-control：呼叫 Kling Motion Control 模型，免費用戶不開放，沿用 Kling 5秒點數
+- /api/admin/gallery：後台角色上架管理（GET 取得列表、POST 新增或更新、DELETE 刪除）
+- /api/admin/gallery/generate：AI 隨機產生角色資料（Claude Haiku，回傳 name/age/gender/personality_tags/story，年齡18-40，姓氏從20個台灣常見姓氏隨機選）
+- /api/admin/gallery/generate-image：後台專用產圖（Replicate flux-1.1-pro，不扣用戶點數，不受每日限制）。GET polling成功後自動上傳Supabase Storage回傳permanentUrl，加隨機seed防臉孔重複。注意：舊資料若為Replicate臨時URL（約24小時過期）需重新產圖修復。
 
 ---
 
@@ -161,7 +167,7 @@ key 清單（共27個，後台沒設定時 route.ts 有 fallback 預設值）：
 ## 聊天記憶系統（2026/05 競品分析後規劃）
 
 ### 現有記憶機制
-- sessionId 存入 localStorage（key: `chat_session_${email}_${characterId}` 單人 / `chat_session_group_${email}` 群組）
+- sessionId 存入 localStorage（key: `chat_session_${email}_${characterId}` 單人 / `chat_session_group_${email}` 群組 / `chat_session_gallery_${email}_${galleryId}` gallery角色）
 - 重開聊天室自動帶入上次 sessionId，延續對話歷史
 - 每次呼叫 /api/chat 帶入最近20筆歷史（chat_messages 表）
 
@@ -384,7 +390,7 @@ triggerSelfie 生成自拍照片/影片成功後，必須呼叫 /api/history POS
 Seedance E005 錯誤：Replicate bytedance/seedance-2.0 不支援真實人臉輸入，上傳真實照片會觸發 E005 封鎖。Upload Modal 線路五（高精度角色影片）已在 UI 標示⚠️警告，用戶自行評估風險
 Upload Modal 直接生成流程（2026/05/12 重構）：handleUploadDirect 函式負責執行，直接用原圖傳給 Kling 或 Seedance，不再有 Flux Kontext 鎖臉步驟。multi_reference 走 seedance，其他三個功能走 kling
 scrollIntoView 補漏：Upload Modal 生成按鈕 onClick 關閉 Modal 後需加 setTimeout(() => progressRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 300)，此行在修改一已確認但尚未貼入
-wav2lip/route.ts 支援 mediaUrl 參數（圖片或影片皆可），向下相容舊的 videoUrl 參數
+wav2lip/route.ts 仍在使用中（TtsModal.tsx 依賴），不可刪除，待評估是否遷移至 kling-avatar
 TtsModal 新增 mediaUrl prop，優先用 mediaUrl，沒有才用 prediction?.output
 聊天室 triggerSelfie 呼叫 /api/generate-image 必須帶 userEmail 參數，否則 output 回傳空物件 {}
 聊天室 triggerSelfie 的 selfieIntent 型別必須用 `r.selfieIntent === "photo" || r.selfieIntent === "video"` 做判斷，再 as "photo" | "video" 轉型，才能正確呼叫 triggerSelfie
@@ -508,3 +514,18 @@ NEXT_PUBLIC_TURNSTILE_SITE_KEY=0x4AAAAAC-_FUGtx2UlyaYF
 TURNSTILE_SECRET_KEY=（已設定於 Vercel Sensitive）
 ```
 ANTHROPIC_API_KEY=sk-ant-你的金鑰
+✅ 所有聊天室訊息區背景色統一（2026/05/19）：bg-black（純黑），涵蓋單人/群組/預設單人/預設群組/gallery 五個聊天室
+✅ 所有聊天室 textarea 輸入框內部背景色統一（2026/05/19）：bg-black，涵蓋五個聊天室
+✅ 聊天室 isTyping 統一（2026/05/20）：五個聊天室均已加入 isTyping state，打字動畫改用 loading || isTyping 控制，API回來後立刻解鎖輸入，角色逐則顯示前才顯示打字動畫
+✅ 聊天室風格面板位置統一（2026/05/20）：五個聊天室風格面板統一移至輸入列下方（showSuggest 之後）
+✅ 聊天室上傳圖片補角色回應（2026/05/20）：五個聊天室 📎上傳圖片後均會呼叫 /api/chat 讓角色看圖回應
+✅ 聊天室上傳圖片預覽（2026/05/20）：單人/group 已有 mediaUrl 顯示；gallery/default單人/default-group 訊息氣泡缺少 mediaUrl 顯示，待修復
+✅ GlobalHeader 新增「角色生成」按鈕（2026/05/20）：導向 /create，涵蓋桌面版和手機 Drawer
+✅ 單人聊天室顏色統一（2026/05/20）：訊息區 bg-black、header 漸層改純黑、無圖時 bg-black/20、textarea bg-black
+✅ gallery 聊天室新增📎上傳圖片功能（2026/05/19）：對標其他四個聊天室，呼叫 /api/upload-chat-image，帶入 defaultCharacter fakeChar 參數
+✅ 後台產圖永久URL修正（2026/05/19）：generate-image/route.ts GET polling成功後自動下載上傳Supabase Storage，回傳permanentUrl。gallery/page.tsx優先用permanentUrl，fallback才用Replicate URL。舊資料若為Replicate臨時URL（約24小時過期）需重新產圖修復。
+✅ 後台產圖差異化臉孔（2026/05/19）：generate-image/route.ts加入隨機seed(0~2147483647)和randomFeature(16種臉部特徵隨機抽一)。generate/route.ts appearance描述強化為六維度（髮型/臉型/眼睛/膚色/特色/表情氣質），禁止重複用shoulder-length chestnut brown hair。
+✅ admin_settings 新增key（2026/05/19，共13個）：referral_milestone_1/2/3（JSON {"count":N,"credits":N}）、promo_countdown_end、promo_banner_text、promo_firstbuy_text、promo_countdown_text、promo_badge_starter/standard/pro、promo_quota_starter/standard/pro
+✅ Supabase 新表 referral_milestone_logs（2026/05/19）：欄位 id uuid PK, email text, milestone_index integer, credits_awarded integer, created_at timestamptz。UNIQUE INDEX referral_milestone_logs_unique on (email, milestone_index)。RLS停用。
+✅ /api/referral/milestone/route.ts（2026/05/19）：GET 查詢推薦里程碑進度，回傳 referralCount + milestones 陣列（index/count/credits/claimed/reached）
+✅ /api/referral/settings-public/route.ts 擴充（2026/05/19）：新增回傳 plan_bonus_credits_* 及所有 promo_* key

@@ -148,6 +148,9 @@ const bonusCredits = parseInt(bonusRow.data?.value || "") || (DEFAULT_BONUS[plan
       }
     }
 
+    // 里程碑自動發放（非同步，不阻塞主流程）
+    checkAndAwardMilestones(email).catch(() => {});
+
     // 刪除已處理的訂單
     await supabase
       .from("pending_orders")
@@ -157,5 +160,73 @@ const bonusCredits = parseInt(bonusRow.data?.value || "") || (DEFAULT_BONUS[plan
     return NextResponse.json({ received: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+// 里程碑檢查與發放（防重複由 DB unique index 保證）
+async function checkAndAwardMilestones(email: string) {
+  const DEFAULT_MILESTONES = [
+    { index: 1, count: 1, credits: 5 },
+    { index: 2, count: 3, credits: 15 },
+    { index: 3, count: 5, credits: 30 },
+  ];
+
+  // 讀里程碑設定
+  const rows = await Promise.all([
+    supabase.from("admin_settings").select("value").eq("key", "referral_milestone_1").single(),
+    supabase.from("admin_settings").select("value").eq("key", "referral_milestone_2").single(),
+    supabase.from("admin_settings").select("value").eq("key", "referral_milestone_3").single(),
+  ]);
+
+  const milestones = rows.map((r, i) => {
+    try {
+      const parsed = JSON.parse(r.data?.value || "");
+      if (parsed.count && parsed.credits) return { index: i + 1, ...parsed };
+    } catch {}
+    return DEFAULT_MILESTONES[i];
+  });
+
+  // 查成功推薦數（以 referrer_email 為 email 的 referral_logs 筆數）
+  // 注意：這裡是找推薦人 = email 的紀錄，即剛才這筆付款者的推薦人不算
+  // 里程碑是給「推薦別人」的獎勵，查的是 referrer_email = email
+  const { count: referralCount } = await supabase
+    .from("referral_logs")
+    .select("referred_email", { count: "exact" })
+    .eq("referrer_email", email);
+
+  if (!referralCount || referralCount === 0) return;
+
+  // 查已發放紀錄
+  const { data: claimed } = await supabase
+    .from("referral_milestone_logs")
+    .select("milestone_index")
+    .eq("email", email);
+
+  const claimedSet = new Set((claimed ?? []).map((r: any) => r.milestone_index));
+
+  // 逐一檢查並發放
+  for (const m of milestones) {
+    if (referralCount >= m.count && !claimedSet.has(m.index)) {
+      // 嘗試寫入 milestone_logs（unique index 防重複）
+      const { error } = await supabase
+        .from("referral_milestone_logs")
+        .insert({ email, milestone_index: m.index, credits_awarded: m.credits });
+
+      // error 代表已被其他請求搶先寫入，跳過
+      if (error) continue;
+
+      // 發點數
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("credits")
+        .eq("email", email)
+        .single();
+
+      if (profile) {
+        await supabase
+          .from("profiles")
+          .update({ credits: (profile.credits ?? 0) + m.credits })
+          .eq("email", email);
+      }
+    }
   }
 }

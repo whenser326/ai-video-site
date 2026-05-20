@@ -18,6 +18,7 @@ interface GalleryItem {
   chat_count_max: number
   is_featured: boolean
   is_active: boolean
+  appearance?: string
   sort_order: number
   model_label: string
   created_at: string
@@ -96,7 +97,7 @@ export default function AdminGalleryPage() {
       const res = await fetch('/api/admin/gallery/generate-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminEmail: session?.user?.email, prompt: imgPrompt })
+        body: JSON.stringify({ adminEmail: session?.user?.email, prompt: imgPrompt, appearance: editItem.appearance || '' })
       })
       const data = await res.json()
       if (data.id) {
@@ -105,9 +106,10 @@ export default function AdminGalleryPage() {
           attempts++
           const pollRes = await fetch(`/api/admin/gallery/generate-image?id=${data.id}`)
           const pollData = await pollRes.json()
-          if (pollData.status === 'succeeded' && pollData.output) {
+          if (pollData.status === 'succeeded') {
             clearInterval(poll)
-            const imgUrl = Array.isArray(pollData.output) ? pollData.output[0] : pollData.output
+            const imgUrl = pollData.permanentUrl
+              || (Array.isArray(pollData.output) ? pollData.output[0] : pollData.output)
             setEditItem(prev => ({ ...prev, image_url: imgUrl }))
             setMsg('✅ 圖片產出完成')
             setGeneratingImg(false)
@@ -371,11 +373,11 @@ export default function AdminGalleryPage() {
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={!!editItem.is_active} onChange={e => setEditItem(p => ({ ...p, is_active: e.target.checked }))} className="w-4 h-4" />
-                  <span className="text-white/70 text-sm">✅ 立即上架</span>
+                  <span className="text-white/70 text-sm">立即上架</span>
                 </label>
               </div>
 
-              {msg && <p className="text-sm mb-3">{msg}</p>}
+              {msg && <p className="text-sm mb-3 text-[#89f5a2]">{msg}</p>}
 
               <div className="flex gap-3">
                 <button onClick={() => setEditMode(false)} className="flex-1 py-2 rounded-xl border border-white/20 text-white/50 text-sm hover:bg-white/5 transition">取消</button>

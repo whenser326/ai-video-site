@@ -95,6 +95,7 @@ DNA 更新一律只給鉚接點（找到 XXX 改成 XXX），禁止整份輸出�
 成人專區：app/adult/page.tsx（Coming Soon）
 後端 API：app/api/character/route.ts
 視覺配色：深綠 (#0d2318 → #2d5a3d)，亮綠 (#89f5a2)，圓角現代 UI
+靈感畫廊卡片背景：#111（黑色），不可用深綠，確保在深綠背景上有足夠層次對比
 全域 Header 元件：app/components/GlobalHeader.tsx
 Vercel 部署網址：https://ai-video-site-psi.vercel.app
 GitHub：whenser326/ai-video-site

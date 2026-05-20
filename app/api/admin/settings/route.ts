@@ -33,6 +33,11 @@ export async function GET(req: NextRequest) {
       "omni_extra_starter", "omni_extra_standard", "omni_extra_pro",
       "adult_section_enabled",
     "plan_bonus_credits_starter", "plan_bonus_credits_standard", "plan_bonus_credits_pro",
+    "referral_milestone_1", "referral_milestone_2", "referral_milestone_3",
+    "promo_countdown_end", "promo_banner_text", "promo_firstbuy_text",
+    "promo_badge_starter", "promo_badge_standard", "promo_badge_pro",
+    "promo_quota_starter", "promo_quota_standard", "promo_quota_pro",
+    "promo_countdown_text",
     ]);
     // [DNA_PATCH_END]
 
@@ -70,6 +75,11 @@ export async function POST(req: NextRequest) {
       "omni_extra_starter", "omni_extra_standard", "omni_extra_pro",
       "adult_section_enabled",
       "plan_bonus_credits_starter", "plan_bonus_credits_standard", "plan_bonus_credits_pro",
+      "referral_milestone_1", "referral_milestone_2", "referral_milestone_3",
+    "promo_countdown_end", "promo_banner_text", "promo_firstbuy_text",
+    "promo_badge_starter", "promo_badge_standard", "promo_badge_pro",
+    "promo_quota_starter", "promo_quota_standard", "promo_quota_pro",
+    "promo_countdown_text",
   ];
   // [DNA_PATCH_END]
 

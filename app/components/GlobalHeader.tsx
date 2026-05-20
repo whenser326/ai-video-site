@@ -15,6 +15,8 @@ export default function GlobalHeader() {
   const [referralCredits, setReferralCredits] = useState<{ starter: string; standard: string; pro: string } | null>(null);
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [milestones, setMilestones] = useState<any[]>([]);
+  const [referralCount, setReferralCount] = useState(0);
   const [showFeedback, setShowFeedback] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [credits, setCredits] = useState<number | null>(null);
@@ -43,6 +45,14 @@ useEffect(() => {
           }
         });
     }
+    // 每次開 Modal 都重新撈里程碑進度（確保資料最新）
+    fetch("/api/referral/milestone")
+      .then(res => res.json())
+      .then(data => {
+        if (data.milestones) setMilestones(data.milestones);
+        if (data.referralCount !== undefined) setReferralCount(data.referralCount);
+      })
+      .catch(() => {});
   }, [showReferralModal]);
   useEffect(() => {
     if (!session?.user?.email) return;
@@ -148,6 +158,11 @@ if (!session) return (
   const handleReferral = () => { setShowReferralModal(true); setMenuOpen(false); };
 
   const menuItems = [
+    {
+      label: '🎨 角色生成',
+      onClick: () => { router.push('/create'); setMenuOpen(false); },
+      className: 'text-orange-300 border-orange-400/30 bg-orange-400/10 hover:bg-orange-400/20',
+    },
     {
       label: '📖 使用指南',
       onClick: () => {
@@ -316,6 +331,8 @@ if (!session) return (
           copiedLink={copiedLink}
           setCopiedLink={setCopiedLink}
           onClose={() => setShowReferralModal(false)}
+          milestones={milestones}
+          referralCount={referralCount}
         />
       )}
       {/* FeedbackModal */}

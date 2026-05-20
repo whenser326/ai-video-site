@@ -9,6 +9,14 @@ interface ReferralCredits {
   pro: string;
 }
 
+interface Milestone {
+  index: number;
+  count: number;
+  credits: number;
+  claimed: boolean;
+  reached: boolean;
+}
+
 interface ReferralModalProps {
   referralCode: string | null;
   referralCredits: ReferralCredits | null;
@@ -17,6 +25,8 @@ interface ReferralModalProps {
   copiedLink: boolean;
   setCopiedLink: (b: boolean) => void;
   onClose: () => void;
+  milestones?: Milestone[];
+  referralCount?: number;
 }
 
 export default function ReferralModal({
@@ -27,6 +37,8 @@ export default function ReferralModal({
   copiedLink,
   setCopiedLink,
   onClose,
+  milestones = [],
+  referralCount = 0,
 }: ReferralModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
@@ -40,7 +52,40 @@ export default function ReferralModal({
             <span className="text-yellow-300 font-black">{referralCredits?.pro ?? "..."} 點</span> 獎勵！
           </p>
         </div>
+{/* 推薦里程碑進度條 */}
+        {milestones.length > 0 && (
+          <div className="bg-white/5 rounded-2xl p-4 space-y-3">
+            <div className="flex justify-between items-center mb-1">
+              <p className="text-white/40 text-xs font-bold tracking-wider uppercase">推薦里程碑</p>
+              <p className="text-white/50 text-xs">已推薦 <span className="text-yellow-300 font-black">{referralCount}</span> 人</p>
+            </div>
 
+            {milestones.map((m) => {
+              const maxCount = m.count;
+              const progress = Math.min(referralCount / maxCount, 1);
+              return (
+                <div key={m.index} className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-white/60 text-xs">
+                      {m.claimed ? "✅" : m.reached ? "🎉" : "🎯"} 推薦 {m.count} 人
+                    </span>
+                    <span className={`text-xs font-black ${m.claimed ? "text-white/30" : "text-yellow-300"}`}>
+                      {m.claimed ? "已發放" : `+${m.credits} 點`}
+                    </span>
+                  </div>
+                  <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        m.claimed ? "bg-white/20" : "bg-gradient-to-r from-yellow-400 to-yellow-300"
+                      }`}
+                      style={{ width: `${progress * 100}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
         {/* 方案獎勵對照 */}
         <div className="bg-white/5 rounded-2xl p-4 space-y-2">
           <p className="text-white/40 text-xs font-bold tracking-wider uppercase mb-3">方案獎勵對照</p>

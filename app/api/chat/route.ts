@@ -251,9 +251,9 @@ export async function POST(req: NextRequest) {
       .from("chat_messages")
       .select("*")
       .eq("session_id", sessionId)
-      .order("created_at", { ascending: true })
+      .order("created_at", { ascending: false })
       .limit(20);
-    history = msgs || [];
+    history = (msgs || []).reverse();
 
     const { data: sessionData } = await supabase
       .from("chat_sessions")
@@ -373,15 +373,16 @@ const charSystem = `${memoryPrefix}你扮演「${char.name}」。${personality} 
 
   let finalSessionId = sessionId;
   if (!finalSessionId) {
-    const { data: newSession } = await supabase
+    const { data: newSession, error: sessionError } = await supabase
       .from("chat_sessions")
       .insert({
         user_email: userEmail,
-        character_ids: characterList.map(c => c.id),
+        character_ids: characterList.map(c => String(c.id)),
         is_group: isGroup,
       })
       .select()
       .single();
+    if (sessionError) console.error("chat_sessions insert error:", sessionError);
     finalSessionId = newSession?.id;
   }
 

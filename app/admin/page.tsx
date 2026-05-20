@@ -44,6 +44,19 @@ type Settings = {
   plan_bonus_credits_starter: string;
   plan_bonus_credits_standard: string;
   plan_bonus_credits_pro: string;
+  referral_milestone_1: string;
+  referral_milestone_2: string;
+  referral_milestone_3: string;
+  promo_countdown_end: string;
+  promo_quota_starter: string;
+  promo_quota_standard: string;
+  promo_quota_pro: string;
+  promo_firstbuy_text: string;
+  promo_banner_text: string;
+  promo_badge_starter: string;
+  promo_badge_standard: string;
+  promo_badge_pro: string;
+  promo_countdown_text: string;
 };
 // [DNA_PATCH_END]
 
@@ -97,6 +110,19 @@ export default function AdminPage() {
     plan_bonus_credits_starter: "5",
     plan_bonus_credits_standard: "7",
     plan_bonus_credits_pro: "10",
+    referral_milestone_1: '{"count":1,"credits":5}',
+    referral_milestone_2: '{"count":3,"credits":15}',
+    referral_milestone_3: '{"count":5,"credits":30}',
+    promo_countdown_end: "",
+    promo_quota_starter: "0",
+    promo_quota_standard: "0",
+    promo_quota_pro: "0",
+    promo_firstbuy_text: "",
+    promo_banner_text: "",
+    promo_badge_starter: "",
+    promo_badge_standard: "",
+    promo_badge_pro: "",
+    promo_countdown_text: "",
   });
   const [logs, setLogs] = useState<Log[]>([]);
   const [saving, setSaving] = useState(false);
@@ -481,7 +507,159 @@ export default function AdminPage() {
           {msg && <p className="mt-2 text-sm">{msg}</p>}
         </div>
         {/* [DNA_PATCH_END] */}
+        {/* 優惠控制中心 */}
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
+          <h2 className="text-lg font-bold mb-1">🎯 優惠控制中心</h2>
+          <p className="text-white/40 text-xs mb-5">所有設定儲存後立即生效，空白或0代表關閉</p>
 
+          {/* 1. 限時倒數 */}
+          <p className="text-red-300 text-xs font-bold tracking-widest uppercase mb-2">🔥 限時倒數截止時間</p>
+          <p className="text-white/30 text-[10px] mb-2">格式：2026-05-31T23:59:59（台灣時間），空白=不顯示倒數</p>
+          <input
+            type="datetime-local"
+            value={settings.promo_countdown_end}
+            onChange={(e) => setSettings({ ...settings, promo_countdown_end: e.target.value })}
+            className="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-[#89f5a2]/50 mb-3"
+          />
+          <p className="text-red-300/70 text-xs font-bold mb-1">倒數計時器標題文字</p>
+          <p className="text-white/30 text-[10px] mb-2">空白時顯示預設「🔥 限時優惠！購買任一方案加贈點數」</p>
+          <div className="flex gap-2 mb-2">
+            <input
+              type="text"
+              placeholder="🔥 限時優惠！購買任一方案加贈點數"
+              value={settings.promo_countdown_text}
+              onChange={(e) => setSettings({ ...settings, promo_countdown_text: e.target.value })}
+              className="flex-1 bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-[#89f5a2]/50"
+            />
+          </div>
+          <div className="flex flex-wrap gap-1 mb-4">
+            {["🔥","⚡","🎉","🎁","💥","🚀","⭐","👑","💎","🏆","❤️","✨"].map(emoji => (
+              <button
+                key={emoji}
+                onClick={() => setSettings({ ...settings, promo_countdown_text: settings.promo_countdown_text + emoji })}
+                className="px-2 py-1 bg-white/10 border border-white/20 rounded-lg text-sm hover:bg-white/20 transition-all"
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+
+          {/* 2. 公告條 */}
+          <p className="text-yellow-300 text-xs font-bold tracking-widest uppercase mb-2">📢 公告條文字</p>
+          <p className="text-white/30 text-[10px] mb-2">顯示在定價頁最上方，空白=不顯示</p>
+          <input
+            type="text"
+            placeholder="例：🎉 五一特惠限時開跑！"
+            value={settings.promo_banner_text}
+            onChange={(e) => setSettings({ ...settings, promo_banner_text: e.target.value })}
+            className="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-[#89f5a2]/50 mb-4"
+          />
+
+          {/* 3. 首購優惠文字 */}
+          <p className="text-green-300 text-xs font-bold tracking-widest uppercase mb-2">🎁 首購優惠標語</p>
+          <p className="text-white/30 text-[10px] mb-2">只對未付費用戶顯示，空白=不顯示</p>
+          <input
+            type="text"
+            placeholder="例：首次購買享85折優惠！"
+            value={settings.promo_firstbuy_text}
+            onChange={(e) => setSettings({ ...settings, promo_firstbuy_text: e.target.value })}
+            className="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-[#89f5a2]/50 mb-4"
+          />
+
+          {/* 4. 方案 badge */}
+          <p className="text-purple-300 text-xs font-bold tracking-widest uppercase mb-2">🏷️ 方案 Badge（紅色標籤）</p>
+          <p className="text-white/30 text-[10px] mb-2">方案卡片頂部顯示，空白=不顯示（原有「最多人選」badge 優先）</p>
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            {[
+              { key: "promo_badge_starter", label: "🌱 入門" },
+              { key: "promo_badge_standard", label: "⭐ 標準" },
+              { key: "promo_badge_pro", label: "🚀 專業" },
+            ].map((item) => (
+              <div key={item.key}>
+                <p className="text-white/40 text-[10px] mb-1">{item.label}</p>
+                <input
+                  type="text"
+                  placeholder="例：⚡ 限時"
+                  value={settings[item.key as keyof Settings]}
+                  onChange={(e) => setSettings({ ...settings, [item.key]: e.target.value })}
+                  className="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-[#89f5a2]/50"
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* 5. 限量名額 */}
+          <p className="text-orange-300 text-xs font-bold tracking-widest uppercase mb-2">⚡ 限量名額（0=不顯示）</p>
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            {[
+              { key: "promo_quota_starter", label: "🌱 入門" },
+              { key: "promo_quota_standard", label: "⭐ 標準" },
+              { key: "promo_quota_pro", label: "🚀 專業" },
+            ].map((item) => (
+              <div key={item.key}>
+                <p className="text-white/40 text-[10px] mb-1">{item.label}</p>
+                <input
+                  type="number" min="0"
+                  value={settings[item.key as keyof Settings]}
+                  onChange={(e) => setSettings({ ...settings, [item.key]: e.target.value })}
+                  className="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-[#89f5a2]/50"
+                />
+              </div>
+            ))}
+          </div>
+
+          <button onClick={handleSave} disabled={saving}
+            className="mt-2 px-6 py-2 bg-[#89f5a2]/20 border border-[#89f5a2]/40 rounded-xl text-[#89f5a2] font-bold text-sm hover:bg-[#89f5a2]/30 transition-all">
+            {saving ? "儲存中..." : "儲存設定"}
+          </button>
+          {msg && <p className="mt-2 text-sm">{msg}</p>}
+        </div>
+{/* 推薦里程碑設定 */}
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
+          <h2 className="text-lg font-bold mb-1">🏆 推薦里程碑設定</h2>
+          <p className="text-white/40 text-xs mb-4">推薦人數達標後自動發放點數（修改後立即生效，不影響已發放紀錄）</p>
+          {[
+            { key: "referral_milestone_1", label: "🥉 里程碑 1" },
+            { key: "referral_milestone_2", label: "🥈 里程碑 2" },
+            { key: "referral_milestone_3", label: "🥇 里程碑 3" },
+          ].map((item) => {
+            let parsed = { count: 0, credits: 0 };
+            try { parsed = JSON.parse(settings[item.key as keyof Settings]); } catch {}
+            return (
+              <div key={item.key} className="flex items-center gap-4 mb-3">
+                <span className="text-sm w-24">{item.label}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-white/40 text-xs">推薦</span>
+                  <input
+                    type="number" min="1"
+                    value={parsed.count}
+                    onChange={(e) => {
+                      const next = { ...parsed, count: parseInt(e.target.value) || 1 };
+                      setSettings({ ...settings, [item.key]: JSON.stringify(next) });
+                    }}
+                    className="w-16 bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-[#89f5a2]/50"
+                  />
+                  <span className="text-white/40 text-xs">人 獲得</span>
+                  <input
+                    type="number" min="1"
+                    value={parsed.credits}
+                    onChange={(e) => {
+                      const next = { ...parsed, credits: parseInt(e.target.value) || 1 };
+                      setSettings({ ...settings, [item.key]: JSON.stringify(next) });
+                    }}
+                    className="w-16 bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-[#89f5a2]/50"
+                  />
+                  <span className="text-white/40 text-xs">點</span>
+                </div>
+              </div>
+            );
+          })}
+          <button onClick={handleSave} disabled={saving}
+            className="mt-4 px-6 py-2 bg-[#89f5a2]/20 border border-[#89f5a2]/40 rounded-xl text-[#89f5a2] font-bold text-sm hover:bg-[#89f5a2]/30 transition-all">
+            {saving ? "儲存中..." : "儲存設定"}
+          </button>
+          {msg && <p className="mt-2 text-sm">{msg}</p>}
+        </div>
         {/* 分潤紀錄 */}
         <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
           <h2 className="text-lg font-bold mb-4">📋 分潤紀錄</h2>

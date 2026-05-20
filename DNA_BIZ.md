@@ -63,6 +63,7 @@ Apple Pay：幕前支付已串接（checkout tradeInfo 加入 APPLEPAY:"1"），
 - 後台會員管理排序（2026/04/30）：生成次數和註冊日期表頭可點擊排序，sortField / sortDir state
 - /admin/models：模型追蹤頁面（搜尋、標記、熱度、比對測試）
 - /admin/feedback：留言管理（查詢+回覆）
+- /admin/gallery：角色上架管理（新增、編輯、上架展示角色）✅ 2026/05/18 完成
 - admin_settings 影片點數 key 清單（共15個）：見 DNA_TECH.md
 後台方案設定（plan_credits/plan_price/plan_bonus_credits）已連動 checkout 和 notify，修改後金流付款金額和入帳點數同步更新
 
@@ -182,8 +183,48 @@ AI 自拍媒體類型與扣點：
 - ⬜ Vercel 綁定自訂域名
 - ⬜ NEXTAUTH_URL 環境變數改為正式域名
 - ⬜ Google OAuth 授權網址加入正式域名
-- ⬜ 等待藍新回覆 Apple Pay 幕後支付授權串接文件
 - ✅ Vercel 升級為付費版 Pro（$20 USD/月）— 已完成（2026/05/05）
+✅ N02 後台角色上架系統（2026/05/18 完成）：/admin/gallery、public_gallery 資料表、AI 隨機產角色、後台產圖、上架管理。故事長度規格：短20字/中100字/長200字
+靈感畫廊卡片背景色：#111（黑色），不可用深綠
+靈感畫廊互動：卡片點擊→底部滑出預覽面板（不跳頁），CTA主要「💬 開始聊天」/次要「🎨 生成同款」帶prompt跳/create，故事mid/long顯示2行加「⋯ 更多」，篩選標籤橫向滑動，底部投稿入口虛線框佔位（M04前顯示「即將開放」）
+✅ N05 聊天室角色大頭照常駐（2026/05/20 完成）：gallery 聊天室和單人自建聊天室 header 加入角色圖半透明背景（opacity 0.18 + blur），左側漸層遮罩確保名字清晰，圓形大頭貼加綠色邊框，顯示個性標籤。gallery 補齊 isOverQuota UI、連續送出解鎖、打字動畫（isTyping state）
+✅ N01 首頁大改版完整規格（2026/05/19 完成）：
+- app/page.tsx 已登入區塊：Hero 影片（Supabase CDN hero.mp4）+ 瀑布流畫廊（GallerySection.tsx）
+- GallerySection.tsx：熱門/最新 Tab、篩選標籤橫向滑動、2欄手機/3欄桌面瀑布流、卡片背景#111
+- 點卡片底部滑出預覽面板：角色大圖/名字/年齡/標籤/故事/CTA
+- CTA：「💬 開始聊天」→ /chat/gallery/[id]、「🎨 生成同款」→ /create?prompt=XXX
+- 官方精選 ⭐ 獨立區塊、免費用戶第12張後升級提示、投稿入口虛線框（即將開放）
+- app/api/gallery/route.ts：公開 API，讀取 public_gallery（is_active=true），支援 tab/tag/limit/offset/id 參數
+- app/api/gallery/chat-count/route.ts：actual_chat_count +1 API
+- app/chat/gallery/[id]/page.tsx：gallery 角色專用一對一聊天室，含60秒自動發話/推薦話題💬/風格面板🎨/對話搜尋🔍/回覆功能↩/每日提示框/自拍關鍵字攔截/sessionId延續/長期記憶摘要/現實時間感知/清除記憶/📎上傳圖片/離開聊天室按鈕
+- 訊息區背景：bg-black（純黑），輸入框內部：bg-black
+- Supabase RPC：increment_gallery_chat_count(gallery_id uuid)
+- 按讚數顯示：前端純隨機（like_count_min~like_count_max），每次渲染重新產生，client-side
+- 聊天數顯示：隨機基數（chat_count_min~chat_count_max）+ actual_chat_count 疊加，實際使用越多數字越大，client-side
+- 卡片點擊互動（2026/05/19 調整）：點卡片→置中彈窗Modal（非底部滑出），圖片/影片固定3:4比例撐滿，文字資訊漸層覆蓋在圖片下方，CTA按鈕在圖片外卡片底部，桌面版最大寬度420px置中，手機版填滿螢幕
+
+✅ N03 推薦里程碑進度條（2026/05/19 完成）：
+- Supabase 新表：referral_milestone_logs（欄位：id, email, milestone_index, credits_awarded, created_at）
+- UNIQUE INDEX：referral_milestone_logs_unique on (email, milestone_index)，防重複發放
+- admin_settings 新增 key：referral_milestone_1/2/3（JSON格式 {"count":N,"credits":N}，後台可調整）
+- API：/api/referral/milestone/route.ts（GET 查進度，回傳 referralCount + milestones 陣列）
+- notify/route.ts 付款成功後非同步呼叫 checkAndAwardMilestones(email)，達標自動發點
+- 防呆：DB unique index 防並發重複發放，insert 失敗代表已被搶先寫入直接跳過
+- ReferralModal.tsx 新增進度條 UI：顯示已推薦人數、三個里程碑進度條、已發放✅/已達成🎉/目標🎯
+- GlobalHeader.tsx：開啟 Modal 時自動 fetch /api/referral/milestone，傳 milestones/referralCount props
+
+✅ N04 後台優惠控制系統（2026/05/19 完成）：
+- admin_settings 新增 key（共10個）：promo_countdown_end（ISO時間字串）、promo_banner_text、promo_firstbuy_text、promo_countdown_text、promo_badge_starter/standard/pro、promo_quota_starter/standard/pro
+- /api/referral/settings-public/route.ts 新增回傳以上所有 promo key 及 plan_bonus_credits_*
+- /pricing 頁面六種優惠前台連動：
+  1. 限時倒數：後台設截止時間，自動顯示天/時/分/秒倒數，時間到自動消失
+  2. 加贈點數：倒數計時器內顯示動態加贈點數（讀 plan_bonus_credits）
+  3. 限量名額：各方案可設數字，顯示「⚡ 僅剩X名優惠名額」（0=不顯示）
+  4. 首購優惠：只對 plan=free 用戶顯示綠色標語
+  5. 公告條：定價頁最上方黃色公告條（空白=不顯示）
+  6. 方案Badge：各方案紅色標籤，後台有設定則覆蓋原有badge
+- 倒數計時器標題文字可後台設定（promo_countdown_text），空白顯示預設文字
+- 後台優惠控制中心：含emoji快選按鈕（12個常用emoji）、datetime-local 時間選擇器
 
 ---
 

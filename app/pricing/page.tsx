@@ -4,33 +4,50 @@ import { useRouter } from "next/navigation";
 import React from "react";
 import { WHY_DIFFERENT } from "../data/whyDifferent";
 
-// [DNA_PATCH_START] 今日限定優惠倒數計時元件
-function CountdownBanner() {
-  const [timeLeft, setTimeLeft] = React.useState({ hours: 0, minutes: 0, seconds: 0 });
+// [DNA_PATCH_START] 優惠倒數計時元件（後台控制截止時間）
+function CountdownBanner({ endTime, bonus, countdownText }: { endTime: string; bonus: { starter: string; standard: string; pro: string }; countdownText: string }) {
+  const [timeLeft, setTimeLeft] = React.useState({ days: 0, hours: 0, minutes: 0, seconds: 0, expired: false });
 
   React.useEffect(() => {
+    if (!endTime) return;
     const calc = () => {
-      const now = new Date();
-      const midnight = new Date();
-      midnight.setHours(23, 59, 59, 999);
-      const diff = midnight.getTime() - now.getTime();
-      const hours = Math.floor(diff / (1000 * 60 * 60));
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-      setTimeLeft({ hours, minutes, seconds });
+      const now = new Date().getTime();
+      const end = new Date(endTime).getTime();
+      const diff = end - now;
+      if (diff <= 0) { setTimeLeft(t => ({ ...t, expired: true })); return; }
+      setTimeLeft({
+        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+        minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
+        seconds: Math.floor((diff % (1000 * 60)) / 1000),
+        expired: false,
+      });
     };
     calc();
     const interval = setInterval(calc, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [endTime]);
+
+  if (!endTime || timeLeft.expired) return null;
 
   const pad = (n: number) => String(n).padStart(2, '0');
 
   return (
     <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-2xl text-center">
-      <p className="text-red-300 font-black text-sm mb-1">🔥 今日限定優惠！購買任一方案加贈點數</p>
-      <p className="text-white/50 text-xs mb-3">入門+5點 ／ 標準+7點 ／ 專業+10點</p>
+      <p className="text-red-300 font-black text-sm mb-1">{countdownText || "🔥 限時優惠！購買任一方案加贈點數"}</p>
+      <p className="text-white/50 text-xs mb-3">
+        入門+{bonus.starter}點 ／ 標準+{bonus.standard}點 ／ 專業+{bonus.pro}點
+      </p>
       <div className="flex items-center justify-center gap-2">
+        {timeLeft.days > 0 && (
+          <>
+            <div className="bg-black/30 rounded-xl px-3 py-2 min-w-[52px]">
+              <p className="text-white font-black text-xl tabular-nums">{pad(timeLeft.days)}</p>
+              <p className="text-white/30 text-[10px]">天</p>
+            </div>
+            <span className="text-white/40 font-black text-xl">:</span>
+          </>
+        )}
         <div className="bg-black/30 rounded-xl px-3 py-2 min-w-[52px]">
           <p className="text-white font-black text-xl tabular-nums">{pad(timeLeft.hours)}</p>
           <p className="text-white/30 text-[10px]">時</p>
@@ -55,6 +72,16 @@ export default function PricingPage() {
   const router = useRouter();
 
   const [referralCode, setReferralCode] = React.useState("");
+  const [promo, setPromo] = React.useState({
+    countdown_end: "",
+    quota_starter: "", quota_standard: "", quota_pro: "",
+    firstbuy_text: "",
+    banner_text: "",
+    badge_starter: "", badge_standard: "", badge_pro: "",
+    bonus_starter: "5", bonus_standard: "7", bonus_pro: "10",
+    countdown_text: "",
+  });
+  const [isPaidUser, setIsPaidUser] = React.useState(false);
   const [prices, setPrices] = React.useState<Record<string, string>>({
     starter: "250", standard: "450", pro: "799",
   });
@@ -148,9 +175,30 @@ export default function PricingPage() {
             pro: data.settings.plan_price_pro || "799",
           });
           setVideoCredits(prev => ({ ...prev, ...data.settings }));
+          setPromo({
+            countdown_end: data.settings.promo_countdown_end || "",
+            quota_starter: data.settings.promo_quota_starter || "",
+            quota_standard: data.settings.promo_quota_standard || "",
+            quota_pro: data.settings.promo_quota_pro || "",
+            firstbuy_text: data.settings.promo_firstbuy_text || "",
+            banner_text: data.settings.promo_banner_text || "",
+            badge_starter: data.settings.promo_badge_starter || "",
+            badge_standard: data.settings.promo_badge_standard || "",
+            badge_pro: data.settings.promo_badge_pro || "",
+            bonus_starter: data.settings.plan_bonus_credits_starter || "5",
+            bonus_standard: data.settings.plan_bonus_credits_standard || "7",
+            bonus_pro: data.settings.plan_bonus_credits_pro || "10",
+            countdown_text: data.settings.promo_countdown_text || "",
+          });
         }
       });
-  }, []);
+    // 檢查是否首購用戶
+    if (session?.user?.email) {
+      fetch(`/api/user/credits?email=${session.user.email}`)
+        .then(r => r.json())
+        .then(d => { if (d.plan && d.plan !== "free") setIsPaidUser(true); });
+    }
+  }, [session]);
 
   const handleBuy = async (plan: string) => {
     if (!session) { signIn("google"); return; }
@@ -210,8 +258,25 @@ if (data.TradeInfo) {
         >
           <img src="/logo.png" alt="Consistent Flow" className="w-full h-full object-contain" />
         </div>
-{/* [DNA_PATCH_START] 今日限定優惠倒數計時 */}
-        <CountdownBanner />
+{/* [DNA_PATCH_START] N04 優惠控制系統 */}
+        {/* 公告條 */}
+        {promo.banner_text && (
+          <div className="mb-6 p-3 bg-yellow-400/10 border border-yellow-400/30 rounded-2xl text-center">
+            <p className="text-yellow-300 font-black text-sm">{promo.banner_text}</p>
+          </div>
+        )}
+        {/* 首購優惠（未付費用戶才顯示） */}
+        {promo.firstbuy_text && !isPaidUser && (
+          <div className="mb-6 p-3 bg-[#89f5a2]/10 border border-[#89f5a2]/30 rounded-2xl text-center">
+            <p className="text-[#89f5a2] font-black text-sm">🎁 {promo.firstbuy_text}</p>
+          </div>
+        )}
+        {/* 倒數計時 */}
+        <CountdownBanner
+          endTime={promo.countdown_end}
+          bonus={{ starter: promo.bonus_starter, standard: promo.bonus_standard, pro: promo.bonus_pro }}
+          countdownText={promo.countdown_text}
+        />
         {/* [DNA_PATCH_END] */}
         {/* [DNA_PATCH_START] 免費試用入口 */}
         {!session && (
@@ -265,10 +330,14 @@ if (data.TradeInfo) {
               className="relative rounded-3xl p-6 backdrop-blur-sm"
               style={{ background: p.bg, border: `${p.plan === 'standard' ? 2 : 1}px solid ${p.border}` }}
             >
-              {p.badge && (
+              {/* badge：後台有設定就用後台的，沒有才用原有的 */}
+              {(promo[`badge_${p.plan}` as keyof typeof promo] || p.badge) && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 text-xs font-black rounded-full"
-                  style={{ background: p.badgeBg, color: p.badgeText }}>
-                  {p.badge}
+                  style={{
+                    background: promo[`badge_${p.plan}` as keyof typeof promo] ? 'rgba(239,68,68,0.8)' : p.badgeBg,
+                    color: promo[`badge_${p.plan}` as keyof typeof promo] ? 'white' : p.badgeText,
+                  }}>
+                  {promo[`badge_${p.plan}` as keyof typeof promo] || p.badge}
                 </div>
               )}
               <div className="text-3xl mb-3">{p.emoji}</div>
@@ -285,6 +354,12 @@ if (data.TradeInfo) {
                   </div>
                 ))}
               </div>
+              {/* 限量名額顯示 */}
+              {promo[`quota_${p.plan}` as keyof typeof promo] && parseInt(promo[`quota_${p.plan}` as keyof typeof promo]) > 0 && (
+                <p className="text-center text-xs text-red-300 font-bold mb-2">
+                  ⚡ 僅剩 {promo[`quota_${p.plan}` as keyof typeof promo]} 名優惠名額
+                </p>
+              )}
               <button
                 onClick={() => handleBuy(p.plan)}
                 className="w-full py-3 rounded-xl font-bold text-sm transition-all hover:opacity-80 active:scale-[0.98]"

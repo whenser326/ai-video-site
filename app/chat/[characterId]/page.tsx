@@ -33,6 +33,7 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [plan, setPlan] = useState("free");
   const [credits, setCredits] = useState<number | null>(null);
@@ -426,17 +427,39 @@ const [searchOpen, setSearchOpen] = useState(false);
         <div className="h-12 flex-shrink-0" />
 
         {/* 頂部角色資訊列 */}
-        <div className="flex-shrink-0 flex items-center gap-3 px-4 py-3 bg-[#0d2318]/90 backdrop-blur-md border-b border-white/10">
-          <button onClick={() => router.push('/characters')} className="text-white/40 text-xs hover:text-white/70 transition-all flex-shrink-0">← 我的角色</button>
-          {character && (
+        <div className="relative flex-shrink-0 overflow-hidden border-b border-white/10" style={{ minHeight: 80 }}>
+          {character?.image_url && (
             <>
-              <img src={character.image_url} alt={character.name} className="w-8 h-8 rounded-full object-cover border border-white/20 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-white font-black text-sm truncate">{character.name}</p>
-                {character.description && <p className="text-white/30 text-[10px] truncate">{character.description}</p>}
-              </div>
+              <img
+                src={character.image_url}
+                alt=""
+                aria-hidden
+                className="absolute right-0 top-0 h-full w-32 object-cover object-top"
+                style={{ opacity: 0.18, filter: "blur(1px)" }}
+              />
+              <div className="absolute inset-0" style={{ background: "linear-gradient(to right, rgba(0,0,0,0.95) 45%, rgba(0,0,0,0.3) 100%)" }} />
             </>
           )}
+          {!character?.image_url && <div className="absolute inset-0 bg-black/20" />}
+          <div className="relative flex items-center gap-3 px-4 py-3">
+            <button onClick={() => router.push('/characters')} className="text-white/40 text-xs hover:text-white/70 transition-all flex-shrink-0">← 我的角色</button>
+            {character && (
+              <>
+                <div className="w-11 h-11 rounded-full flex-shrink-0 overflow-hidden border-2 border-[#89f5a2]/30">
+                  <img src={character.image_url} alt={character.name} className="w-full h-full object-cover object-top" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white font-black text-sm truncate">{character.name}</p>
+                  {character.description && <p className="text-white/35 text-[10px] mt-0.5 truncate">{character.description.slice(0, 25)}{character.description.length > 25 ? "..." : ""}</p>}
+                  <div className="flex gap-1 mt-1 flex-wrap">
+                    {character.description?.split("・").slice(0, 3).map((t: string, i: number) => (
+                      <span key={i} className="text-[9px] bg-[#89f5a2]/10 border border-[#89f5a2]/20 text-[#89f5a2]/55 rounded-full px-1.5 py-0.5">{t}</span>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             <div className="text-right">
               {isOverQuota
@@ -536,7 +559,7 @@ const [searchOpen, setSearchOpen] = useState(false);
         )}
 
         {/* 訊息區 */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 bg-black">
           {messages.length === 0 && character && (
             <div className="text-center py-8 space-y-3">
               <img src={character.image_url} alt={character.name} className="w-20 h-20 rounded-full object-cover border-2 border-[#89f5a2]/30 mx-auto" />
@@ -745,46 +768,7 @@ const [searchOpen, setSearchOpen] = useState(false);
 >
   🎨
 </button>
-{/* 風格面板 */}
-{showStylePanel && (
-  <div className="mb-2 bg-[#0a1e12] border border-[#89f5a2]/15 rounded-2xl p-3">
-    {/* 角色底層設定 */}
-    <div className="bg-[#0d2318] border border-[#89f5a2]/10 rounded-xl p-3 mb-3">
-      <p className="text-[#89f5a2]/50 text-[10px] tracking-widest mb-2">角色設定</p>
-      <div className="space-y-1.5">
-        <div className="flex gap-2">
-          <span className="text-white/30 text-[11px] w-8 shrink-0">名稱</span>
-          <span className="text-white/80 text-[11px]">{character?.name || "—"}</span>
-        </div>
-        <div className="flex gap-2">
-          <span className="text-white/30 text-[11px] w-8 shrink-0">個性</span>
-          <span className="text-white/80 text-[11px]">{character?.description || "—"}</span>
-        </div>
-        <div className="flex gap-2">
-          <span className="text-white/30 text-[11px] w-8 shrink-0">聲線</span>
-          <span className="text-white/80 text-[11px]">{VOICE_OPTIONS.find(v => v.id === (character?.voice_id || "female-2"))?.label || "—"}</span>
-        </div>
-      </div>
-    </div>
-    {/* 口吻與文風 */}
-    <p className="text-white/30 text-[10px] mb-2">選擇口吻與文風</p>
-    <div className="flex gap-2 flex-wrap items-center">
-      {["療癒", "毒舌", "刺激"].map(s => (
-        <button key={s} onClick={() => setChatStyle(s)}
-          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${chatStyle === s ? "bg-[#89f5a2] text-[#0d2318]" : "bg-white/5 border border-white/15 text-white/50 hover:border-white/30"}`}>
-          {s}
-        </button>
-      ))}
-      <div className="w-px h-5 bg-white/15 mx-1" />
-      {["直白", "文藝", "輕小說"].map(s => (
-        <button key={s} onClick={() => setWritingStyle(s)}
-          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${writingStyle === s ? "bg-[#89f5a2] text-[#0d2318]" : "bg-white/5 border border-white/15 text-white/50 hover:border-white/30"}`}>
-          {s}
-        </button>
-      ))}
-    </div>
-  </div>
-)}
+
           {replyTo && (
             <div className="mb-2 flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/10 rounded-xl">
               <div className="flex-1 min-w-0">
@@ -800,7 +784,7 @@ const [searchOpen, setSearchOpen] = useState(false);
               onKeyDown={handleKeyDown}
               placeholder={`跟 ${character?.name || "角色"} 說點什麼...`}
               rows={2}
-              className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-white/20 text-sm resize-none focus:outline-none focus:border-[#89f5a2]/40 leading-relaxed"
+              className="flex-1 px-4 py-3 bg-black border border-white/10 rounded-2xl text-white placeholder-white/20 text-sm resize-none focus:outline-none focus:border-[#89f5a2]/40 leading-relaxed"
             />
             <button
               onClick={handleSend}
@@ -828,6 +812,43 @@ const [searchOpen, setSearchOpen] = useState(false);
                   {s}
                 </button>
               ))}
+            </div>
+          )}
+          {showStylePanel && (
+            <div className="mt-2 bg-[#0a1e12] border border-[#89f5a2]/15 rounded-2xl p-3">
+              <div className="bg-[#0d2318] border border-[#89f5a2]/10 rounded-xl p-3 mb-3">
+                <p className="text-[#89f5a2]/50 text-[10px] tracking-widest mb-2">角色設定</p>
+                <div className="space-y-1.5">
+                  <div className="flex gap-2">
+                    <span className="text-white/30 text-[11px] w-8 shrink-0">名稱</span>
+                    <span className="text-white/80 text-[11px]">{character?.name || "—"}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="text-white/30 text-[11px] w-8 shrink-0">個性</span>
+                    <span className="text-white/80 text-[11px]">{character?.description || "—"}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="text-white/30 text-[11px] w-8 shrink-0">聲線</span>
+                    <span className="text-white/80 text-[11px]">{VOICE_OPTIONS.find(v => v.id === (character?.voice_id || "female-2"))?.label || "—"}</span>
+                  </div>
+                </div>
+              </div>
+              <p className="text-white/30 text-[10px] mb-2">選擇口吻與文風</p>
+              <div className="flex gap-2 flex-wrap items-center">
+                {["療癒", "毒舌", "刺激"].map(s => (
+                  <button key={s} onClick={() => setChatStyle(s)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${chatStyle === s ? "bg-[#89f5a2] text-[#0d2318]" : "bg-white/5 border border-white/15 text-white/50 hover:border-white/30"}`}>
+                    {s}
+                  </button>
+                ))}
+                <div className="w-px h-5 bg-white/15 mx-1" />
+                {["直白", "文藝", "輕小說"].map(s => (
+                  <button key={s} onClick={() => setWritingStyle(s)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${writingStyle === s ? "bg-[#89f5a2] text-[#0d2318]" : "bg-white/5 border border-white/15 text-white/50 hover:border-white/30"}`}>
+                    {s}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
           <div className="flex items-center justify-between mt-2">

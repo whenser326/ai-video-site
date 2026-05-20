@@ -1,0 +1,3450 @@
+"use client";
+
+import { signIn, signOut, useSession } from "next-auth/react";
+import { useState, useEffect, useRef } from "react";
+// [DNA_PATCH_START] 防止視窗切換時自動刷新
+import { useRouter } from 'next/navigation';
+
+// [DNA_PATCH_START] Code Splitting — dynamic import 懶載入 Modal
+import dynamic from "next/dynamic";
+
+const BatchModal = dynamic(() => import("../components/BatchModal"), { ssr: false });
+const TtsModal = dynamic(() => import("../components/TtsModal"), { ssr: false });
+const ReferralModal = dynamic(() => import("../components/ReferralModal"), { ssr: false });
+const SaveCharacterModal = dynamic(() => import("../components/SaveCharacterModal"), { ssr: false });
+const VideoSettingsModal = dynamic(() => import("../components/VideoSettingsModal"), { ssr: false });
+const Text2VideoModal = dynamic(() => import("../components/Text2VideoModal"), { ssr: false });
+// [DNA_PATCH_START] promo-timer-component
+function PromoTimer() {
+  const [time, setTime] = useState({ h: '00', m: '00', s: '00' })
+  useEffect(() => {
+    function tick() {
+      const now = new Date()
+      const midnight = new Date()
+      midnight.setHours(24, 0, 0, 0)
+      const diff = Math.floor((midnight.getTime() - now.getTime()) / 1000)
+      setTime({
+        h: String(Math.floor(diff / 3600)).padStart(2, '0'),
+        m: String(Math.floor((diff % 3600) / 60)).padStart(2, '0'),
+        s: String(diff % 60).padStart(2, '0'),
+      })
+    }
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [])
+  return (
+    <div className="flex items-center gap-2">
+      <span style={{ fontSize: 11, color: 'rgba(184,255,200,0.5)', whiteSpace: 'nowrap' }}>剩餘時間</span>
+      <div className="flex items-center gap-1">
+        {(['h','m','s'] as const).map((unit, i) => (
+          <div key={unit} className="flex items-center gap-1">
+            <div className="flex flex-col items-center gap-0.5">
+              <div style={{ background: 'rgba(184,255,200,0.12)', border: '1px solid rgba(184,255,200,0.28)', borderRadius: 6, padding: '2px 6px', fontSize: 15, fontWeight: 700, color: '#c8ffd6', fontVariantNumeric: 'tabular-nums', minWidth: 32, textAlign: 'center' }}>
+                {time[unit]}
+              </div>
+              <div style={{ fontSize: 9, color: 'rgba(184,255,200,0.35)' }}>{['時','分','秒'][i]}</div>
+            </div>
+            {i < 2 && <div style={{ fontSize: 14, color: 'rgba(184,255,200,0.3)', marginBottom: 8 }}>:</div>}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+// [DNA_PATCH_END]
+export default function Home() {
+  const hasLoadedFromStorage = useRef(false);
+  const progressRef = useRef<HTMLDivElement>(null);
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [prompt, setPrompt] = useState("");
+  const [selectedStyle, setSelectedStyle] = useState("");
+  const [prediction, setPrediction] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  // [DNA_PATCH_START] 入場動畫
+const [pageReady, setPageReady] = useState(false);
+const [splashDone, setSplashDone] = useState(false);
+// [DNA_PATCH_END]
+  const [error, setError] = useState("");
+  const [history, setHistory] = useState<any[]>([]);
+  const [seconds, setSeconds] = useState(0);
+  const VIDEO_COUNTDOWN = 120; // 影片預估 120 秒
+const IMAGE_COUNTDOWN = 60; // 圖片預估 60 秒
+  const [genType, setGenType] = useState<"image" | "video">("image");
+  // [DNA_PATCH_START] Step 1 模式選擇狀態
+const [generationMode, setGenerationMode] = useState<"image" | "video" | "upload" | "text2video">("image");
+// [DNA_PATCH_START] Steps 2-6 手風琴狀態
+const [activeStep, setActiveStep] = useState<number>(2);
+const [imageRatio, setImageRatio] = useState("1:1");
+// [DNA_PATCH_START] STEP 2 外貌特徵 state
+const [selectedHair, setSelectedHair] = useState("");
+const [selectedEye, setSelectedEye] = useState("");
+const [selectedBody, setSelectedBody] = useState("");
+// [DNA_PATCH_START] 外貌特徵自訂輸入
+const [customAppearance, setCustomAppearance] = useState("");
+const [customAppearanceTranslated, setCustomAppearanceTranslated] = useState<string | null>(null);
+const [isCustomAppearanceTranslating, setIsCustomAppearanceTranslating] = useState(false);
+const [selectedPersona, setSelectedPersona] = useState("");
+const [selectedPersonality, setSelectedPersonality] = useState("");
+const [selectedJob, setSelectedJob] = useState("");
+const [selectedScene, setSelectedScene] = useState("");
+const [selectedShot, setSelectedShot] = useState("");
+// [DNA_PATCH_START] 自訂欄位 + 翻譯狀態
+const [customPersona, setCustomPersona] = useState("");
+const [customPersonaTranslated, setCustomPersonaTranslated] = useState<string | null>(null);
+const [isCustomPersonaTranslating, setIsCustomPersonaTranslating] = useState(false);
+const [customScene, setCustomScene] = useState("");
+const [customSceneTranslated, setCustomSceneTranslated] = useState<string | null>(null);
+const [isCustomSceneTranslating, setIsCustomSceneTranslating] = useState(false);
+const [customPersonality, setCustomPersonality] = useState("");
+const [customPersonalityTranslated, setCustomPersonalityTranslated] = useState<string | null>(null);
+const [isCustomPersonalityTranslating, setIsCustomPersonalityTranslating] = useState(false);
+// [DNA_PATCH_END]
+  const [credits, setCredits] = useState<number | null>(null); // ✨ 點數狀態
+  const [plan, setPlan] = useState<string>('free');
+  const [showUploadModal, setShowUploadModal] = useState(false);
+const [agreedToTerms, setAgreedToTerms] = useState(false);
+const [termsChecked, setTermsChecked] = useState(false);
+const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+const [videoPrompt, setVideoPrompt] = useState("");
+const [videoRatio, setVideoRatio] = useState("1:1");
+const [videoDuration, setVideoDuration] = useState(5);
+const [showVideoModal, setShowVideoModal] = useState(false);
+const [showText2VideoModal, setShowText2VideoModal] = useState(false);
+const [text2videoPrompt, setText2videoPrompt] = useState("");
+const [text2videoTranslated, setText2videoTranslated] = useState<string | null>(null);
+const [isText2videoTranslating, setIsText2videoTranslating] = useState(false);
+const [text2videoRatio, setText2videoRatio] = useState("16:9");
+const [text2videoDuration, setText2videoDuration] = useState(5);
+const [text2videoModel, setText2videoModel] = useState<"kling" | "seedance">("kling");
+const [videoModel, setVideoModel] = useState<"kling" | "seedance">("kling");
+// [DNA_PATCH_START] Omni-Reference 狀態
+const [omniRef1, setOmniRef1] = useState<string | null>(null); // 第二角色
+const [omniRef2, setOmniRef2] = useState<string | null>(null); // 場景風格
+const [omniRef3, setOmniRef3] = useState<string | null>(null); // 動作參考
+// [DNA_PATCH_START] 動作參考影片 state
+const [motionVideoFile, setMotionVideoFile] = useState<File | null>(null);
+const [motionVideoUrl, setMotionVideoUrl] = useState<string | null>(null);
+const [motionVideoUploading, setMotionVideoUploading] = useState(false);
+const [motionVideoError, setMotionVideoError] = useState<string>('');
+const [motionLimits, setMotionLimits] = useState({ minSec: 5, maxSec: 10, maxMb: 30 });
+const [motionExpanded, setMotionExpanded] = useState(false);
+// [DNA_PATCH_START] Upload Modal 功能下拉 state
+const [selectedFunction, setSelectedFunction] = useState<"free_motion" | "motion_video" | "multi_reference" | "avatar">("free_motion");
+const [functionDropdownOpen, setFunctionDropdownOpen] = useState(false);
+const [uploadTab, setUploadTab] = useState(0);
+const [uploadTextMode, setUploadTextMode] = useState(false);
+const [faceLockImageUrl, setFaceLockImageUrl] = useState<string | null>(null);
+const [avatarText, setAvatarText] = useState("");
+const [avatarVoiceId, setAvatarVoiceId] = useState("female-2");
+const [avatarLoading, setAvatarLoading] = useState(false);
+const [avatarPredictionId, setAvatarPredictionId] = useState<string | null>(null);
+const [avatarTtsAudio, setAvatarTtsAudio] = useState<string | null>(null);
+const [avatarTtsCache, setAvatarTtsCache] = useState<Record<string, string>>({});
+const [avatarTtsPreviewCount, setAvatarTtsPreviewCount] = useState(0);
+const AVATAR_TTS_MAX_PREVIEW = 3;
+// [DNA_PATCH_END]
+// [DNA_PATCH_START] 影片提示詞翻譯狀態
+const [videoTranslatedPrompt, setVideoTranslatedPrompt] = useState<string | null>(null);
+const [isVideoTranslating, setIsVideoTranslating] = useState(false);
+// [DNA_PATCH_END]
+// [DNA_PATCH_START] 翻譯相關狀態
+const [translatedPrompt, setTranslatedPrompt] = useState<string | null>(null);
+const [isTranslating, setIsTranslating] = useState(false);
+const [useTranslated, setUseTranslated] = useState(false);
+// [DNA_PATCH_END]
+// [DNA_PATCH_START] 推薦賺點狀態
+const [showReferralModal, setShowReferralModal] = useState(false);
+// [DNA_PATCH_START]
+const [lockedCharacterUrl, setLockedCharacterUrl] = useState<string | null>(null);
+const [lockedCharacterId, setLockedCharacterId] = useState<number | null>(null);
+const [kontextRetryCount, setKontextRetryCount] = useState(0);
+const [retryMessage, setRetryMessage] = useState("");
+// [DNA_PATCH_START] Toast 通知狀態
+const [toastMessage, setToastMessage] = useState("");
+const [showToast, setShowToast] = useState(false);
+// [DNA_PATCH_END]
+const [referralCode, setReferralCode] = useState<string | null>(null);
+const [referralCredits, setReferralCredits] = useState<{ starter: string; standard: string; pro: string } | null>(null);
+const [copiedCode, setCopiedCode] = useState(false);
+const [copiedLink, setCopiedLink] = useState(false);
+const [activeTab, setActiveTab] = useState<"gallery" | "history">("gallery");
+const [galleryItems, setGalleryItems] = useState<{ title: string; prompt: string; image: string }[]>([
+  { title: "迷人貓咪", prompt: "Breathtakingly beautiful cat", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719479381.png" },
+  { title: "韓系男生", prompt: "A handsome Korean man looks at the camera with a smile ~ the background is a men's clothing store", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719447992.png" },
+  { title: "城市女孩", prompt: "Beautiful woman walking on city street", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719327300.png" },
+  { title: "走向鏡頭", prompt: "Slowly walk into the camera ~ getting closer and closer", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775716736592.png" },
+  { title: "貓狗好友", prompt: "Beautiful cat playing with dog", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775658563619.png" },
+  { title: "校園奔跑", prompt: "Running on campus", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775657672714.png" },
+  { title: "健壯男士", prompt: "Handsome man showing off his strong muscles and wiping sweat", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719396914.png" },
+  { title: "沙灘活力", prompt: "A fit woman playing beach volleyball on a tropical beach, action shot, dynamic movement, cinematic lighting", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719296354.png" },
+]);
+// [DNA_PATCH_START] 角色收藏狀態
+const [savedCharacters, setSavedCharacters] = useState<any[]>([]);
+const [showSaveModal, setShowSaveModal] = useState(false);
+const [saveCharacterName, setSaveCharacterName] = useState("");
+const [isSaving, setIsSaving] = useState(false);
+// [DNA_PATCH_END]
+// [DNA_PATCH_START] TTS 狀態
+const [showTtsModal, setShowTtsModal] = useState(false);
+const [ttsText, setTtsText] = useState("");
+const [ttsVoice, setTtsVoice] = useState("gentle-female");
+const [ttsAudio, setTtsAudio] = useState<string | null>(null);
+const [isTtsLoading, setIsTtsLoading] = useState(false);
+// [DNA_PATCH_START] TTS 試聽限制
+const [ttsTrimmed, setTtsTrimmed] = useState(false);
+const [ttsCache, setTtsCache] = useState<Record<string, string>>({});
+// [DNA_PATCH_START]
+const [ttsPreviewCount, setTtsPreviewCount] = useState(0);
+const [ttsPreviewVideoUrl, setTtsPreviewVideoUrl] = useState<string | null>(null);
+// [DNA_PATCH_END]
+const TTS_MAX_PREVIEW = 3;
+// [DNA_PATCH_END]
+// [DNA_PATCH_START] Wav2Lip 狀態
+const [isWav2lipLoading, setIsWav2lipLoading] = useState(false);
+const [wav2lipResult, setWav2lipResult] = useState<string | null>(null);
+const [wav2lipSeconds, setWav2lipSeconds] = useState(0);
+const [ttsSeconds, setTtsSeconds] = useState(0);
+// [DNA_PATCH_END]
+// [DNA_PATCH_START] 批次生成狀態
+const [showBatchModal, setShowBatchModal] = useState(false);
+const [batchCount, setBatchCount] = useState(2);
+const [batchPrompts, setBatchPrompts] = useState<{ prompt: string; note: string; isTranslating?: boolean; translated?: boolean; isNoteTranslating?: boolean; noteTranslated?: boolean }[]>([
+  { prompt: "", note: "" },
+  { prompt: "", note: "" },
+  { prompt: "", note: "" },
+  { prompt: "", note: "" },
+  { prompt: "", note: "" },
+  { prompt: "", note: "" },
+]);
+const [batchResults, setBatchResults] = useState<{ url: string; status: "waiting" | "generating" | "done" | "failed" }[]>([]);
+const [isBatchGenerating, setIsBatchGenerating] = useState(false);
+const [batchCurrentIndex, setBatchCurrentIndex] = useState(-1);
+// [DNA_PATCH_END]
+// [DNA_PATCH_START] promo-card-state
+const [showPromoCard, setShowPromoCard] = useState(false)
+const [promoCollapsed, setPromoCollapsed] = useState(false)
+const [adultEnabled, setAdultEnabled] = useState(false)
+// [DNA_PATCH_START] Onboarding 引導狀態
+const [showOnboarding, setShowOnboarding] = useState(false);
+const [onboardingDismissed, setOnboardingDismissed] = useState(false);
+// [DNA_PATCH_END]
+// [DNA_PATCH_END]
+  // 1. 初始化與點數同步
+  useEffect(() => {
+    if (!hasLoadedFromStorage.current && session?.user?.email) {
+      hasLoadedFromStorage.current = true;
+      const savedKey = `last_prediction_${session.user.email}`;
+      const savedPrediction = localStorage.getItem(savedKey);
+      if (savedPrediction) setPrediction(JSON.parse(savedPrediction));
+    }
+    
+    // [DNA_PATCH_START] 鎖定角色從資料庫讀，避免跨帳號污染
+    // 不再讀 localStorage，改由 credits API 回傳後設定（見下方 fetch credits 的 .then）
+    // [DNA_PATCH_END]
+    // [DNA_PATCH_START] history 延遲載入，不阻塞首屏
+    if (session?.user?.email) {
+      setTimeout(() => {
+        fetch(`/api/history?email=${session?.user?.email}`)
+          .then(res => res.json())
+          .then(data => {
+            setHistory(data);
+            // [DNA_PATCH_START] 靈感畫廊：從歷史抓最多4張有 prompt 的圖
+            const FALLBACK_GALLERY = [
+              { title: "迷人貓咪", prompt: "Breathtakingly beautiful cat", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719479381.png" },
+              { title: "韓系男生", prompt: "A handsome Korean man looks at the camera with a smile ~ the background is a men's clothing store", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719447992.png" },
+              { title: "城市女孩", prompt: "Beautiful woman walking on city street", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719327300.png" },
+              { title: "走向鏡頭", prompt: "Slowly walk into the camera ~ getting closer and closer", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775716736592.png" },
+              { title: "貓狗好友", prompt: "Beautiful cat playing with dog", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775658563619.png" },
+              { title: "校園奔跑", prompt: "Running on campus", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775657672714.png" },
+              { title: "健壯男士", prompt: "Handsome man showing off his strong muscles and wiping sweat", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719396914.png" },
+              { title: "沙灘活力", prompt: "A fit woman playing beach volleyball on a tropical beach, action shot, dynamic movement, cinematic lighting", image: "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/whenser@gmail.com-1775719296354.png" },
+            ];
+            if (Array.isArray(data)) {
+              const fromHistory = data
+                .filter((item: any) => item.image_url && item.prompt && !item.video_url)
+                .slice(0, 4)
+                .map((item: any) => ({
+                  title: "我的作品",
+                  prompt: item.prompt,
+                  image: item.image_url,
+                }));
+              const combined = [...fromHistory, ...FALLBACK_GALLERY].slice(0, 8);
+              setGalleryItems(combined);
+            } else {
+              setGalleryItems(FALLBACK_GALLERY);
+            }
+            // [DNA_PATCH_END]
+          });
+      }, 1500); // 延遲 1.5 秒，讓首屏點數/登入狀態先跑完
+
+      // [DNA_PATCH_START] 點數優先載入，收藏角色延遲 400ms
+      fetch(`/api/user/credits?email=${session.user.email}`)
+        .then(res => res.json())
+        .then(data => {
+          setCredits(data.credits);
+          setPlan(data.plan || 'free');
+          // [DNA_PATCH_START] 從資料庫讀鎖定角色，避免跨帳號污染
+          setLockedCharacterUrl(data.locked_character || null);
+          // [DNA_PATCH_END]
+        });
+      setTimeout(() => {
+        fetch(`/api/saved-characters?email=${session?.user?.email}`)
+          .then(res => res.json())
+          .then(data => {
+            if (Array.isArray(data)) {
+              setSavedCharacters(data);
+              // [DNA_PATCH_START] 從資料庫讀鎖定角色（不讀 localStorage）
+              fetch(`/api/user/credits?email=${session?.user?.email}`)
+                .then(r => r.json())
+                .then(creditsData => {
+                  const lockedUrl = creditsData.locked_character;
+                  if (lockedUrl) {
+                    const matched = data.find((c: any) => c.image_url === lockedUrl);
+                    if (matched) setLockedCharacterId(matched.id);
+                  }
+                });
+              // [DNA_PATCH_END]
+            }
+          });
+      }, 400);
+      // [DNA_PATCH_END]
+    }
+  }, [session]);
+  // [DNA_PATCH_START] Wav2Lip 倒數計時
+useEffect(() => {
+  if (!isWav2lipLoading) { setWav2lipSeconds(0); return; }
+  const timer = setInterval(() => setWav2lipSeconds(prev => prev + 2), 2000);
+  return () => clearInterval(timer);
+}, [isWav2lipLoading]);
+// [DNA_PATCH_END]
+// [DNA_PATCH_START] TTS 倒數計時
+useEffect(() => {
+  if (!isTtsLoading) { setTtsSeconds(0); return; }
+  const timer = setInterval(() => setTtsSeconds(prev => prev + 2), 2000);
+  return () => clearInterval(timer);
+}, [isTtsLoading]);
+// [DNA_PATCH_END]
+  // [DNA_PATCH_START] 推薦賺點事件監聽 + 資料載入
+useEffect(() => {
+  const handler = () => setShowReferralModal(true);
+  window.addEventListener("open-referral-modal", handler);
+  return () => window.removeEventListener("open-referral-modal", handler);
+}, []);
+
+useEffect(() => {
+  if (!showReferralModal) return;
+  if (session?.user?.email && !referralCode) {
+    fetch(`/api/user/credits?email=${session.user.email}`)
+      .then(res => res.json())
+      .then(data => { if (data.referral_code) setReferralCode(data.referral_code); });
+  }
+  if (!referralCredits) {
+    fetch("/api/referral/settings")
+      .then(res => res.json())
+      .then(data => {
+        if (data.settings) {
+          setReferralCredits({
+            starter: data.settings.referral_credits_starter || "?",
+            standard: data.settings.referral_credits_standard || "?",
+            pro: data.settings.referral_credits_pro || "?",
+          });
+        }
+      });
+  }
+}, [showReferralModal]);
+// [DNA_PATCH_END]
+// [DNA_PATCH_START] 讀取成人專區開關
+useEffect(() => {
+  fetch("/api/admin/settings-public?key=adult_section_enabled")
+    .then(r => r.json())
+    .then(d => { if (d.value === "true") setAdultEnabled(true); })
+    .catch(() => {});
+}, []);
+// [DNA_PATCH_END]
+// [DNA_PATCH_START] 偵測主頁載入完成 → 結束入場動畫
+useEffect(() => {
+  const maxWait = setTimeout(() => setPageReady(true), 2500);
+  if (credits !== null) {
+    setPageReady(true);
+    clearTimeout(maxWait);
+  }
+  return () => clearTimeout(maxWait);
+}, [credits]);
+// [DNA_PATCH_END]
+// [DNA_PATCH_START] selectedFunction 自動同步 videoModel
+useEffect(() => {
+  if (selectedFunction === "multi_reference") {
+    setVideoModel("seedance");
+  } else {
+    setVideoModel("kling");
+  }
+}, [selectedFunction]);
+// [DNA_PATCH_END]
+// [DNA_PATCH_START] promo-card-trigger：等 Onboarding 關掉後才顯示
+useEffect(() => {
+  if (session === undefined) return
+  if (session !== null && credits === null) return
+  const isPaid = session !== null && plan !== 'free'
+  if (isPaid) return
+  if (showOnboarding) return  // Onboarding 還開著就不觸發
+  const timer = setTimeout(() => setShowPromoCard(true), 2500)
+  return () => clearTimeout(timer)
+}, [session === null ? 'loggedout' : plan, credits, showOnboarding])
+// [DNA_PATCH_END]
+// [DNA_PATCH_START] 首次登入引導：只對免費新用戶顯示，付費帳號跳過
+useEffect(() => {
+  if (!session?.user?.email) return;
+  if (credits === null) return;
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
+  const key = `onboarding_done_${session.user.email}_${today}`;
+  // Onboarding 只由「使用指南」按鈕手動觸發，不自動跳
+  // 付費用戶直接寫入 localStorage 標記，避免重複顯示
+  if (plan !== 'free') {
+    localStorage.setItem(key, '1');
+  }
+}, [session?.user?.email, plan, credits]);
+
+useEffect(() => {
+  const handler = () => {
+    setShowOnboarding(true);
+    setOnboardingDismissed(false);
+  };
+  window.addEventListener('open-onboarding', handler);
+  return () => window.removeEventListener('open-onboarding', handler);
+}, []);
+// [DNA_PATCH_END]
+// ✨ 修正後的下載功能
+  const downloadFile = async (url: string) => {
+    try {
+      setLoading(true); // 下載大檔案時顯示一下載入狀態
+      const response = await fetch(url);
+      const blob = await response.blob();
+      
+      // 自動判斷副檔名
+      let extension = genType === "video" ? "mp4" : "png";
+      if (url.includes(".webp")) extension = "webp";
+      if (url.includes(".jpg") || url.includes(".jpeg")) extension = "jpg";
+
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = `ai-studio-${Date.now()}.${extension}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+      setLoading(false);
+    } catch (err) { 
+      console.error("下載失敗", err);
+      // 如果 Blob 被瀏覽器擋掉，就用最原始的方法：在新分頁開啟
+      window.open(url, '_blank'); 
+      setLoading(false);
+    }
+  };
+
+  // 3. 狀態檢查 (接通影片與圖片)
+  // [DNA_PATCH_START]
+const checkStatus = async (id: string, currentGenType?: string) => {
+// [DNA_PATCH_END]
+    try {
+      const res = await fetch(`/api/character?id=${id}&email=${session?.user?.email}`);
+      const data = await res.json();
+      setSeconds(prev => prev + 2);
+      console.log("Polling status:", data.status, "Error:", data.error, data);
+
+      if (data.status === "succeeded") {
+        // [DNA_PATCH_START]
+const finalUrl = Array.isArray(data.output) ? data.output[0] : data.output;
+const resolvedGenType = currentGenType || genType;
+console.log("finalUrl:", finalUrl, "resolvedGenType:", resolvedGenType, "output:", data.output);
+// [DNA_PATCH_END]
+        const formattedData = { ...data, output: finalUrl };
+        
+        setPrediction(formattedData);
+        setGenType(resolvedGenType as "image" | "video");
+        // [DNA_PATCH_START]
+// 新影片生成完成：歸零試聽計數，保留 ttsCache（用戶可重聽舊聲音）
+const resolvedIsVideo = resolvedGenType === "video";
+if (resolvedIsVideo && finalUrl) {
+  setTtsPreviewCount(0);
+  setTtsPreviewVideoUrl(finalUrl);
+}
+// [DNA_PATCH_END]
+        
+        // 更新點數與歷史
+        if (session?.user?.email) {
+                    fetch(`/api/user/credits?email=${session.user.email}`).then(res => res.json()).then(data => setCredits(data.credits));
+        }
+// [DNA_PATCH_START] 寫入歷史紀錄
+// [DNA_PATCH_START] 圖片+影片永久保存至 Supabase Storage
+if (session?.user?.email && finalUrl) {
+  let permanentUrl = finalUrl;
+  try {
+    const uploadRes = await fetch("/api/upload-image", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ imageUrl: finalUrl, email: session.user.email }),
+    });
+    const uploadData = await uploadRes.json();
+    if (uploadData.url) permanentUrl = uploadData.url;
+  } catch {
+    // 上傳失敗用原始 URL
+  }
+
+  await fetch("/api/history", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      user_email: session.user.email,
+      image_url: resolvedGenType === "image" ? permanentUrl : null,
+      video_url: resolvedGenType === "video" ? permanentUrl : null,
+      prompt: resolvedGenType === "video" ? (videoPrompt || prompt) : (prompt || videoPrompt),
+      character_id: lockedCharacterId || null,
+    }),
+  });
+}
+// [DNA_PATCH_END]
+if (session?.user?.email) fetch(`/api/history?email=${session.user.email}`).then(res => res.json()).then(data => setHistory(data));
+        localStorage.setItem(`last_prediction_${session?.user?.email}`, JSON.stringify(formattedData));
+        setLoading(false);
+        setSeconds(0);
+      // [DNA_PATCH_START]
+      } else if (data.status === "failed") {
+        const isKontext = data.model?.includes('flux-kontext-pro');
+        if (isKontext && kontextRetryCount < 2) {
+          const nextCount = kontextRetryCount + 1;
+          setKontextRetryCount(nextCount);
+          setRetryMessage(`角色一致性生成遇到問題，正在第 ${nextCount} 次重試...`);
+          // 重新呼叫生成
+          try {
+            const res = await fetch("/api/character", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                prompt: prompt,
+                userEmail: session?.user?.email,
+              }),
+            });
+            const retryData = await res.json();
+            if (retryData.id) {
+              setTimeout(() => checkStatus(retryData.id), 2000);
+            } else {
+              // retry 也啟動失敗，退點
+              await fetch("/api/character", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ refundCredits: 1, userEmail: session?.user?.email }),
+              });
+              fetch(`/api/user/credits?email=${session?.user?.email}`).then(r => r.json()).then(d => setCredits(d.credits));
+              setRetryMessage("");
+              setKontextRetryCount(0);
+              setError("角色一致性生成失敗，點數已退還");
+              setLoading(false);
+            }
+          } catch {
+            setRetryMessage("");
+            setKontextRetryCount(0);
+            setError("角色一致性生成失敗，請重試");
+            setLoading(false);
+          }
+        } else if (isKontext && kontextRetryCount >= 2) {
+          // 2次都失敗，退點
+          await fetch("/api/character", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ refundCredits: 1, userEmail: session?.user?.email }),
+          });
+          fetch(`/api/user/credits?email=${session?.user?.email}`).then(r => r.json()).then(d => setCredits(d.credits));
+          setRetryMessage("");
+          setKontextRetryCount(0);
+          setError("角色一致性生成失敗，點數已退還");
+          setLoading(false);
+        } else {
+          const errMsg = data.error || "";
+          const isE005 = errMsg.includes("E005") || errMsg.includes("flagged as sensitive");
+          setError(isE005
+            ? "影片生成失敗：偵測到真實人臉，違反 Seedance 使用政策。請改用 AI 生成圖作為主角，或改用其他模式。"
+            : "生成失敗，請檢查點數或重試");
+          setLoading(false);
+        }
+      // [DNA_PATCH_END]
+      } else {
+        setTimeout(() => checkStatus(id, currentGenType), 2000);
+      }
+    } catch (err) { setLoading(false); }
+  };
+
+  // 4. 開始產圖
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!prompt.trim()) return;
+    setLoading(true);
+    setError("");
+    setPrediction(null);
+    setSeconds(0);
+    setGenType("image");
+    setTimeout(() => progressRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
+
+    try {
+      // [DNA_PATCH_START] 直接用 state 而非重新從 API 抓
+const lockedCharacter = lockedCharacterUrl || null;
+// [DNA_PATCH_END]
+      const res = await fetch("/api/character", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // [DNA_PATCH_START] prompt 組合含自訂欄位
+body: JSON.stringify({ 
+  prompt: [
+  selectedStyle,
+  selectedHair, selectedEye, selectedBody,
+  customAppearance ? (customAppearanceTranslated || customAppearance) : null,
+  selectedPersona || (customPersona ? (customPersonaTranslated || customPersona) : null),
+  selectedScene || (customScene ? (customSceneTranslated || customScene) : null),
+  selectedShot,
+  prompt
+].filter(Boolean).join(", "),
+  userEmail: session?.user?.email,
+  lockedCharacter: lockedCharacter || null,
+  imageRatio: imageRatio,
+}),
+      });
+      const data = await res.json();
+      if (data.id) checkStatus(data.id, "image");
+      else { setError(data.error || "啟動失敗"); setLoading(false); }
+    } catch (err) { setError("連線失敗"); setLoading(false); }
+  };
+
+  // [DNA_PATCH_START] 翻譯函式
+const hasChinese = (text: string) => /[\u4e00-\u9fff]/.test(text);
+
+const handleTranslate = async () => {
+  if (!prompt.trim() || !hasChinese(prompt)) return;
+  setIsTranslating(true);
+  setTranslatedPrompt(null);
+  setUseTranslated(false);
+  try {
+    const res = await fetch("/api/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: prompt }),
+    });
+    const data = await res.json();
+    if (data.translated) setTranslatedPrompt(data.translated);
+  } catch {
+    // 翻譯失敗靜默處理
+  } finally {
+    setIsTranslating(false);
+  }
+};
+// [DNA_PATCH_END]
+// [DNA_PATCH_START] 影片提示詞翻譯函式
+const handleVideoTranslate = async () => {
+  if (!videoPrompt.trim() || !hasChinese(videoPrompt)) return;
+  setIsVideoTranslating(true);
+  setVideoTranslatedPrompt(null);
+  try {
+    const res = await fetch("/api/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: videoPrompt }),
+    });
+    const data = await res.json();
+    if (data.translated) setVideoTranslatedPrompt(data.translated);
+  } catch {
+    // 翻譯失敗靜默處理
+  } finally {
+    setIsVideoTranslating(false);
+  }
+};
+// [DNA_PATCH_START] 批次生成函式
+const getMaxBatch = () => {
+  if (plan === 'pro') return 6;
+  if (plan === 'standard') return 4;
+  if (plan === 'starter') return 2;
+  return 0;
+};
+
+const handleBatchGenerate = async () => {
+  if (!lockedCharacterUrl) { alert("⚠️ 批次生成必須先鎖定角色！"); return; }
+  const maxBatch = getMaxBatch();
+  if (maxBatch === 0) { alert("⚠️ 批次生成為付費功能，請先升級方案"); return; }
+  const validPrompts = batchPrompts.slice(0, batchCount).filter(p => p.prompt.trim());
+  if (validPrompts.length === 0) { alert("⚠️ 請至少填寫一個 Pose 描述"); return; }
+
+  setIsBatchGenerating(true);
+  setBatchCurrentIndex(-1);
+  setBatchResults(validPrompts.map(() => ({ url: "", status: "waiting" })));
+
+  const res = await fetch("/api/character", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ batchPrompts: validPrompts, userEmail: session?.user?.email }),
+  });
+  const data = await res.json();
+
+  if (!data.batch || !data.predictions) {
+    // [DNA_PATCH_START] 429 錯誤中文化
+    const errMsg = data.error || "批次生成啟動失敗";
+    const friendlyMsg = errMsg.includes("429") || errMsg.includes("throttled") || errMsg.includes("Too Many")
+      ? "⚠️ 生成請求太頻繁，請等待 5 秒後重試"
+      : "⚠️ 批次生成啟動失敗，請重試";
+    alert(friendlyMsg);
+    // [DNA_PATCH_END]
+    setIsBatchGenerating(false);
+    return;
+  }
+
+  const results: { url: string; status: "waiting" | "generating" | "done" | "failed" }[] = validPrompts.map(() => ({ url: "", status: "waiting" }));
+
+  for (let i = 0; i < data.predictions.length; i++) {
+    setBatchCurrentIndex(i);
+    results[i] = { url: "", status: "generating" };
+    setBatchResults([...results]);
+
+    const predId = data.predictions[i].id;
+    let done = false;
+    let retryCount = 0;
+    let currentPredId = predId;
+
+    while (!done) {
+      await new Promise(r => setTimeout(r, 3000));
+      try {
+        const pollRes = await fetch(`/api/character?id=${currentPredId}&email=${session?.user?.email}`);
+        const pollData = await pollRes.json();
+
+        if (pollData.status === "succeeded") {
+          const finalUrl = Array.isArray(pollData.output) ? pollData.output[0] : pollData.output;
+          let permanentUrl = finalUrl;
+          try {
+            const uploadRes = await fetch("/api/upload-image", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ imageUrl: finalUrl, email: session?.user?.email }),
+            });
+            const uploadData = await uploadRes.json();
+            if (uploadData.url) permanentUrl = uploadData.url;
+          } catch {}
+          await fetch("/api/history", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              user_email: session?.user?.email,
+              image_url: permanentUrl,
+              video_url: null,
+              prompt: validPrompts[i].prompt,
+              character_id: lockedCharacterId || null,
+            }),
+          });
+          results[i] = { url: permanentUrl, status: "done" };
+          setBatchResults([...results]);
+          done = true;
+
+        } else if (pollData.status === "failed") {
+          if (retryCount < 2) {
+            // 自動 retry
+            retryCount++;
+            results[i] = { url: "", status: "generating" };
+            setBatchResults([...results]);
+            const finalPrompt = `${validPrompts[i].prompt}${validPrompts[i].note ? ', ' + validPrompts[i].note : ''}, same person from reference image`;
+            try {
+              const retryRes = await fetch("/api/character", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  batchPrompts: [{ prompt: validPrompts[i].prompt, note: validPrompts[i].note }],
+                  userEmail: session?.user?.email,
+                  isSingleRetry: true,
+                }),
+              });
+              const retryData = await retryRes.json();
+              if (retryData.batch && retryData.predictions?.[0]?.id) {
+                currentPredId = retryData.predictions[0].id;
+              } else {
+                // retry 啟動失敗，直接退點標記失敗
+                await fetch("/api/character", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ refundCredits: 1, userEmail: session?.user?.email }),
+                });
+                fetch(`/api/user/credits?email=${session?.user?.email}`).then(r => r.json()).then(d => setCredits(d.credits));
+                results[i] = { url: "", status: "failed" };
+                setBatchResults([...results]);
+                done = true;
+              }
+            } catch {
+              results[i] = { url: "", status: "failed" };
+              setBatchResults([...results]);
+              done = true;
+            }
+          } else {
+            // retry 2次都失敗，退點
+            await fetch("/api/character", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ refundCredits: 1, userEmail: session?.user?.email }),
+            });
+            fetch(`/api/user/credits?email=${session?.user?.email}`).then(r => r.json()).then(d => setCredits(d.credits));
+            results[i] = { url: "", status: "failed" };
+            setBatchResults([...results]);
+            done = true;
+          }
+        }
+      } catch { done = true; }
+    }
+  }
+
+  if (session?.user?.email) {
+    fetch(`/api/user/credits?email=${session.user.email}`).then(r => r.json()).then(d => setCredits(d.credits));
+    fetch(`/api/history?email=${session.user.email}`).then(r => r.json()).then(d => setHistory(d));
+  }
+  setBatchCurrentIndex(-1);
+  setIsBatchGenerating(false);
+};
+// [DNA_PATCH_END]
+// [DNA_PATCH_END]
+// [DNA_PATCH_START] handleText2Video
+const handleText2Video = async () => {
+  const finalPrompt = text2videoTranslated || text2videoPrompt;
+  if (!finalPrompt.trim()) { alert("⚠️ 請輸入影片描述"); return; }
+  if (plan === "free") { alert("⚠️ 文字生成影片為付費功能，請先升級方案！"); return; }
+
+  setShowText2VideoModal(false);
+  setLoading(true);
+  setError("");
+  setSeconds(0);
+  setGenType("video");
+  setTimeout(() => progressRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
+
+  try {
+    const res = await fetch("/api/character", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mode: "text2video",
+        userEmail: session?.user?.email,
+        videoPrompt: finalPrompt,
+        videoModel: text2videoModel,
+        aspectRatio: text2videoRatio,
+        duration: text2videoDuration,
+      }),
+    });
+    const data = await res.json();
+    if (data.id) checkStatus(data.id, "video");
+    else {
+      const msg = data.error || "文字生成影片啟動失敗";
+      setError(msg);
+      alert("⚠️ " + msg);
+      setLoading(false);
+    }
+  } catch (err) { setError("連線失敗"); setLoading(false); }
+};
+// [DNA_PATCH_END]
+  // 5. ✨ 接通影片生成
+// [DNA_PATCH_START] handleGenerateVideo 加入 omniRefs
+const handleGenerateVideo = async (imageUrl: string, prompt?: string, ratio?: string, duration?: number, model?: string, omniRefs?: (string | null)[]) => {
+// [DNA_PATCH_END]
+    setLoading(true);
+    setError("");
+    setSeconds(0);
+    setGenType("video");
+    setTimeout(() => progressRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
+
+    try {
+      const res = await fetch("/api/character", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+  image: imageUrl, 
+  mode: "video", 
+  userEmail: session?.user?.email,
+  videoPrompt: prompt || "animate this character with smooth natural motion, cinematic quality",
+  videoModel: model || "kling",
+  aspectRatio: ratio || "1:1",
+  duration: duration || 5,
+  // [DNA_PATCH_START] Omni-Reference
+  omniRefs: omniRefs ? omniRefs.filter(Boolean) : [],
+  // [DNA_PATCH_END]
+}),
+      });
+      const data = await res.json();
+      if (data.id) checkStatus(data.id, "video");
+      else { 
+  const msg = data.error || "影片啟動失敗";
+  setError(msg);
+  alert("⚠️ " + msg);
+  setLoading(false); 
+}
+    } catch (err) { setError("影片連線失敗"); setLoading(false); }
+  };
+
+  // [DNA_PATCH_START] 動作參考影片上傳 + Motion Control 生成
+  const handleMotionVideoUpload = async (file: File): Promise<string | null> => {
+    setMotionVideoUploading(true);
+    setMotionVideoError('');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('email', session?.user?.email || '');
+      const res = await fetch('/api/upload-video', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (!res.ok) {
+        setMotionVideoError(data.error || '上傳失敗');
+        return null;
+      }
+      if (data.minDurationSec) setMotionLimits({ minSec: data.minDurationSec, maxSec: data.maxDurationSec, maxMb: data.maxSizeMb });
+      setMotionVideoUrl(data.url);
+      return data.url;
+    } catch {
+      setMotionVideoError('上傳失敗，請重試');
+      return null;
+    } finally {
+      setMotionVideoUploading(false);
+    }
+  };
+
+  const handleMotionControl = async (imageUrl: string, videoUrl: string, prompt?: string, ratio?: string, duration?: number) => {
+    setLoading(true);
+    setError('');
+    setSeconds(0);
+    setGenType('video');
+    setTimeout(() => progressRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+    try {
+      const res = await fetch('/api/motion-control', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userEmail: session?.user?.email,
+          image: imageUrl,
+          motionVideoUrl: videoUrl,
+          prompt: prompt || 'animate this character following the motion reference, cinematic quality',
+          aspectRatio: ratio || '1:1',
+          duration: duration || 5,
+        }),
+      });
+      const data = await res.json();
+      if (data.id) checkStatus(data.id, 'video');
+      else {
+        const msg = data.error || 'Motion Control 啟動失敗';
+        setError(msg);
+        alert('⚠️ ' + msg);
+        setLoading(false);
+      }
+    } catch { setError('連線失敗'); setLoading(false); }
+  };
+  // [DNA_PATCH_END]
+  // [DNA_PATCH_START] handleUploadAvatar：說話影片線路（TTS → Kling Avatar）
+const handleUploadAvatar = async (imageUrl: string) => {
+  if (!avatarText.trim()) { alert("⚠️ 請輸入說話文字"); return; }
+  setAvatarLoading(true);
+  setLoading(true);
+  setError("");
+  setSeconds(0);
+  setGenType("video");
+  setRetryMessage("步驟 1／2：語音合成中（ElevenLabs）...");
+  setTimeout(() => progressRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
+
+  let avatarTimer: ReturnType<typeof setInterval> | undefined = undefined;
+  try {
+    // Step 1: TTS
+    const ttsRes = await fetch("/api/tts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: avatarText, voiceId: avatarVoiceId, videoDuration: 5 }),
+    });
+    const ttsData = await ttsRes.json();
+    if (!ttsData.audio) {
+      setError(ttsData.error || "語音合成失敗，請重試");
+      setRetryMessage(""); setLoading(false); setAvatarLoading(false); return;
+    }
+
+    // Step 2: Kling Avatar
+    setRetryMessage("步驟 2／2：說話影片生成中（Kling Avatar）...");
+    const avatarRes = await fetch("/api/kling-avatar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        imageUrl,
+        audioBase64: ttsData.audio,
+        userEmail: session?.user?.email,
+        plan,
+        prompt: "natural talking",
+        mode: "std",
+      }),
+    });
+    const avatarData = await avatarRes.json();
+    if (!avatarData.id) {
+      setError(avatarData.error || "說話影片啟動失敗，請重試");
+      setRetryMessage(""); setLoading(false); setAvatarLoading(false); return;
+    }
+
+    setAvatarPredictionId(avatarData.id);
+    if (session?.user?.email) {
+      fetch(`/api/user/credits?email=${session.user.email}`).then(r => r.json()).then(d => setCredits(d.credits));
+    }
+
+    // Polling
+    let done = false;
+    let attempts = 0;
+    avatarTimer = setInterval(() => setSeconds(prev => prev + 3), 3000);
+    while (!done && attempts < 60) {
+      await new Promise(r => setTimeout(r, 3000));
+      attempts++;
+      const pollRes = await fetch(`/api/kling-avatar?id=${avatarData.id}`);
+      const pollData = await pollRes.json();
+      if (pollData.status === "succeeded") {
+        done = true;
+        const output = Array.isArray(pollData.output) ? pollData.output[0] : pollData.output;
+        setPrediction({ output, status: "succeeded" });
+        setRetryMessage("");
+        if (session?.user?.email) {
+          await fetch("/api/history", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              user_email: session.user.email,
+              image_url: null,
+              video_url: output,
+              prompt: avatarText,
+              character_id: lockedCharacterId || null,
+            }),
+          });
+        }
+      } else if (pollData.status === "failed") {
+        done = true;
+        setError("說話影片生成失敗，請重試");
+        setRetryMessage("");
+      }
+    }
+    if (!done) { setError("說話影片逾時，請重試"); setRetryMessage(""); }
+  } catch {
+    setError("連線失敗，請重試");
+    setRetryMessage("");
+  } finally {
+    if (avatarTimer) clearInterval(avatarTimer);
+    setLoading(false);
+    setAvatarLoading(false);
+  }
+};
+// [DNA_PATCH_END]
+// [DNA_PATCH_START] handleUploadDirect：直接用原圖生成影片（不鎖臉）
+const handleUploadDirect = async (
+  imageUrl: string,
+  mode: "free_motion" | "motion_video" | "multi_reference",
+  motionUrl?: string | null,
+  omniRefs?: (string | null)[]
+) => {
+  setLoading(true);
+  setError("");
+  setSeconds(0);
+  setGenType("video");
+  setRetryMessage(`生成影片中（${mode === "multi_reference" ? "Seedance" : "Kling 3.0"}）...`);
+  setTimeout(() => progressRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
+
+  if (mode === "motion_video" && motionUrl) {
+    await handleMotionControl(imageUrl, motionUrl, videoTranslatedPrompt || videoPrompt, videoRatio, videoDuration);
+  } else {
+    await handleGenerateVideo(
+      imageUrl,
+      videoTranslatedPrompt || videoPrompt,
+      videoRatio,
+      videoDuration,
+      mode === "multi_reference" ? "seedance" : "kling",
+      omniRefs ? omniRefs.filter(Boolean) : []
+    );
+  }
+  setRetryMessage("");
+};
+// [DNA_PATCH_END]
+  // [DNA_PATCH_START] 未登入直接 return Landing Page，不渲染主工作室
+// [DNA_PATCH_START] 未登入 Landing Page — 美化版
+if (status === 'loading') return null;
+if (!session) return (
+  <>
+    <div style={{
+      minHeight: '100vh',
+      background: '#0a1f10',
+      display: 'flex',
+      flexDirection: 'column',
+      fontFamily: "'Noto Sans TC', sans-serif",
+    }}>
+      {/* Hero */}
+      <div style={{
+        padding: '72px 24px 40px',
+        textAlign: 'center',
+        position: 'relative',
+        overflow: 'hidden',
+        background: 'linear-gradient(160deg, #0d2318 0%, #1a3a25 50%, #0d2318 100%)',
+      }}>
+        {/* 背景光暈 */}
+        <div style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none',
+          background: 'radial-gradient(ellipse 80% 50% at 50% 0%, rgba(137,245,162,0.10) 0%, transparent 70%)',
+        }} />
+        <div style={{
+          position: 'absolute', top: -60, left: '50%', transform: 'translateX(-50%)',
+          width: 400, height: 400, borderRadius: '50%', pointerEvents: 'none',
+          background: 'radial-gradient(circle, rgba(137,245,162,0.06) 0%, transparent 65%)',
+        }} />
+
+        {/* Badge */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          background: 'rgba(137,245,162,0.08)',
+          border: '1px solid rgba(137,245,162,0.22)',
+          borderRadius: 20, padding: '5px 14px',
+          fontSize: 10, fontWeight: 600, color: '#89f5a2',
+          letterSpacing: '0.15em',
+          position: 'relative',
+          whiteSpace: 'nowrap',
+          width: 'fit-content',
+          margin: '0 auto 24px',
+        }}>
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#89f5a2', display: 'inline-block', boxShadow: '0 0 8px #89f5a2' }} />
+          ✨ AI CHARACTER STUDIO
+        </div>
+
+        {/* 標題 */}
+        <h1 style={{
+          fontSize: 'clamp(24px, 8vw, 38px)',
+          fontWeight: 500,
+          color: '#fff',
+          lineHeight: 1.2,
+          marginBottom: 14,
+          position: 'relative',
+          letterSpacing: '0.01em',
+        }}>
+          打造專屬 AI 角色
+          <br />
+          <span style={{
+            color: '#89f5a2',
+            fontWeight: 400,
+            letterSpacing: '0.06em',
+            textShadow: '0 0 20px rgba(137,245,162,0.6), 0 0 40px rgba(137,245,162,0.25)',
+            display: 'inline-block',
+            marginTop: 6,
+            fontSize: '0.85em',
+            opacity: 0.92,
+          }}>創作・對話・影片</span>
+        </h1>
+
+        {/* 副標 */}
+        <p style={{
+          fontSize: 13,
+          color: 'rgba(255,255,255,0.5)',
+          marginBottom: 32,
+          position: 'relative',
+          lineHeight: 1.9,
+          maxWidth: 300,
+          margin: '0 auto 32px',
+          letterSpacing: '0.03em',
+        }}>
+          生成角色、和他們聊天、製作說話影片<br />一個平台，三種體驗
+        </p>
+
+        {/* CTA 按鈕 */}
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'center', position: 'relative', flexWrap: 'wrap' }}>
+          {/Threads|FBAN|FBAV|Instagram|Line\/|MicroMessenger/i.test(typeof navigator !== 'undefined' ? navigator.userAgent : '') && (
+            <div style={{
+              width: '100%', textAlign: 'center',
+              fontSize: 11, color: 'rgba(255,200,100,0.85)',
+              background: 'rgba(255,180,0,0.08)',
+              border: '1px solid rgba(255,180,0,0.2)',
+              borderRadius: 8, padding: '7px 12px',
+              marginBottom: 4, lineHeight: 1.7,
+            }}>
+              ⚠️ 若登入失敗，請用 <strong>Safari</strong> 或 <strong>Chrome</strong> 開啟本頁
+            </div>
+          )}
+          <button
+            onClick={() => signIn("google", {}, { prompt: "select_account" })}
+            style={{
+              background: 'linear-gradient(135deg, #2d8a42, #3db558)',
+              border: 'none',
+              borderRadius: 12,
+              padding: '12px 28px',
+              fontSize: 14,
+              fontWeight: 800,
+              color: '#fff',
+              cursor: 'pointer',
+              boxShadow: '0 4px 20px rgba(61,181,88,0.35)',
+              letterSpacing: '0.02em',
+            }}
+          >🚀 免費開始試用</button>
+          <button
+            onClick={() => { window.location.href = '/pricing'; }}
+            style={{
+              background: 'rgba(137,245,162,0.06)',
+              border: '1px solid rgba(137,245,162,0.22)',
+              borderRadius: 12,
+              padding: '12px 24px',
+              fontSize: 14,
+              fontWeight: 600,
+              color: '#89f5a2',
+              cursor: 'pointer',
+            }}
+          >查看定價</button>
+        </div>
+      </div>
+
+      {/* 功能卡片 */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: 10,
+        padding: '24px 16px',
+        maxWidth: 560,
+        margin: '0 auto',
+        width: '100%',
+      }}>
+        {[
+          { icon: '🎨', title: '生成 AI 角色', desc: '高精度圖片與影片，角色外貌高度一致' },
+          { icon: '💬', title: '即時對話', desc: '和角色聊天、群組聊天、AI 自拍' },
+          { icon: '🎬', title: '說話影片', desc: '語音合成 + 嘴型同步，栩栩如生' },
+        ].map((f) => (
+          <div key={f.title} style={{
+            background: 'rgba(137,245,162,0.04)',
+            border: '1px solid rgba(137,245,162,0.10)',
+            borderRadius: 12,
+            padding: '14px 8px',
+            textAlign: 'center',
+          }}>
+            <div style={{ fontSize: 22, marginBottom: 8 }}>{f.icon}</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#b8ffc8', marginBottom: 4, lineHeight: 1.4 }}>{f.title}</div>
+            <div style={{ fontSize: 9.5, color: 'rgba(184,255,200,0.4)', lineHeight: 1.6 }}>{f.desc}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* 底部提示 */}
+      <div style={{ textAlign: 'center', paddingBottom: 32, marginTop: 4 }}>
+        <div style={{
+          display: 'inline-block',
+          fontSize: 11, color: 'rgba(184,255,200,0.28)',
+          borderTop: '1px solid rgba(137,245,162,0.08)',
+          paddingTop: 16,
+        }}>
+          ↓ 免費獲得 5 點，登入即可使用
+        </div>
+      </div>
+    </div>
+  </>
+);
+// [DNA_PATCH_END]
+return (
+  <>
+{/* [DNA_PATCH_START] Splash 入場動畫蓋板 */}
+{!splashDone && (
+  <div
+    style={{
+      position: "fixed", inset: 0, zIndex: 9999,
+      background: "#0f2e18",
+      display: "flex", flexDirection: "column",
+      alignItems: "center", justifyContent: "center",
+      opacity: pageReady ? 0 : 1,
+      transition: "opacity 0.7s ease",
+      pointerEvents: pageReady ? "none" : "auto",
+      overflow: "hidden",
+    }}
+    onTransitionEnd={() => { if (pageReady) setSplashDone(true); }}
+  >
+    <style>{`
+      @keyframes orbitSpin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
+      @keyframes sweep { 0%{left:-80%} 65%,100%{left:160%} }
+      @keyframes logoPulse {
+        0%,100%{filter:drop-shadow(0 0 16px rgba(137,245,162,0.7)) drop-shadow(0 0 40px rgba(137,245,162,0.4));transform:scale(1)}
+        50%{filter:drop-shadow(0 0 30px rgba(137,245,162,1)) drop-shadow(0 0 70px rgba(137,245,162,0.7));transform:scale(1.03)}
+      }
+      @keyframes scan { 0%{left:-40px} 100%{left:150px} }
+      @keyframes textGlow {
+        0%,100%{text-shadow:0 0 8px rgba(137,245,162,0.3)}
+        50%{text-shadow:0 0 22px rgba(137,245,162,0.85),0 0 40px rgba(137,245,162,0.3)}
+      }
+      @keyframes dotB {
+        0%,100%{transform:translateY(0);opacity:0.3}
+        50%{transform:translateY(-7px);opacity:1}
+      }
+      @keyframes lineFlash {
+        0%,100%{opacity:0.35;width:70px}
+        50%{opacity:1;width:120px}
+      }
+      @keyframes glowDrift {
+        0%,100%{opacity:0.5;transform:scale(1)}
+        50%{opacity:1;transform:scale(1.1)}
+      }
+      .splash-orbit {
+        position:absolute; width:210px; height:210px; border-radius:50%;
+        border:1px solid rgba(137,245,162,0.18);
+        animation:orbitSpin 7s linear infinite;
+      }
+      .splash-orbit::after {
+        content:''; position:absolute;
+        width:7px; height:7px; border-radius:50%;
+        background:#89f5a2;
+        top:-3.5px; left:50%; transform:translateX(-50%);
+        box-shadow:0 0 10px #89f5a2, 0 0 20px rgba(137,245,162,0.5);
+      }
+      .splash-sweep-bar {
+        position:absolute; top:0; left:-80%;
+        width:45%; height:100%;
+        background:linear-gradient(90deg,transparent,rgba(137,245,162,0.45),transparent);
+        animation:sweep 2.6s ease-in-out infinite;
+      }
+      .splash-logo-img {
+        width:100%; height:100%; object-fit:cover;
+      }
+      .splash-scandot {
+        width:36px; height:100%;
+        background:linear-gradient(90deg,transparent,#89f5a2,transparent);
+        position:absolute; left:-40px;
+        animation:scan 2.6s linear infinite;
+      }
+      .splash-scandot-delay { animation-delay:0.5s; }
+      .splash-brand {
+        color:#89f5a2; font-weight:900; font-size:20px; letter-spacing:0.2em;
+        animation:textGlow 2.6s ease-in-out infinite;
+      }
+      .splash-dot { animation:dotB 1.3s ease-in-out infinite; }
+      .splash-dot:nth-child(2) { animation-delay:0.22s; }
+      .splash-dot:nth-child(3) { animation-delay:0.44s; }
+      .splash-bottom-line {
+        position:absolute; bottom:36px; height:1px;
+        background:linear-gradient(90deg,transparent,rgba(137,245,162,0.45),transparent);
+        animation:lineFlash 2.6s ease-in-out infinite;
+      }
+      .splash-bg1 {
+        position:absolute; width:320px; height:320px;
+        top:-80px; right:-80px; border-radius:50%;
+        background:radial-gradient(circle,rgba(137,245,162,0.18) 0%,transparent 70%);
+        animation:glowDrift 5s ease-in-out infinite;
+      }
+      .splash-bg2 {
+        position:absolute; width:260px; height:260px;
+        bottom:-60px; left:-60px; border-radius:50%;
+        background:radial-gradient(circle,rgba(137,245,162,0.15) 0%,transparent 70%);
+        animation:glowDrift 5s ease-in-out infinite 2.5s;
+      }
+    `}</style>
+    <div className="splash-bg1" />
+    <div className="splash-bg2" />
+    <div style={{ position:"relative", width:220, height:220, display:"flex", alignItems:"center", justifyContent:"center" }}>
+      <div className="splash-orbit" />
+      <div style={{ position:"absolute", inset:0, borderRadius:"50%", overflow:"hidden", zIndex:2, pointerEvents:"none" }}>
+        <div className="splash-sweep-bar" />
+      </div>
+      <div style={{ width:200, height:200, borderRadius:"50%", overflow:"hidden", position:"relative", zIndex:1 }}>
+        <img className="splash-logo-img" src="/logo-splash.png" alt="Consistent Flow" style={{ width:"100%", height:"100%", objectFit:"cover", animation:"logoPulse 2.6s ease-in-out infinite" }} />
+      </div>
+    </div>
+    <div style={{ marginTop:8, display:"flex", flexDirection:"column", alignItems:"center", gap:5 }}>
+      <div style={{ width:130, height:1.5, background:"rgba(137,245,162,0.1)", borderRadius:2, overflow:"hidden", position:"relative" }}>
+        <div className="splash-scandot" />
+      </div>
+      <div style={{ width:85, height:1.5, background:"rgba(137,245,162,0.1)", borderRadius:2, overflow:"hidden", position:"relative" }}>
+        <div className="splash-scandot splash-scandot-delay" />
+      </div>
+    </div>
+    <div style={{ marginTop:20, textAlign:"center" }}>
+      <p className="splash-brand">CONSISTENT FLOW</p>
+      <p style={{ color:"rgba(137,245,162,0.42)", fontSize:11, letterSpacing:"0.28em", marginTop:6 }}>AI CHARACTER STUDIO</p>
+    </div>
+    <div style={{ display:"flex", gap:9, marginTop:32 }}>
+      {[0,1,2].map(i => (
+        <div key={i} className="splash-dot" style={{ width:7, height:7, borderRadius:"50%", background:"#89f5a2" }} />
+      ))}
+    </div>
+    <div className="splash-bottom-line" />
+  </div>
+)}
+{/* [DNA_PATCH_END] */}
+{/* [DNA_PATCH_START] 已登入 Onboarding 引導（第一次登入，半透明遮罩） */}
+{session && showOnboarding && !onboardingDismissed && (
+  <div style={{
+    position: 'fixed',
+    inset: 0,
+    background: 'rgba(0,0,0,0.7)',
+    zIndex: 500,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  }}>
+    <div style={{
+  background: '#0f2318',
+  border: '1px solid rgba(137,245,162,0.28)',
+  borderRadius: 18,
+  padding: '28px 22px',
+  width: '100%',
+  maxWidth: 360,
+  boxShadow: '0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(137,245,162,0.05)',
+}}>
+      <div style={{ textAlign: 'center', marginBottom: 4 }}>
+        <p style={{ fontSize: 12, color: 'rgba(184,255,200,0.4)' }}>
+          歡迎！你有{' '}
+          <span style={{ color: '#89f5a2', fontWeight: 700 }}>5 點</span>
+          {' '}免費點數
+        </p>
+      </div>
+      <div style={{ fontSize: 16, fontWeight: 900, color: '#d4ffe0', textAlign: 'center', marginBottom: 4, marginTop: 8, letterSpacing: '-0.01em' }}>
+  👋 你想先做什麼？
+</div>
+      <div style={{ fontSize: 11, color: 'rgba(184,255,200,0.4)', textAlign: 'center', marginBottom: 22, lineHeight: 1.6 }}>
+        選擇你的第一個任務，我帶你一步步完成
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {[
+          { icon: '🌟', title: '生成 AI 角色', sub: '選風格 → 設定外觀 → 生成圖片或影片', href: null },
+          { icon: '💬', title: '和 AI 角色聊天', sub: '選角色 → 設定個性 → 開始對話・AI 自拍・說話影片', href: '/characters' },
+          { icon: '📁', title: '上傳照片轉影片', sub: '說話影片・自由動作・套用動作・高精度影片', href: null, openUpload: true },
+        ].map((opt) => (
+          <div
+            key={opt.title}
+              onClick={() => {
+                const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
+const key = `onboarding_done_${session?.user?.email}_${today}`;
+localStorage.setItem(key, '1');
+                setShowOnboarding(false);
+                setOnboardingDismissed(true);
+                if ((opt as any).openUpload) {
+                setShowUploadModal(true);
+              } else if (opt.href) {
+                router.push(opt.href);
+              }
+              }}
+              style={{
+                background: 'rgba(137,245,162,0.06)',
+              border: '1px solid rgba(137,245,162,0.2)',
+              borderRadius: 12,
+              padding: '14px 16px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLDivElement).style.background = 'rgba(137,245,162,0.12)';
+              (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(137,245,162,0.4)';
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLDivElement).style.background = 'rgba(137,245,162,0.06)';
+              (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(137,245,162,0.2)';
+            }}
+          >
+            <span style={{ fontSize: 22, flexShrink: 0 }}>{opt.icon}</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#d4ffe0' }}>{opt.title}</div>
+              <div style={{ fontSize: 10, color: 'rgba(184,255,200,0.45)', marginTop: 2 }}>{opt.sub}</div>
+            </div>
+            <span style={{ color: 'rgba(137,245,162,0.4)', fontSize: 14 }}>→</span>
+          </div>
+        ))}
+      </div>
+      <div style={{ textAlign: 'center', marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {/* [DNA_PATCH_START] 查看完整指南按鈕 */}
+          <div
+            onClick={() => {
+              const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
+const key = `onboarding_done_${session?.user?.email}_${today}`;
+localStorage.setItem(key, '1');
+              setShowOnboarding(false);
+              setOnboardingDismissed(true);
+              window.location.href = '/guide';
+            }}
+            style={{
+              background: 'rgba(137,245,162,0.06)',
+              border: '1px solid rgba(137,245,162,0.2)',
+              borderRadius: 12,
+              padding: '14px 16px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLDivElement).style.background = 'rgba(137,245,162,0.12)';
+              (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(137,245,162,0.4)';
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLDivElement).style.background = 'rgba(137,245,162,0.06)';
+              (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(137,245,162,0.2)';
+            }}
+          >
+            <span style={{ fontSize: 22, flexShrink: 0 }}>📖</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#d4ffe0', textAlign: 'left' }}>查看完整指南</div>
+            <div style={{ fontSize: 10, color: 'rgba(184,255,200,0.45)', marginTop: 2, textAlign: 'left' }}>功能詳解・點數說明・方案對照</div>
+            </div>
+            <span style={{ color: 'rgba(137,245,162,0.4)', fontSize: 14 }}>→</span>
+          </div>
+          {/* [DNA_PATCH_END] */}
+          <span
+            onClick={() => {
+              const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
+const key = `onboarding_done_${session?.user?.email}_${today}`;
+localStorage.setItem(key, '1');
+              setShowOnboarding(false);
+              setOnboardingDismissed(true);
+            }}
+            style={{ fontSize: 10, color: 'rgba(184,255,200,0.25)', cursor: 'pointer' }}
+          >
+            跳過，直接進入 →
+          </span>
+        </div>
+    </div>
+  </div>
+)}
+{/* [DNA_PATCH_END] */}
+    <main className="flex min-h-screen flex-col items-center px-3 sm:px-4 pt-2 pb-4 bg-gradient-to-br from-[#0d2318] via-[#1a3a25] to-[#2d5a3d] relative overflow-y-auto">
+      
+      {/* 背景裝飾光暈 */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-[#89f5a2]/10 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-[#4ade80]/8 rounded-full blur-[100px]" />
+      </div>
+
+            {/* 主卡片 */}
+      <div className="w-full max-w-lg mt-14 sm:mt-16 mb-8 relative z-10">
+        
+{/* [DNA_PATCH_START] 標題區（LOGO 已移至 GlobalHeader，這裡只保留文字） */}
+<div className="text-center mb-6">
+  <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight drop-shadow-lg">
+    AI Character Studio
+  </h1>
+  <p className="text-white/40 text-xs mt-1.5 font-medium tracking-widest uppercase">
+    高精度角色生成平台
+  </p>
+</div>
+{/* [DNA_PATCH_END] */}
+{/* [DNA_PATCH_START] Hero 佔位符 */}
+<div className="w-full mb-6 rounded-2xl overflow-hidden border border-white/10 relative"
+     style={{ aspectRatio: '16/9' }}>
+  <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#091c10] gap-3">
+    <div className="w-12 h-12 rounded-full border border-[#89f5a2]/30 flex items-center justify-center">
+      <div style={{
+        borderLeft: '14px solid #89f5a2',
+        borderTop: '9px solid transparent',
+        borderBottom: '9px solid transparent',
+        marginLeft: '3px',
+        opacity: 0.7,
+      }} />
+    <video src="https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/hero.mp4" autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover" />
+        </div>
+      </div>
+    </div>
+{/* [DNA_PATCH_END] */}
+
+{/* [DNA_PATCH_START] Step 1 模式選擇 */}
+{(() => {
+  const modes = [
+    { key: "image",        label: "🎨 生成角色圖片",   desc: "1點" },
+    { key: "video",        label: "🎬 圖片轉影片",     desc: "Kling 4-6點 / Seedance ?" },
+    { key: "upload",       label: "📁 上傳照片轉影片", desc: "Kling 4-6點 / Seedance ?" },
+{ key: "text2video",   label: "✨ 文字生成影片",   desc: "Kling 4-6點 / Seedance ?" },
+  ] as const;
+  return (
+    <div className="mb-4">
+      <p className="text-white/30 text-[10px] font-bold tracking-widest uppercase mb-2 px-1">
+        選擇模式
+      </p>
+      <div className="grid grid-cols-2 gap-2">
+        {modes.map((m) => {
+          const isPaidOnly = m.key === "text2video" && plan === "free";
+          const isActive   = generationMode === m.key;
+          return (
+            <button
+              key={m.key}
+              type="button"
+              onClick={() => {
+                if (isPaidOnly) {
+                  alert("⚠️ 文字生成影片為付費功能，請先升級方案！\n\n前往儲值頁面升級 👉 /pricing");
+                  return;
+                }
+                setGenerationMode(m.key);
+                if (m.key === "video")  { setShowVideoModal(true);  }
+                if (m.key === "upload") { setShowUploadModal(true); }
+                if (m.key === "text2video") { setShowText2VideoModal(true); }
+              }}
+              className={`relative flex flex-col items-start px-4 py-3 rounded-2xl border text-left
+                transition-all active:scale-95
+                ${isPaidOnly
+                  ? "border-yellow-400/20 bg-yellow-400/5 cursor-pointer"
+                  : isActive
+                    ? "border-[#89f5a2]/60 bg-[#89f5a2]/10 shadow-sm shadow-[#89f5a2]/10"
+                    : "border-white/10 bg-white/4 hover:border-[#89f5a2]/30 hover:bg-white/8"
+                }`}
+            >
+              <span className={`text-sm font-bold leading-tight
+                ${isPaidOnly ? "text-yellow-300/70" : isActive ? "text-[#89f5a2]" : "text-white/70"}`}>
+                {m.label}
+              </span>
+              <span className={`text-[10px] mt-0.5
+                ${isPaidOnly ? "text-yellow-400/50" : isActive ? "text-[#89f5a2]/60" : "text-white/30"}`}>
+                {isPaidOnly ? "💎 付費方案限定" : m.desc}
+              </span>
+              {isPaidOnly && (
+                <span className="absolute top-2 right-2 text-[9px] text-yellow-400/70 font-black">升級</span>
+              )}
+              {isActive && !isPaidOnly && (
+                <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#89f5a2]" />
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+})()}
+{/* [DNA_PATCH_END] */}
+
+{/* [DNA_PATCH_START] 輸入卡片 Steps 2-6 手風琴 */}
+        <div className="bg-black/25 backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden">
+          <form onSubmit={handleSubmit} className="p-4 space-y-2">
+
+            {/* 鎖定角色狀態列 */}
+            {lockedCharacterUrl && (
+              <div className="flex items-center gap-3 px-4 py-3 bg-[#89f5a2]/10 border border-[#89f5a2]/30 rounded-2xl mb-2">
+                <img src={lockedCharacterUrl} className="w-10 h-10 rounded-xl object-cover border border-[#89f5a2]/40 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[#89f5a2] text-xs font-black">🔒 角色鎖定中</p>
+                  <p className="text-white/40 text-xs mt-0.5">生成將套用此角色（-1點）</p>
+                </div>
+              </div>
+            )}
+
+            {/* Step 2：角色人設 */}
+            {(() => {
+              const isOpen = activeStep === 2;
+              const summary = [selectedStyle, selectedPersona].filter(Boolean);
+              return (
+                <div className="border border-white/8 rounded-2xl overflow-hidden">
+                  <button type="button" onClick={() => setActiveStep(isOpen ? 0 : 2)}
+                    className="w-full flex items-center gap-3 px-4 py-3 bg-white/4 hover:bg-white/7 transition-all">
+                    <span className="text-[10px] font-black text-white/30 w-12 flex-shrink-0">STEP 1</span>
+<span className="text-sm font-bold text-white/80 flex-1 text-left">角色風格</span>
+                    {summary.length > 0 && !isOpen && (
+                      <span className="text-[10px] text-[#89f5a2]/70 truncate max-w-[120px]">
+                        {summary.map(v => {
+                          const styleMap: Record<string,string> = {
+                            "anime style, cel shading, vibrant colors": "動漫",
+                            "photorealistic, hyperdetailed, cinematic lighting": "寫實",
+                            "oil painting, classical art style, textured brushstrokes": "油畫",
+                            "game character, 3D render, Unreal Engine style": "遊戲",
+                            "pencil sketch, black and white illustration, detailed lineart": "素描",
+                          };
+                          const personaMap: Record<string,string> = {
+                            "Taiwanese girl, natural look, friendly smile, casual outfit": "台灣女孩",
+                            "high fashion model, cold expression, sharp features, editorial look": "冷豔名模",
+                            "cute student girl, innocent expression, school uniform, soft lighting": "清純學生",
+                            "office lady, professional attire, confident look, city background": "都市OL",
+                            "mysterious witch, dark fantasy, glowing eyes, dramatic lighting": "神秘女巫",
+                            "handsome Korean man, clean look, casual fashion, soft smile": "韓系男生",
+                            "rugged masculine man, strong jawline, serious expression, cinematic": "硬漢型男",
+                            "armored knight, heroic pose, fantasy style, epic lighting": "帥氣騎士",
+                            "cyberpunk character, neon lights, futuristic outfit, urban night": "賽博龐克",
+                            "fantasy elf, pointed ears, ethereal beauty, forest background": "奇幻精靈",
+                          };
+                          return styleMap[v] || personaMap[v] || v;
+                        }).join(" · ")}
+                      </span>
+                    )}
+                    <span className="text-white/30 text-xs ml-1">{isOpen ? "▲" : "▼"}</span>
+                  </button>
+                  {isOpen && (
+                    <div className="px-4 pb-4 pt-2 space-y-3 bg-black/20">
+                      {/* 風格 */}
+                      <div>
+                        <p className="text-white/30 text-[10px] font-bold tracking-wider uppercase mb-2">角色風格</p>
+                        <div className="flex gap-2 flex-wrap">
+                          {[
+                            { label: "🎨 動漫", value: "anime style, cel shading, vibrant colors" },
+                            { label: "📸 寫實", value: "photorealistic, hyperdetailed, cinematic lighting" },
+                            { label: "🖼️ 油畫", value: "oil painting, classical art style, textured brushstrokes" },
+                            { label: "🎮 遊戲", value: "game character, 3D render, Unreal Engine style" },
+                            { label: "✏️ 素描", value: "pencil sketch, black and white illustration, detailed lineart" },
+                          ].map((s) => (
+                            <button key={s.value} type="button"
+                              onClick={() => setSelectedStyle(selectedStyle === s.value ? "" : s.value)}
+                              className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                                selectedStyle === s.value
+                                  ? "bg-[#89f5a2] text-[#0d2318] border-[#89f5a2]"
+                                  : "bg-white/5 text-white/50 border-white/10 hover:border-[#89f5a2]/40"
+                              }`}>{s.label}</button>
+                          ))}
+                        </div>
+                      </div>
+                      {/* 人設 */}
+                      <div>
+                        <p className="text-white/30 text-[10px] font-bold tracking-wider uppercase mb-2">✨ 人設快速標籤</p>
+                        <div className="flex gap-2 flex-wrap">
+                          {[
+                            { label: "🇹🇼 台灣女孩", value: "Taiwanese girl, natural look, friendly smile, casual outfit" },
+                            { label: "👠 冷豔名模", value: "high fashion model, cold expression, sharp features, editorial look" },
+                            { label: "🎀 清純學生", value: "cute student girl, innocent expression, school uniform, soft lighting" },
+                            { label: "💼 都市OL", value: "office lady, professional attire, confident look, city background" },
+                            { label: "🔮 神秘女巫", value: "mysterious witch, dark fantasy, glowing eyes, dramatic lighting" },
+                            { label: "🇰🇷 韓系男生", value: "handsome Korean man, clean look, casual fashion, soft smile" },
+                            { label: "💪 硬漢型男", value: "rugged masculine man, strong jawline, serious expression, cinematic" },
+                            { label: "⚔️ 帥氣騎士", value: "armored knight, heroic pose, fantasy style, epic lighting" },
+                            { label: "🌆 賽博龐克", value: "cyberpunk character, neon lights, futuristic outfit, urban night" },
+                            { label: "🧝 奇幻精靈", value: "fantasy elf, pointed ears, ethereal beauty, forest background" },
+                          ].map((tag) => (
+                            <button key={tag.value} type="button"
+                              onClick={() => {
+                                setSelectedPersona(selectedPersona === tag.value ? "" : tag.value);
+                                setPrompt(selectedPersona === tag.value ? "" : tag.value);
+                                setCustomPersona("");
+                                setTranslatedPrompt(null); setUseTranslated(false);
+                              }}
+                              className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                                selectedPersona === tag.value
+                                  ? "bg-yellow-400/30 text-yellow-300 border-yellow-400/60"
+                                  : "bg-white/5 text-white/50 border-white/10 hover:border-yellow-400/40"
+                              }`}>{tag.label}</button>
+                          ))}
+                        </div>
+                        {!selectedPersona && (
+                        <div className="mt-2 space-y-1">
+                          <div className="relative">
+                            <textarea
+  rows={2}
+  value={customPersona}
+  onChange={(e) => { setCustomPersona(e.target.value); setCustomPersonaTranslated(null); }}
+  placeholder="或自行輸入角色描述...可中文輸入！輸入後點「翻譯」按鈕幫你翻譯 🌐"
+  className="w-full px-3 py-2 pr-16 rounded-xl bg-white/5 border border-white/10 text-white text-xs placeholder-white/25 focus:outline-none focus:border-yellow-400/40 resize-none leading-relaxed"
+/>
+                            {hasChinese(customPersona) && !customPersonaTranslated && (
+                              <button type="button"
+                                onClick={async () => {
+                                  setIsCustomPersonaTranslating(true);
+                                  try {
+                                    const res = await fetch("/api/translate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: customPersona }) });
+                                    const data = await res.json();
+                                    if (data.translated) setCustomPersonaTranslated(data.translated);
+                                  } finally { setIsCustomPersonaTranslating(false); }
+                                }}
+                                disabled={isCustomPersonaTranslating}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 bg-yellow-400/20 border border-yellow-400/40 text-yellow-300 text-[10px] rounded-lg font-bold disabled:opacity-40">
+                                {isCustomPersonaTranslating ? "翻譯中..." : "🌐 翻譯"}
+                              </button>
+                            )}
+                          </div>
+                          {customPersonaTranslated && (
+                            <div className="flex gap-2 items-center px-2 py-1.5 bg-yellow-400/10 border border-yellow-400/20 rounded-xl">
+                              <p className="text-yellow-300 text-[10px] flex-1">{customPersonaTranslated}</p>
+                              <button type="button" onClick={() => { setCustomPersona(customPersonaTranslated); setCustomPersonaTranslated(null); }}
+                                className="text-[10px] px-2 py-0.5 bg-yellow-400/30 text-yellow-300 rounded-lg font-bold flex-shrink-0">採用</button>
+                              <button type="button" onClick={() => setCustomPersonaTranslated(null)}
+                                className="text-[10px] text-white/30 flex-shrink-0">略過</button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      </div>
+                      {/* 圖片比例 */}
+<div>
+  <p className="text-white/30 text-[10px] font-bold tracking-wider uppercase mb-2">圖片比例</p>
+  <div className="flex gap-2 flex-wrap">
+    {[
+      { label: "1:1", value: "1:1" },
+      { label: "16:9", value: "16:9" },
+      { label: "9:16", value: "9:16" },
+      { label: "4:3", value: "4:3" },
+      { label: "3:4", value: "3:4" },
+    ].map((r) => (
+      <button key={r.value} type="button"
+        onClick={() => setImageRatio(r.value)}
+        className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+          imageRatio === r.value
+            ? "bg-[#89f5a2] text-[#0d2318] border-[#89f5a2]"
+            : "bg-white/5 text-white/50 border-white/10 hover:border-[#89f5a2]/40"
+        }`}>{r.label}</button>
+    ))}
+  </div>
+  <p className="text-white/20 text-[10px] mt-1.5">選好比例後生成，之後轉影片就不會變形</p>
+</div>
+                      <button type="button" onClick={() => setActiveStep(25)}
+  className="w-full py-2 text-xs text-white/40 hover:text-white/60 transition-all">
+  下一步 →
+</button>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+{/* STEP 2：外貌特徵（選填，存入 description，不進 prompt） */}
+{(() => {
+  const isOpen = activeStep === 25;
+  const summary = [selectedHair, selectedEye, selectedBody].filter(Boolean);
+  return (
+    <div className="border border-white/8 rounded-2xl overflow-hidden">
+      <button type="button" onClick={() => setActiveStep(isOpen ? 0 : 25)}
+        className="w-full flex items-center gap-3 px-4 py-3 bg-white/4 hover:bg-white/7 transition-all">
+        <span className="text-[10px] font-black text-white/30 w-12 flex-shrink-0">STEP 2</span>
+        <span className="text-sm font-bold text-white/80 flex-1 text-left">外貌特徵</span>
+        {summary.length > 0 && !isOpen && (
+          <span className="text-[10px] text-pink-300/70 truncate max-w-[120px]">{summary.join(" · ")}</span>
+        )}
+        <span className="text-white/20 text-[10px] mr-1">選填</span>
+        <span className="text-white/30 text-xs ml-1">{isOpen ? "▲" : "▼"}</span>
+      </button>
+      {isOpen && (
+        <div className="px-4 pb-4 pt-2 space-y-3 bg-black/20">
+          {/* 髮色 */}
+          <div>
+            <p className="text-white/30 text-[10px] font-bold tracking-wider uppercase mb-2">髮色</p>
+            <div className="flex gap-2 flex-wrap">
+              {[
+                { label: "🖤 黑髮", value: "黑髮" },
+                { label: "🤎 棕髮", value: "棕髮" },
+                { label: "💛 金髮", value: "金髮" },
+                { label: "🤍 銀白髮", value: "銀白髮" },
+                { label: "❤️ 紅髮", value: "紅髮" },
+              ].map((item) => (
+                <button key={item.value} type="button"
+                  onClick={() => setSelectedHair(selectedHair === item.value ? "" : item.value)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                    selectedHair === item.value
+                      ? "bg-pink-400/30 text-pink-300 border-pink-400/60"
+                      : "bg-white/5 text-white/50 border-white/10 hover:border-pink-400/40"
+                  }`}>{item.label}</button>
+              ))}
+            </div>
+          </div>
+          {/* 眼睛 */}
+          <div>
+            <p className="text-white/30 text-[10px] font-bold tracking-wider uppercase mb-2">眼睛</p>
+            <div className="flex gap-2 flex-wrap">
+              {[
+                { label: "⚫ 黑眸", value: "黑眸" },
+                { label: "🔵 藍眸", value: "藍眸" },
+                { label: "🟢 綠眸", value: "綠眸" },
+                { label: "✨ 異色瞳", value: "異色瞳" },
+              ].map((item) => (
+                <button key={item.value} type="button"
+                  onClick={() => setSelectedEye(selectedEye === item.value ? "" : item.value)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                    selectedEye === item.value
+                      ? "bg-pink-400/30 text-pink-300 border-pink-400/60"
+                      : "bg-white/5 text-white/50 border-white/10 hover:border-pink-400/40"
+                  }`}>{item.label}</button>
+              ))}
+            </div>
+          </div>
+          {/* 身材 */}
+          <div>
+            <p className="text-white/30 text-[10px] font-bold tracking-wider uppercase mb-2">身材</p>
+            <div className="flex gap-2 flex-wrap">
+              {[
+                { label: "🌸 嬌小", value: "嬌小" },
+                { label: "🦋 高挑", value: "高挑" },
+                { label: "💪 健壯", value: "健壯" },
+                { label: "🍃 纖細", value: "纖細" },
+              ].map((item) => (
+                <button key={item.value} type="button"
+                  onClick={() => setSelectedBody(selectedBody === item.value ? "" : item.value)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                    selectedBody === item.value
+                      ? "bg-pink-400/30 text-pink-300 border-pink-400/60"
+                      : "bg-white/5 text-white/50 border-white/10 hover:border-pink-400/40"
+                  }`}>{item.label}</button>
+              ))}
+            </div>
+          </div>
+          {!selectedHair && !selectedEye && !selectedBody && (
+            <div className="space-y-1">
+              <p className="text-white/30 text-[10px] font-bold tracking-wider uppercase mb-2">自訂外貌</p>
+              <div className="relative">
+                <textarea
+                  rows={2}
+                  value={customAppearance}
+                  onChange={(e) => { setCustomAppearance(e.target.value); setCustomAppearanceTranslated(null); }}
+                  placeholder="或自行描述外貌特徵...可中文輸入！輸入後點「翻譯」按鈕幫你翻譯 🌐"
+                  className="w-full px-3 py-2 pr-16 rounded-xl bg-white/5 border border-white/10 text-white text-xs placeholder-white/25 focus:outline-none focus:border-pink-400/40 resize-none leading-relaxed"
+                />
+                {hasChinese(customAppearance) && !customAppearanceTranslated && (
+                  <button type="button"
+                    onClick={async () => {
+                      setIsCustomAppearanceTranslating(true);
+                      try {
+                        const res = await fetch("/api/translate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: customAppearance }) });
+                        const data = await res.json();
+                        if (data.translated) setCustomAppearanceTranslated(data.translated);
+                      } finally { setIsCustomAppearanceTranslating(false); }
+                    }}
+                    disabled={isCustomAppearanceTranslating}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 bg-pink-400/20 border border-pink-400/40 text-pink-300 text-[10px] rounded-lg font-bold disabled:opacity-40">
+                    {isCustomAppearanceTranslating ? "翻譯中..." : "🌐 翻譯"}
+                  </button>
+                )}
+              </div>
+              {customAppearanceTranslated && (
+                <div className="flex gap-2 items-center px-2 py-1.5 bg-pink-400/10 border border-pink-400/20 rounded-xl">
+                  <p className="text-pink-300 text-[10px] flex-1">{customAppearanceTranslated}</p>
+                  <button type="button" onClick={() => { setCustomAppearance(customAppearanceTranslated); setCustomAppearanceTranslated(null); }}
+                    className="text-[10px] px-2 py-0.5 bg-pink-400/30 text-pink-300 rounded-lg font-bold flex-shrink-0">採用</button>
+                  <button type="button" onClick={() => setCustomAppearanceTranslated(null)}
+                    className="text-[10px] text-white/30 flex-shrink-0">略過</button>
+                </div>
+              )}
+            </div>
+          )}
+          <p className="text-white/20 text-[10px]">此設定存入角色資料，不影響生成 prompt</p>
+          <button type="button" onClick={() => setActiveStep(3)}
+            className="w-full py-2 text-xs text-white/40 hover:text-white/60 transition-all">
+            下一步 →
+          </button>
+        </div>
+      )}
+    </div>
+  );
+})()}
+            {/* Step 3：個性職業 */}
+            {(() => {
+              const isOpen = activeStep === 3;
+              const summary = [selectedPersonality, selectedJob].filter(Boolean);
+              return (
+                <div className="border border-white/8 rounded-2xl overflow-hidden">
+                  <button type="button" onClick={() => setActiveStep(isOpen ? 0 : 3)}
+                    className="w-full flex items-center gap-3 px-4 py-3 bg-white/4 hover:bg-white/7 transition-all">
+                    <span className="text-[10px] font-black text-white/30 w-12 flex-shrink-0">STEP 3</span>
+<span className="text-sm font-bold text-white/80 flex-1 text-left">個性職業</span>
+                    {summary.length > 0 && !isOpen && (
+                      <span className="text-[10px] text-purple-300/70 truncate max-w-[120px]">{summary.join(" · ")}</span>
+                    )}
+                    <span className="text-white/30 text-xs ml-1">{isOpen ? "▲" : "▼"}</span>
+                  </button>
+                  {isOpen && (
+                    <div className="px-4 pb-4 pt-2 space-y-3 bg-black/20">
+                      <div>
+                        <p className="text-white/30 text-[10px] font-bold tracking-wider uppercase mb-2">個性</p>
+                        <div className="flex gap-2 flex-wrap">
+                          {["開朗活潑","冷靜理智","神秘感","溫柔體貼","霸道強勢","天真爛漫","毒舌傲嬌"].map((p) => (
+                            <button key={p} type="button"
+                              onClick={() => { setSelectedPersonality(selectedPersonality === p ? "" : p); setCustomPersonality(""); }}
+                              className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                                selectedPersonality === p
+                                  ? "bg-purple-400/30 text-purple-300 border-purple-400/60"
+                                  : "bg-white/5 text-white/50 border-white/10 hover:border-purple-400/40"
+                              }`}>{p}</button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-white/30 text-[10px] font-bold tracking-wider uppercase mb-2">職業</p>
+                        <div className="flex gap-2 flex-wrap">
+                          {["醫生","教師","偵探","魔法師","運動員","護士","學生","商人","武士","歌手"].map((j) => (
+                            <button key={j} type="button"
+                              onClick={() => { setSelectedJob(selectedJob === j ? "" : j); setCustomPersonality(""); }}
+                              className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                                selectedJob === j
+                                  ? "bg-purple-400/30 text-purple-300 border-purple-400/60"
+                                  : "bg-white/5 text-white/50 border-white/10 hover:border-purple-400/40"
+                              }`}>{j}</button>
+                          ))}
+                        </div>
+                      </div>
+                      {!selectedPersonality && !selectedJob && (
+                        <div className="space-y-1">
+                          <div className="relative">
+                            <textarea
+  rows={2}
+  value={customPersonality}
+  onChange={(e) => { setCustomPersonality(e.target.value); setCustomPersonalityTranslated(null); }}
+  placeholder="或自行輸入個性描述...可中文輸入！輸入後點「翻譯」按鈕幫你翻譯 🌐"
+  className="w-full px-3 py-2 pr-16 rounded-xl bg-white/5 border border-white/10 text-white text-xs placeholder-white/25 focus:outline-none focus:border-purple-400/40 resize-none leading-relaxed"
+/>
+                            {hasChinese(customPersonality) && !customPersonalityTranslated && (
+                              <button type="button"
+                                onClick={async () => {
+                                  setIsCustomPersonalityTranslating(true);
+                                  try {
+                                    const res = await fetch("/api/translate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: customPersonality }) });
+                                    const data = await res.json();
+                                    if (data.translated) setCustomPersonalityTranslated(data.translated);
+                                  } finally { setIsCustomPersonalityTranslating(false); }
+                                }}
+                                disabled={isCustomPersonalityTranslating}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 bg-purple-400/20 border border-purple-400/40 text-purple-300 text-[10px] rounded-lg font-bold disabled:opacity-40">
+                                {isCustomPersonalityTranslating ? "翻譯中..." : "🌐 翻譯"}
+                              </button>
+                            )}
+                          </div>
+                          {customPersonalityTranslated && (
+                            <div className="flex gap-2 items-center px-2 py-1.5 bg-purple-400/10 border border-purple-400/20 rounded-xl">
+                              <p className="text-purple-300 text-[10px] flex-1">{customPersonalityTranslated}</p>
+                              <button type="button" onClick={() => { setCustomPersonality(customPersonalityTranslated); setCustomPersonalityTranslated(null); }}
+                                className="text-[10px] px-2 py-0.5 bg-purple-400/30 text-purple-300 rounded-lg font-bold flex-shrink-0">採用</button>
+                              <button type="button" onClick={() => setCustomPersonalityTranslated(null)}
+                                className="text-[10px] text-white/30 flex-shrink-0">略過</button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      <p className="text-white/20 text-[10px]">此設定存入角色資料，不影響生成 prompt</p>
+                      <button type="button" onClick={() => setActiveStep(4)}
+                        className="w-full py-2 text-xs text-white/40 hover:text-white/60 transition-all">
+                        下一步 →
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Step 4：場景選擇 */}
+            {(() => {
+              const isOpen = activeStep === 4;
+              const sceneLabels: Record<string,string> = {
+                "urban night cityscape, neon lights, busy street": "城市夜景",
+                "dense jungle, tropical forest, sunlight through leaves": "叢林",
+                "abandoned ruins, overgrown, dramatic lighting": "廢墟",
+                "snowy landscape, winter, soft light": "雪地",
+                "cozy cafe interior, warm lighting, bokeh": "咖啡廳",
+                "ancient temple, mystical atmosphere, fog": "神殿",
+                "beach, ocean, golden hour sunlight": "海邊",
+                "cyberpunk city, rain, holographic signs": "賽博城市",
+              };
+              return (
+                <div className="border border-white/8 rounded-2xl overflow-hidden">
+                  <button type="button" onClick={() => setActiveStep(isOpen ? 0 : 4)}
+                    className="w-full flex items-center gap-3 px-4 py-3 bg-white/4 hover:bg-white/7 transition-all">
+                    <span className="text-[10px] font-black text-white/30 w-12 flex-shrink-0">STEP 4</span>
+                    <span className="text-sm font-bold text-white/80 flex-1 text-left">場景選擇</span>
+                    {selectedScene && !isOpen && (
+                      <span className="text-[10px] text-blue-300/70">{sceneLabels[selectedScene] || selectedScene}</span>
+                    )}
+                    <span className="text-white/30 text-xs ml-1">{isOpen ? "▲" : "▼"}</span>
+                  </button>
+                  {isOpen && (
+                    <div className="px-4 pb-4 pt-2 bg-black/20">
+                      <div className="flex gap-2 flex-wrap">
+                        {Object.entries(sceneLabels).map(([value, label]) => (
+                          <button key={value} type="button"
+                            onClick={() => { setSelectedScene(selectedScene === value ? "" : value); setCustomScene(""); }}
+                            className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                              selectedScene === value
+                                ? "bg-blue-400/30 text-blue-300 border-blue-400/60"
+                                : "bg-white/5 text-white/50 border-white/10 hover:border-blue-400/40"
+                            }`}>{label}</button>
+                        ))}
+                      </div>
+                      {!selectedScene && (
+                        <div className="mt-2 space-y-1">
+                          <div className="relative">
+                            <textarea
+  rows={2}
+  value={customScene}
+  onChange={(e) => { setCustomScene(e.target.value); setCustomSceneTranslated(null); }}
+  placeholder="或自行輸入場景描述...可中文輸入！輸入後點「翻譯」按鈕幫你翻譯 🌐"
+  className="w-full px-3 py-2 pr-16 rounded-xl bg-white/5 border border-white/10 text-white text-xs placeholder-white/25 focus:outline-none focus:border-blue-400/40 resize-none leading-relaxed"
+/>
+                            {hasChinese(customScene) && !customSceneTranslated && (
+                              <button type="button"
+                                onClick={async () => {
+                                  setIsCustomSceneTranslating(true);
+                                  try {
+                                    const res = await fetch("/api/translate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: customScene }) });
+                                    const data = await res.json();
+                                    if (data.translated) setCustomSceneTranslated(data.translated);
+                                  } finally { setIsCustomSceneTranslating(false); }
+                                }}
+                                disabled={isCustomSceneTranslating}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 bg-blue-400/20 border border-blue-400/40 text-blue-300 text-[10px] rounded-lg font-bold disabled:opacity-40">
+                                {isCustomSceneTranslating ? "翻譯中..." : "🌐 翻譯"}
+                              </button>
+                            )}
+                          </div>
+                          {customSceneTranslated && (
+                            <div className="flex gap-2 items-center px-2 py-1.5 bg-blue-400/10 border border-blue-400/20 rounded-xl">
+                              <p className="text-blue-300 text-[10px] flex-1">{customSceneTranslated}</p>
+                              <button type="button" onClick={() => { setCustomScene(customSceneTranslated); setCustomSceneTranslated(null); }}
+                                className="text-[10px] px-2 py-0.5 bg-blue-400/30 text-blue-300 rounded-lg font-bold flex-shrink-0">採用</button>
+                              <button type="button" onClick={() => setCustomSceneTranslated(null)}
+                                className="text-[10px] text-white/30 flex-shrink-0">略過</button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      <button type="button" onClick={() => setActiveStep(generationMode === "image" ? 6 : 5)}
+                        className="w-full py-2 mt-3 text-xs text-white/40 hover:text-white/60 transition-all">
+                        下一步 →
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* STEP 5：鏡頭角度（永遠顯示，圖片模式灰暗不可點） */}
+            {(() => {
+              const isLocked = generationMode === "image";
+              const isOpen = activeStep === 5 && !isLocked;
+              const shotLabels: Record<string,string> = {
+                "close-up shot, detailed face": "特寫",
+                "full body shot": "全身鏡",
+                "low angle shot, looking up": "從下往上",
+                "orbiting camera, 360 around subject": "環繞鏡頭",
+                "slow push in, camera moving forward": "慢速推近",
+              };
+              return (
+                <div className={`border rounded-2xl overflow-hidden transition-all ${
+                  isLocked ? "border-white/4 opacity-40" : "border-white/8"
+                }`}>
+                  <button
+                    type="button"
+                    disabled={isLocked}
+                    onClick={() => !isLocked && setActiveStep(isOpen ? 0 : 5)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 transition-all ${
+                      isLocked ? "bg-white/2 cursor-not-allowed" : "bg-white/4 hover:bg-white/7"
+                    }`}>
+                    <span className="text-[10px] font-black text-white/30 w-12 flex-shrink-0">STEP 5</span>
+                    <span className={`text-sm font-bold flex-1 text-left ${isLocked ? "text-white/30" : "text-white/80"}`}>鏡頭角度</span>
+                    {!isLocked && selectedShot && !isOpen && (
+                      <span className="text-[10px] text-amber-300/70">{shotLabels[selectedShot] || selectedShot}</span>
+                    )}
+                    <span className="text-white/25 text-[10px] mr-1">
+                      {isLocked ? "🔒 選影片模式才開放" : "影片限定"}
+                    </span>
+                    {!isLocked && <span className="text-white/30 text-xs">{isOpen ? "▲" : "▼"}</span>}
+                  </button>
+                  {isOpen && (
+                    <div className="px-4 pb-4 pt-2 bg-black/20">
+                      <div className="flex gap-2 flex-wrap">
+                        {Object.entries(shotLabels).map(([value, label]) => (
+                          <button key={value} type="button"
+                            onClick={() => setSelectedShot(selectedShot === value ? "" : value)}
+                            className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                              selectedShot === value
+                                ? "bg-amber-400/30 text-amber-300 border-amber-400/60"
+                                : "bg-white/5 text-white/50 border-white/10 hover:border-amber-400/40"
+                            }`}>{label}</button>
+                        ))}
+                      </div>
+                      <button type="button" onClick={() => setActiveStep(6)}
+                        className="w-full py-2 mt-3 text-xs text-white/40 hover:text-white/60 transition-all">
+                        下一步 →
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Step 6：自由輸入 */}
+            {(() => {
+              const isOpen = activeStep === 6;
+              return (
+                <div id="step6-section" className="border border-white/8 rounded-2xl overflow-hidden">
+                  <button type="button" onClick={() => setActiveStep(isOpen ? 0 : 6)}
+                    className="w-full flex items-center gap-3 px-4 py-3 bg-white/4 hover:bg-white/7 transition-all">
+                    <span className="text-[10px] font-black text-white/30 w-12 flex-shrink-0">STEP 6</span>
+                    <span className="text-sm font-bold text-white/80 flex-1 text-left">補充細節</span>
+                    <span className="text-white/20 text-[10px] mr-1">選填</span>
+                    <span className="text-white/30 text-xs">{isOpen ? "▲" : "▼"}</span>
+                  </button>
+                  {isOpen && (
+                    <div className="px-4 pb-4 pt-2 space-y-2 bg-black/20">
+                      {/* 已選標籤摘要 */}
+                      {[selectedStyle, selectedPersona, selectedScene, selectedShot].filter(Boolean).length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 p-2 bg-white/4 rounded-xl">
+                          {[
+                            { v: selectedStyle, color: "text-[#89f5a2]/70" },
+                            { v: selectedPersona, color: "text-yellow-300/70" },
+                            { v: selectedScene, color: "text-blue-300/70" },
+                            { v: selectedShot, color: "text-amber-300/70" },
+                          ].filter(x => x.v).map((x, i) => (
+                            <span key={i} className={`text-[10px] ${x.color}`}>#{x.v.split(",")[0]}</span>
+                          ))}
+                        </div>
+                      )}
+                      <div className="relative">
+                        <textarea
+                          value={prompt}
+                          onChange={(e) => { setPrompt(e.target.value); setTranslatedPrompt(null); setUseTranslated(false); }}
+                          placeholder="補充細節（選填，中文也可以！輸入後點「翻譯成英文」按鈕，我們幫你自動翻譯 🌐）：服裝顏色、表情、動作...&#10;標籤已幫你建立骨架，這裡補充細節"
+                          className="w-full p-3 rounded-xl bg-white/8 border border-white/10 text-white placeholder-white/25 focus:outline-none focus:ring-2 focus:ring-[#89f5a2]/40 text-sm resize-none transition-all"
+                          rows={3}
+                        />
+                        <div className="absolute bottom-2 right-2 flex items-center gap-2">
+                          {hasChinese(prompt) && !translatedPrompt && (
+                            <button type="button" onClick={handleTranslate} disabled={isTranslating}
+                              className="px-2 py-1 bg-[#89f5a2]/20 border border-[#89f5a2]/40 text-[#89f5a2] text-xs rounded-lg font-bold hover:bg-[#89f5a2]/30 disabled:opacity-40">
+                              {isTranslating ? "翻譯中..." : "🌐 翻譯"}
+                            </button>
+                          )}
+                          <span className="text-white/20 text-xs">{prompt.length}/500</span>
+                        </div>
+                      </div>
+                      {translatedPrompt && (
+                        <div className="bg-[#89f5a2]/10 border border-[#89f5a2]/30 rounded-xl p-3 space-y-2">
+                          <p className="text-white/40 text-xs font-bold uppercase">🌐 翻譯結果</p>
+                          <p className="text-[#89f5a2] text-sm font-medium">{translatedPrompt}</p>
+                          <div className="flex gap-2">
+                            <button type="button" onClick={() => { setPrompt(translatedPrompt); setTranslatedPrompt(null); setUseTranslated(true); }}
+                              className="flex-1 py-1.5 bg-[#89f5a2] text-[#0d2318] rounded-lg text-xs font-black hover:opacity-90">✅ 採用翻譯</button>
+                            <button type="button" onClick={() => { setTranslatedPrompt(null); setUseTranslated(false); }}
+                              className="px-3 py-1.5 bg-white/5 border border-white/10 text-white/40 rounded-lg text-xs font-bold">略過</button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* 生成按鈕 */}
+            <button
+              type="submit"
+              disabled={loading || (credits !== null && credits <= 0)}
+              className="w-full py-4 bg-gradient-to-r from-[#89f5a2] to-[#4ade80] hover:from-[#72e88d] hover:to-[#3ccf6e] text-[#0d2318] rounded-2xl font-black text-lg shadow-lg shadow-[#89f5a2]/25 transition-all transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none"
+            >
+              {loading && genType === "image" ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="w-4 h-4 border-2 border-[#0d2318]/40 border-t-[#0d2318] rounded-full animate-spin inline-block" />
+                  正在構思角色...
+                </span>
+              ) : (
+                <span className="flex items-center justify-center gap-2">
+                  ✨ 開始生成角色
+                  <span className="text-[#0d2318]/60 text-sm font-bold">1 點</span>
+                </span>
+              )}
+            </button>
+
+          </form>
+        </div>
+        {/* [DNA_PATCH_END] */}
+
+{/* [DNA_PATCH_START] retry 提示訊息 */}
+{retryMessage && (
+  <div className="w-full max-w-lg relative z-10">
+    <div className="px-4 py-3 bg-yellow-400/10 border border-yellow-400/30 rounded-2xl text-yellow-300 text-sm text-center font-bold">
+      ⚡ {retryMessage}
+    </div>
+  </div>
+)}
+{/* [DNA_PATCH_END] */}
+        {/* 錯誤訊息 */}
+        {error && (
+          <div className="mt-4 p-4 bg-red-500/20 border border-red-500/30 text-red-300 rounded-2xl text-center text-sm font-bold backdrop-blur-sm">
+            ⚠️ {error}
+          </div>
+        )}
+
+        {/* 進度條 */}
+        {loading && (
+          <div ref={progressRef} className="mt-4 p-5 bg-black/25 backdrop-blur-xl rounded-2xl border border-white/10">
+            <div className="flex justify-between items-center mb-3">
+              <span className="text-[#89f5a2] text-xs font-black tracking-widest uppercase">
+                {genType === "image" ? "🎨 Image Rendering" : "🎥 Video Animating"}
+              </span>
+              <span className="text-white/60 text-xs font-mono">
+  {genType === "video" && seconds >= 120 
+    ? "🔄 影片生成中，等待時間較長，請保持頁面開啟 😊" 
+    : `剩餘約 ${Math.max((genType === "video" ? 120 : 30) - seconds, 0)} 秒`}
+</span>
+            </div>
+            <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-[#89f5a2] to-[#4ade80] rounded-full transition-all duration-1000"
+                style={{ width: `${Math.min((seconds / (genType === "video" ? 120 : 30)) * 100, 95)}%` }}
+              />
+            </div>
+            <p className="text-white/25 text-[10px] text-center mt-2">
+              {genType === "video" 
+  ? seconds >= 120 
+    ? "⚠️ 目前影片需求較多，正在排隊中，請繼續耐心等候，請勿關閉頁面" 
+    : "影片生成約需 60～120 秒，請耐心等候"
+  : genType === "image" && seconds >= 30 ? "⚠️ 仍在處理中，請耐心等候，勿關閉頁面" : "圖片生成約需 15～30 秒"}
+            </p>
+          </div>
+        )}
+{/* Step 1 鎖臉圖固定顯示區 */}
+        {faceLockImageUrl && (
+          <div className="mt-4 bg-black/25 backdrop-blur-xl rounded-3xl border border-white/10 overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5">
+              <div className="w-2 h-2 bg-[#89f5a2] rounded-full" />
+              <span className="text-white/50 text-xs font-bold uppercase tracking-widest">鎖臉圖（Step 1）</span>
+              <button onClick={() => setFaceLockImageUrl(null)} className="ml-auto text-white/20 hover:text-white/50 text-xs">✕</button>
+            </div>
+            <div className="p-3">
+              <img src={faceLockImageUrl} alt="Face Lock" className="rounded-2xl w-full shadow-xl" />
+              <button
+                onClick={() => { setTtsText(""); setTtsAudio(null); setShowTtsModal(true); }}
+                className="w-full mt-2 py-2.5 rounded-xl bg-gradient-to-r from-purple-500/20 to-blue-500/20 border border-purple-500/30 text-purple-300 text-xs font-black hover:from-purple-500/30 transition-all"
+              >🎙️ 讓她說話</button>
+            </div>
+          </div>
+        )}
+        {/* 結果顯示區 */}
+        {prediction?.output && (
+          <div className="mt-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-black/25 backdrop-blur-xl rounded-3xl border border-white/10 overflow-hidden shadow-2xl">
+              
+              {/* 標籤列 */}
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5">
+                <div className="w-2 h-2 bg-[#89f5a2] rounded-full" />
+                <span className="text-white/50 text-xs font-bold uppercase tracking-widest">
+                  {genType === "video" ? "Generated Video" : "Generated Image"}
+                </span>
+              </div>
+
+              {/* 媒體內容 */}
+              <div className="p-3">
+                {genType === "video" || prediction.output.includes('.mp4') ? (
+                  <video src={prediction.output} controls autoPlay loop className="rounded-2xl w-full shadow-xl" />
+                ) : (
+                  <img src={prediction.output} alt="Result" className="rounded-2xl w-full shadow-xl" />
+                )}
+          {genType === "image" && (
+  <button
+    onClick={() => {
+      setTtsText("");
+      setTtsAudio(null);
+      setShowTtsModal(true);
+    }}
+    className="w-full mt-2 py-2.5 rounded-xl bg-gradient-to-r from-purple-500/20 to-blue-500/20 border border-purple-500/30 text-purple-300 text-xs font-black hover:from-purple-500/30 transition-all"
+  >
+    🎙️ 讓她說話
+  </button>
+)}
+          <p className="text-white/25 text-[10px] text-center mt-1">
+  📱 長按上方圖片可直接儲存到相簿｜影片請點「儲存成果」下載
+</p>
+        </div>
+
+        {/* 操作按鈕 */}
+              <div className="grid grid-cols-2 gap-3 p-4 pt-1">
+                <button
+                  onClick={() => downloadFile(prediction.output)}
+                  className="flex items-center justify-center gap-2 py-3 bg-white text-[#0d2318] rounded-xl font-bold text-sm shadow-md hover:bg-[#89f5a2] transition-colors"
+                >
+                  ⬇️ 儲存成果
+                </button>
+
+                <button
+                  onClick={() => setShowVideoModal(true)}
+                  disabled={loading || (credits !== null && credits <= 0)}
+                  className="flex items-center justify-center gap-2 py-3 bg-white/5 text-white rounded-xl border border-white/15 text-sm font-bold disabled:opacity-25 hover:bg-white/10 transition-colors"
+                >
+                  {loading && genType === "video" ? (
+                    <><span className="w-3 h-3 border border-white/40 border-t-white rounded-full animate-spin inline-block" /> 生成中...</>
+                  ) : (
+                    <span className="flex flex-col items-center leading-tight"><span>🎬 轉成影片</span><span className="text-white/40 text-xs">Kling 3.0 · 4-6點</span></span>
+                  )}
+                </button>
+                {/* [DNA_PATCH_START] 分享按鈕 */}
+                <button
+                  onClick={async () => {
+                    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                    if (isMobile && navigator.share) {
+                      // 手機：跳系統選單
+                      try {
+                        await navigator.share({
+                          title: 'AI Character Studio',
+                          text: '我用 AI Character Studio 生成了這張角色圖！來試試看 👉',
+                          url: 'https://ai-video-site-psi.vercel.app',
+                        });
+                      } catch {}
+                    } else {
+                      // 電腦：下載圖片 + 開FB
+                      await downloadFile(prediction.output);
+                      setTimeout(() => {
+                        window.open('https://www.facebook.com', '_blank');
+                        alert('圖片已下載！\n\n請到 FB 建立新貼文 → 選擇剛下載的圖片 📘');
+                      }, 1000);
+                    }
+                  }}
+                  className="col-span-2 flex items-center justify-center gap-2 py-3 bg-white/5 border border-white/15 text-white rounded-xl text-sm font-bold hover:bg-white/10 transition-colors"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                  分享作品
+                </button>
+                {/* [DNA_PATCH_END] */}
+                {/* [DNA_PATCH_START] 影片不保存提示 */}
+{genType === "video" && (
+  // [DNA_PATCH_START]
+<div className="col-span-2 w-full mt-1 px-4 py-3 bg-yellow-400/20 border-2 border-yellow-400/50 rounded-2xl text-center">
+  <p className="text-yellow-300 text-sm font-black tracking-wide">⚠️ 影片保存僅3天(付費7天)，請立即下載保存</p>
+</div>
+// [DNA_PATCH_END]
+)}
+{/* [DNA_PATCH_START] 影片結果區解除鎖定按鈕 */}
+{genType === 'video' && lockedCharacterUrl && (
+  <button
+    onClick={async () => {
+      if (!confirm('確定要解除鎖定角色嗎？')) return;
+      await fetch("/api/user/clear-locked-character", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: session?.user?.email }),
+      });
+      setLockedCharacterUrl(null);
+      setLockedCharacterId(null);
+    }}
+    className="col-span-2 w-full py-2.5 bg-white/3 border border-white/10 text-white/35 rounded-xl text-xs font-bold hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-400/60 transition-all active:scale-95"
+  >
+    🔓 解除鎖定角色
+  </button>
+)}
+{/* [DNA_PATCH_END] */}
+{/* [DNA_PATCH_START] TTS 語音合成按鈕（付費專屬，僅影片生成後顯示） */}
+{plan !== 'free' && genType === 'video' && (
+  <button
+    onClick={() => { setTtsText(""); setTtsAudio(null); setWav2lipResult(null); setShowTtsModal(true); }}
+    className="col-span-2 w-full py-3 bg-gradient-to-r from-purple-500/20 to-blue-500/20 border border-purple-500/30 text-purple-300 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:from-purple-500/30 transition-all"
+  >
+    🎙️ 語音合成 <span className="text-purple-300/50 text-xs">6點/次</span>
+  </button>
+)}
+{/* [DNA_PATCH_END] */}
+{/* [DNA_PATCH_END] */}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+{/* [DNA_PATCH_START] 結果區操作按鈕整合 */}
+{prediction?.output && !genType.includes('video') && (
+  <div className="mt-4 px-4 space-y-2.5">
+
+    {/* 主要操作：一排五顆 */}
+    <div className="grid grid-cols-5 gap-2">
+      {/* 鎖定此角色 */}
+      <button
+        onClick={async () => {
+          // [DNA_PATCH_START] Toast 取代 alert
+          setToastMessage("🔄 上傳中，請稍候...");
+          setShowToast(true);
+          try {
+            const res = await fetch("/api/upload-image", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ imageUrl: prediction.output, email: session?.user?.email }),
+            });
+            const data = await res.json();
+            if (data.url) {
+              await fetch("/api/user/save-locked-character", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: session?.user?.email ?? '', url: data.url }),
+              });
+              setError('');
+              setLockedCharacterUrl(data.url);
+              // [DNA_PATCH_START] 比對 savedCharacters 自動帶入 character_id
+              const matched = savedCharacters.find((c: any) => c.image_url === data.url);
+              if (matched) setLockedCharacterId(matched.id);
+              else setLockedCharacterId(null);
+              // [DNA_PATCH_END]
+              setToastMessage("✅ 角色已鎖定！");
+              setTimeout(() => setShowToast(false), 2000);
+            } else {
+              setToastMessage("❌ 鎖定失敗，請重試");
+              setTimeout(() => setShowToast(false), 2000);
+            }
+          } catch {
+            setToastMessage("❌ 鎖定失敗，請重試");
+            setTimeout(() => setShowToast(false), 2000);
+          }
+          // [DNA_PATCH_END]
+        }}
+        className="flex flex-col items-center gap-1.5 py-3.5 bg-gradient-to-b from-[#89f5a2]/15 to-[#89f5a2]/5 border border-[#89f5a2]/40 text-[#89f5a2] rounded-2xl text-xs font-black hover:from-[#89f5a2]/25 hover:to-[#89f5a2]/10 hover:border-[#89f5a2]/60 transition-all active:scale-95 shadow-sm shadow-[#89f5a2]/10"
+      >
+        <span className="text-lg">🎯</span>
+        <span>鎖定角色</span>
+      </button>
+
+      {/* 解除鎖定 */}
+      <button
+        onClick={async () => {
+          if (!confirm('確定要解除鎖定角色嗎？')) return;
+          await fetch("/api/user/clear-locked-character", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: session?.user?.email }),
+          });
+          setLockedCharacterUrl(null);
+          setLockedCharacterId(null);
+        }}
+        className={`flex flex-col items-center gap-1.5 py-3.5 rounded-2xl text-xs font-black border transition-all active:scale-95 ${
+          lockedCharacterUrl
+            ? 'bg-red-500/5 border-red-500/15 text-red-400/55 hover:bg-red-500/12 hover:border-red-500/30 hover:text-red-400/80'
+            : 'bg-white/2 border-white/6 text-white/15 cursor-not-allowed'
+        }`}
+        disabled={!lockedCharacterUrl}
+      >
+        <span className="text-lg">🔓</span>
+        <span>解除鎖定</span>
+      </button>
+
+      {/* 收藏此角色 */}
+      <button
+        onClick={() => { setSaveCharacterName(""); setShowSaveModal(true); }}
+        className="flex flex-col items-center gap-1.5 py-3.5 bg-gradient-to-b from-yellow-400/15 to-yellow-400/5 border border-yellow-400/40 text-yellow-300 rounded-2xl text-xs font-black hover:from-yellow-400/25 hover:to-yellow-400/10 hover:border-yellow-400/60 transition-all active:scale-95 shadow-sm shadow-yellow-400/10"
+      >
+        <span className="text-lg">⭐</span>
+        <span>收藏角色</span>
+      </button>
+
+      {/* 批次生成 */}
+      <button
+        onClick={() => {
+          if (plan === 'free') { alert('⚠️ 批次生成為付費功能，請先升級方案'); return; }
+          if (!lockedCharacterUrl) { alert('⚠️ 批次生成必須先鎖定角色'); return; }
+          setShowBatchModal(true);
+        }}
+        className={`flex flex-col items-center gap-1.5 py-3.5 rounded-2xl text-xs font-black border transition-all active:scale-95 ${
+          plan !== 'free' && lockedCharacterUrl
+            ? 'bg-gradient-to-b from-blue-500/15 to-blue-500/5 border-blue-400/40 text-blue-300 hover:from-blue-500/25 hover:border-blue-400/60 shadow-sm shadow-blue-400/10'
+            : 'bg-white/3 border-white/8 text-white/20 cursor-not-allowed'
+        }`}
+      >
+        <span className="text-lg">🎭</span>
+        <span>批次生成</span>
+        {(plan === 'free' || !lockedCharacterUrl) && (
+          <span className="text-[9px] text-white/20 font-normal -mt-0.5">
+            {plan === 'free' ? '付費限定' : '需鎖定'}
+          </span>
+        )}
+      </button>
+
+      {/* 成人專區 */}
+      <button
+        onClick={() => adultEnabled && router.push("/adult")}
+        disabled={!adultEnabled}
+        className={`flex flex-col items-center gap-1.5 py-3.5 rounded-2xl text-xs font-black border transition-all active:scale-95 ${
+          adultEnabled
+            ? 'bg-gradient-to-b from-pink-500/15 to-pink-500/5 border-pink-500/35 text-pink-300 hover:from-pink-500/25 hover:border-pink-500/55'
+            : 'bg-white/2 border-white/6 text-white/15 cursor-not-allowed'
+        }`}
+      >
+        <span className="text-lg">🔞</span>
+        <span>成人專區</span>
+        {!adultEnabled && (
+          <span className="text-[9px] text-white/20 font-normal -mt-0.5">未開放</span>
+        )}
+      </button>
+    </div>
+
+    {/* 推薦賺點橫幅 */}
+    <button
+      onClick={() => setShowReferralModal(true)}
+      className="w-full flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-yellow-400/10 to-amber-500/5 border border-yellow-400/25 rounded-2xl hover:from-yellow-400/18 hover:border-yellow-400/40 transition-all group"
+    >
+      <div className="w-8 h-8 rounded-xl bg-yellow-400/15 flex items-center justify-center flex-shrink-0">
+        <span className="text-base">🎁</span>
+      </div>
+      <div className="text-left flex-1 min-w-0">
+        <p className="text-yellow-300 text-sm font-black leading-tight">推薦好友賺點數</p>
+        <p className="text-white/30 text-[11px] mt-0.5">推薦升級最高可得獎勵點數</p>
+      </div>
+      <span className="text-yellow-400/50 text-sm group-hover:translate-x-0.5 transition-transform flex-shrink-0">›</span>
+    </button>
+
+    {/* 成人專區入口 */}
+    <button
+      onClick={() => adultEnabled && router.push("/adult")}
+      disabled={!adultEnabled}
+      className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all group ${
+        adultEnabled
+          ? "bg-gradient-to-r from-pink-500/12 to-rose-500/8 border-pink-500/30 hover:from-pink-500/20 hover:border-pink-500/50 cursor-pointer"
+          : "bg-white/3 border-white/8 cursor-not-allowed opacity-40"
+      }`}
+    >
+      <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${adultEnabled ? "bg-pink-500/20" : "bg-white/5"}`}>
+        <span className="text-base">🔞</span>
+      </div>
+      <div className="text-left flex-1 min-w-0">
+        <p className={`text-sm font-black leading-tight ${adultEnabled ? "text-pink-300" : "text-white/20"}`}>成人專區</p>
+        <p className="text-white/30 text-[11px] mt-0.5">{adultEnabled ? "想讓你的角色進化嗎？" : "目前未開放"}</p>
+      </div>
+      {adultEnabled && <span className="text-pink-400/50 text-sm group-hover:translate-x-0.5 transition-transform flex-shrink-0">›</span>}
+    </button>
+  </div>
+)}
+{/* [DNA_PATCH_END] */}
+{/* [DNA_PATCH_START] 收藏角色列表 */}
+{savedCharacters.length > 0 && (
+  <div className="mt-3 px-4">
+    <p className="text-white/40 text-xs font-bold tracking-wider uppercase mb-2">⭐ 收藏的角色</p>
+    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+      {savedCharacters.map((char) => (
+        <div key={char.id} className="flex-shrink-0 w-20 group relative cursor-pointer"
+          onClick={() => {
+            setLockedCharacterUrl(char.image_url);
+            setLockedCharacterId(char.id);
+            fetch("/api/user/save-locked-character", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email: session?.user?.email, url: char.image_url }),
+            });
+            alert(`✅ 已切換到「${char.name}」`);
+          }}
+        >
+          <div className="w-20 h-20 rounded-xl overflow-hidden border border-white/10 group-hover:border-yellow-400/50 transition-all">
+            <img src={char.image_url} className="w-full h-full object-cover" />
+          </div>
+          <p className="text-white/50 text-[9px] text-center mt-1 truncate font-bold">{char.name}</p>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!confirm(`確定刪除「${char.name}」？`)) return;
+              fetch("/api/saved-characters", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id: char.id, email: session?.user?.email }),
+              }).then(() => setSavedCharacters(prev => prev.filter(c => c.id !== char.id)));
+            }}
+            className="absolute top-0 right-0 w-5 h-5 bg-red-500/80 rounded-full text-white text-[10px] font-black flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+          >×</button>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+{/* [DNA_PATCH_END] */}
+{/* [DNA_PATCH_START] 影片設定 Modal — Code Split */}
+{showVideoModal && (
+  <VideoSettingsModal
+    plan={plan}
+    videoModel={videoModel}
+    setVideoModel={setVideoModel}
+    videoPrompt={videoPrompt}
+    setVideoPrompt={setVideoPrompt}
+    videoTranslatedPrompt={videoTranslatedPrompt}
+    setVideoTranslatedPrompt={setVideoTranslatedPrompt}
+    isVideoTranslating={isVideoTranslating}
+    handleVideoTranslate={handleVideoTranslate}
+    videoRatio={videoRatio}
+    setVideoRatio={setVideoRatio}
+    videoDuration={videoDuration}
+    setVideoDuration={setVideoDuration}
+    omniRef1={omniRef1}
+    setOmniRef1={setOmniRef1}
+    omniRef2={omniRef2}
+    setOmniRef2={setOmniRef2}
+    omniRef3={omniRef3}
+    setOmniRef3={setOmniRef3}
+    predictionOutput={prediction?.output ?? null}
+    onClose={() => { setShowVideoModal(false); setGenerationMode("image"); }}
+    onGenerate={(refs) => {
+      setShowVideoModal(false);
+      handleGenerateVideo(prediction.output, videoTranslatedPrompt || videoPrompt, videoRatio, videoDuration, videoModel, refs);
+    }}
+  />
+)}
+{/* [DNA_PATCH_START] 文字生成影片 Modal — Code Split */}
+{showText2VideoModal && (
+  <Text2VideoModal
+    plan={plan}
+    text2videoModel={text2videoModel}
+    setText2videoModel={setText2videoModel}
+    text2videoRatio={text2videoRatio}
+    setText2videoRatio={setText2videoRatio}
+    text2videoDuration={text2videoDuration}
+    setText2videoDuration={setText2videoDuration}
+    text2videoPrompt={text2videoPrompt}
+    setText2videoPrompt={setText2videoPrompt}
+    text2videoTranslated={text2videoTranslated}
+    setText2videoTranslated={setText2videoTranslated}
+    isText2videoTranslating={isText2videoTranslating}
+    setIsText2videoTranslating={setIsText2videoTranslating}
+    onClose={() => { setShowText2VideoModal(false); setGenerationMode("image"); }}
+    onGenerate={handleText2Video}
+  />
+)}
+{/* [DNA_PATCH_END] */}
+{/* 上傳圖片轉影片 Modal */}
+{showUploadModal && (
+  <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 backdrop-blur-sm px-4 py-6 overflow-y-auto">
+    <div className="w-full max-w-md bg-[#0d2318] border border-white/10 rounded-3xl overflow-hidden">
+
+      {!agreedToTerms ? (
+        /* ── 使用條款頁（不動） ── */
+        <div className="p-6 space-y-4">
+          <h2 className="text-white font-black text-lg text-center">⚠️ 使用聲明</h2>
+          <div className="bg-white/5 rounded-2xl p-4 text-white/60 text-xs space-y-2 leading-relaxed">
+            <p>使用本功能即表示您同意以下條款：</p>
+            <p>1. 您上傳的圖片須為您本人或已獲得授權的影像，嚴禁上傳他人肖像。</p>
+            <p>2. 嚴禁利用本服務製作任何未經當事人同意的換臉、深偽（Deepfake）影片。</p>
+            <p>3. 嚴禁製作任何涉及色情、暴力、詐騙、誹謗或其他違法內容。</p>
+            <p>4. 您須為上傳內容承擔全部法律責任，本平台不承擔任何連帶責任。</p>
+            <p>5. 違反上述條款者，本平台有權終止您的帳號並保留法律追訴權。</p>
+          </div>
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input type="checkbox" checked={termsChecked} onChange={(e) => setTermsChecked(e.target.checked)} className="w-4 h-4 accent-[#89f5a2]" />
+            <span className="text-white/70 text-sm">我已閱讀並同意上述條款</span>
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <button onClick={() => { setShowUploadModal(false); setTermsChecked(false); }} className="py-3 rounded-xl border border-white/10 text-white/50 text-sm font-bold hover:bg-white/5 transition-all">取消</button>
+            <button onClick={() => { if (termsChecked) setAgreedToTerms(true); }} disabled={!termsChecked} className="py-3 rounded-xl bg-[#89f5a2] text-[#0d2318] text-sm font-bold disabled:opacity-30 hover:bg-[#72e88d] transition-all">同意並繼續</button>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* ── Header ── */}
+          <div className="px-5 pt-5 pb-4 border-b border-white/8">
+            <p className="text-white font-black text-base">📁 上傳照片轉影片</p>
+            <p className="text-white/35 text-xs mt-1">選擇功能 → 上傳照片 → 設定，開始生成</p>
+          </div>
+
+          {/* ── Tab 列 ── */}
+          <div className="flex border-b border-white/8">
+            {[
+              { key: 0, label: "1. 選功能" },
+              { key: 1, label: "2. 上傳照片" },
+              { key: 2, label: "3. 設定" },
+            ].map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setUploadTab(t.key)}
+                className={`flex-1 py-2.5 text-xs font-bold transition-all border-b-2 ${
+                  uploadTab === t.key
+                    ? "border-[#89f5a2] text-[#89f5a2]"
+                    : "border-transparent text-white/35 hover:text-white/60"
+                }`}
+              >{t.label}</button>
+            ))}
+          </div>
+
+          {/* ── Tab 1：選功能 ── */}
+          {uploadTab === 0 && (
+            <div className="p-5 space-y-3">
+              {[
+                {
+                  id: "avatar" as const,
+                  icon: "🗣️",
+                  title: "說話影片",
+                  desc: "輸入文字，AI 語音合成 + 嘴型同步，讓角色開口說話",
+                  cost: "Avatar 8–10 點",
+                  orange: false,
+                  requiresPlan: false,
+                },
+                {
+                  id: "free_motion" as const,
+                  icon: "🪄",
+                  title: "AI 自由發揮",
+                  desc: "不輸入動作，AI 自動安排最自然的動作",
+                  cost: "Kling 4–6 點",
+                  orange: false,
+                  requiresPlan: false,
+                },
+                {
+                  id: "text_motion" as const,
+                  icon: "✍️",
+                  title: "文字指定動作",
+                  desc: "輸入文字描述想要的動作，例如「轉身、揮手」",
+                  cost: "Kling 4–6 點",
+                  orange: false,
+                  requiresPlan: false,
+                },
+                {
+                  id: "motion_video" as const,
+                  icon: "▶️",
+                  title: "套用動作影片",
+                  desc: "上傳 MP4，角色模仿影片動作",
+                  cost: "Kling 4–6 點",
+                  orange: false,
+                  requiresPlan: true,
+                },
+                {
+                  id: "multi_reference" as const,
+                  icon: "🖼️",
+                  title: "高精度角色影片",
+                  desc: "可加入第二角色、場景或動作參考圖（Seedance）⚠️ 參考圖若含真實人臉很可能生成失敗，建議使用 AI 生成角色圖，再上傳到這",
+                  cost: "Seedance 13–17 點（+ Omni-Reference 額外17-23點另計）",
+                  orange: true,
+                  requiresPlan: true,
+                },
+              ].map((opt) => {
+                const locked = opt.requiresPlan && plan === 'free';
+                const isSelected = selectedFunction === opt.id || (opt.id === "text_motion" && selectedFunction === "free_motion" && uploadTextMode);
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => {
+                      if (locked) { router.push('/pricing'); return; }
+                      if (opt.id === "text_motion") {
+                        setSelectedFunction("free_motion");
+                        setUploadTextMode(true);
+                      } else {
+                        setSelectedFunction(opt.id === "free_motion" ? "free_motion" : opt.id);
+                        setUploadTextMode(false);
+                      }
+                      setUploadTab(1);
+                    }}
+                    className={`w-full flex gap-3 items-start p-3 rounded-2xl border transition-all text-left ${
+                      isSelected
+                        ? "border-[#89f5a2]/60 bg-[#89f5a2]/8"
+                        : "border-white/10 hover:border-white/25 bg-white/2"
+                    } ${locked ? "opacity-50" : ""}`}
+                  >
+                    <span className="text-xl flex-shrink-0 mt-0.5">{opt.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`text-xs font-black ${isSelected ? "text-[#89f5a2]" : "text-white/80"}`}>{opt.title}</span>
+                        {locked && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/10 text-white/40">🔒 升級解鎖</span>}
+                        {isSelected && <span className="text-[9px] text-[#89f5a2]">✓ 已選</span>}
+                      </div>
+                      <p className="text-white/35 text-[10px] mt-0.5 leading-relaxed">{opt.desc}</p>
+                      <span className={`inline-block text-[10px] font-bold mt-1.5 px-2 py-0.5 rounded-full ${opt.orange ? "bg-orange-500/15 text-orange-300" : "bg-[#89f5a2]/12 text-[#89f5a2]"}`}>{opt.cost}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* ── Tab 2：上傳照片 ── */}
+          {uploadTab === 1 && (
+            <div className="p-5 space-y-4">
+              {/* 主角照片 */}
+              <div>
+                <p className="text-white/40 text-xs mb-2">主角照片（必填）</p>
+                <label className="block cursor-pointer">
+                  <div className={`border-2 border-dashed rounded-2xl p-5 text-center transition-all ${uploadedImage ? "border-[#89f5a2]/50 bg-[#89f5a2]/5" : "border-white/15 hover:border-[#89f5a2]/40"}`}>
+                    {uploadedImage ? (
+                      <>
+                        <img src={uploadedImage} className="w-full max-h-32 object-contain rounded-xl mb-2" />
+                        <p className="text-[#89f5a2] text-xs font-bold">✓ 已上傳，點擊重新上傳</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-2xl mb-2">🖼️</p>
+                        <p className="text-white/50 text-sm">點擊上傳主角照片</p>
+                        <p className="text-white/25 text-xs mt-1">JPG / PNG / WEBP</p>
+                      </>
+                    )}
+                  </div>
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) { const reader = new FileReader(); reader.onload = () => setUploadedImage(reader.result as string); reader.readAsDataURL(file); }
+                  }} />
+                </label>
+              </div>
+{/* 說話文字（avatar 才顯示） */}
+              {selectedFunction === "avatar" && (
+                <div>
+                  <p className="text-white/40 text-xs mb-2">說話文字（必填）</p>
+                  <textarea
+                    value={avatarText}
+                    onChange={(e) => setAvatarText(e.target.value)}
+                    placeholder="輸入角色要說的話，例如：你好！很高興認識你～"
+                    className="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/20 text-xs resize-none focus:outline-none focus:ring-1 focus:ring-[#89f5a2]/40"
+                    rows={3}
+                    maxLength={30}
+  />
+  <p className="text-white/25 text-[10px] mt-1">{avatarText.length}/30 字（說話影片字數上限）</p>
+                  <p className="text-white/40 text-xs mt-3 mb-2">聲音選擇</p>
+                  {/* 試聽區 */}
+                  {avatarTtsAudio && (
+                    <audio controls className="w-full mt-2" src={`data:audio/mp3;base64,${avatarTtsAudio}`} />
+                  )}
+                  <div className="flex items-center justify-between mt-2 mb-1">
+                    <p className="text-yellow-300 text-[10px] font-bold">⚠️ 免費試聽 {AVATAR_TTS_MAX_PREVIEW} 次（剩餘 {Math.max(AVATAR_TTS_MAX_PREVIEW - avatarTtsPreviewCount, 0)} 次）</p>
+                    <button
+                      type="button"
+                      disabled={!avatarText.trim() || avatarTtsPreviewCount >= AVATAR_TTS_MAX_PREVIEW && !avatarTtsCache[avatarVoiceId]}
+                      onClick={async () => {
+                        if (avatarTtsCache[avatarVoiceId]) { setAvatarTtsAudio(avatarTtsCache[avatarVoiceId]); return; }
+                        if (avatarTtsPreviewCount >= AVATAR_TTS_MAX_PREVIEW) { alert("本影片試聽次數已用完"); return; }
+                        const res = await fetch("/api/tts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: avatarText, voiceId: avatarVoiceId, videoDuration: 5 }) });
+                        const data = await res.json();
+                        if (data.audio) {
+                          setAvatarTtsAudio(data.audio);
+                          setAvatarTtsCache(prev => ({ ...prev, [avatarVoiceId]: data.audio }));
+                          setAvatarTtsPreviewCount(prev => prev + 1);
+                        } else { alert(data.error || "語音生成失敗"); }
+                      }}
+                      className="px-3 py-1 rounded-lg text-xs font-bold border transition-all bg-[#89f5a2]/15 border-[#89f5a2]/40 text-[#89f5a2] hover:bg-[#89f5a2]/25 disabled:opacity-30"
+                    >
+                      {avatarTtsCache[avatarVoiceId] ? "🔄 重新播放" : avatarTtsPreviewCount >= AVATAR_TTS_MAX_PREVIEW ? "🚫 試聽已用完" : "🎙️ 免費試聽"}
+                    </button>
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="flex-1 flex flex-col gap-1.5">
+                      {[
+                        { id: "female-1", label: "👩 低沉女聲" },
+                        { id: "female-2", label: "👩 甜美女聲" },
+                        { id: "female-3", label: "👩 清晰女聲" },
+                        { id: "female-4", label: "👩 活潑女聲" },
+                        { id: "female-5", label: "👩 溫柔女聲" },
+                      ].map((v) => (
+                        <button key={v.id} type="button"
+                          onClick={() => { setAvatarVoiceId(v.id); setAvatarTtsAudio(null); }}
+                          className={`py-1.5 rounded-lg text-xs font-bold border transition-all ${avatarVoiceId === v.id ? "bg-[#89f5a2] text-[#0d2318] border-[#89f5a2]" : "bg-white/5 text-white/50 border-white/10 hover:border-white/30"}`}
+                        >{v.label}</button>
+                      ))}
+                    </div>
+                    <div className="flex-1 flex flex-col gap-1.5">
+                      {[
+                        { id: "male-1", label: "👨 專業男聲" },
+                        { id: "male-2", label: "👨 溫暖男聲" },
+                        { id: "male-3", label: "👨 成熟男聲" },
+                        { id: "male-4", label: "👨 旁白男聲" },
+                        { id: "male-5", label: "👨 深沉男聲" },
+                      ].map((v) => (
+                        <button key={v.id} type="button"
+                          onClick={() => { setAvatarVoiceId(v.id); setAvatarTtsAudio(null); }}
+                          className={`py-1.5 rounded-lg text-xs font-bold border transition-all ${avatarVoiceId === v.id ? "bg-[#89f5a2] text-[#0d2318] border-[#89f5a2]" : "bg-white/5 text-white/50 border-white/10 hover:border-white/30"}`}
+                        >{v.label}</button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+              {/* 動作參考影片（motion_video 才顯示） */}
+              {selectedFunction === "motion_video" && (
+                <div>
+                  <p className="text-white/40 text-xs mb-2">動作參考影片（必填）</p>
+                  {motionVideoUrl ? (
+                    <div className="flex items-center gap-3 bg-[#89f5a2]/10 border border-[#89f5a2]/30 rounded-xl p-3">
+                      <span className="text-2xl">🎞️</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[#89f5a2] text-xs font-bold truncate">影片已上傳</p>
+                        <p className="text-white/30 text-[10px]">點擊移除可重新上傳</p>
+                      </div>
+                      <button onClick={() => { setMotionVideoUrl(null); setMotionVideoFile(null); setMotionVideoError(''); }} className="text-red-400 text-xs font-bold">✕ 移除</button>
+                    </div>
+                  ) : (
+                    <label className="block cursor-pointer">
+                      <div className={`border-2 border-dashed rounded-xl p-5 text-center transition-all ${motionVideoUploading ? "border-[#89f5a2]/40 bg-[#89f5a2]/5" : "border-white/15 hover:border-[#89f5a2]/40"}`}>
+                        {motionVideoUploading ? <p className="text-[#89f5a2] text-sm">上傳中...</p> : (
+                          <>
+                            <p className="text-2xl mb-2">🎞️</p>
+                            <p className="text-white/50 text-sm font-bold">點擊上傳 MP4</p>
+                            <p className="text-white/25 text-[11px] mt-1">{motionLimits.minSec}–{motionLimits.maxSec} 秒・最大 {motionLimits.maxMb}MB</p>
+                          </>
+                        )}
+                      </div>
+                      <input type="file" accept="video/mp4,video/*" className="hidden" disabled={motionVideoUploading}
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0]; if (!file) return;
+                          setMotionVideoFile(file);
+                          const videoEl = document.createElement('video'); videoEl.preload = 'metadata'; videoEl.src = URL.createObjectURL(file);
+                          videoEl.onloadedmetadata = async () => {
+                            URL.revokeObjectURL(videoEl.src);
+                            const dur = videoEl.duration;
+                            if (dur < motionLimits.minSec || dur > motionLimits.maxSec) {
+                              setMotionVideoError(`影片長度需在 ${motionLimits.minSec}–${motionLimits.maxSec} 秒之間（目前 ${Math.round(dur)} 秒）`);
+                              setMotionVideoFile(null); e.target.value = ''; return;
+                            }
+                            await handleMotionVideoUpload(file);
+                          };
+                        }}
+                      />
+                    </label>
+                  )}
+                  {motionVideoError && <p className="text-red-400 text-[11px] mt-1">{motionVideoError}</p>}
+                </div>
+              )}
+
+              {/* 多重參考圖（multi_reference 才顯示） */}
+              {selectedFunction === "multi_reference" && (
+                <div>
+                  <p className="text-white/40 text-xs mb-2">參考圖（選填，1–3 張）</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { label: "第二角色", hint: "🧑", state: omniRef1, setter: setOmniRef1 },
+                      { label: "場景風格", hint: "🌄", state: omniRef2, setter: setOmniRef2 },
+                      { label: "動作參考", hint: "🎬", state: omniRef3, setter: setOmniRef3 },
+                    ].map((item, idx) => (
+                      <div key={idx}>
+                        <p className="text-white/30 text-[10px] mb-1 text-center">{item.hint} {item.label}</p>
+                        <label className="block cursor-pointer">
+                          <div className={`border border-dashed rounded-xl p-3 text-center transition-all ${item.state ? "border-orange-400/50 bg-orange-400/5" : "border-white/10 hover:border-orange-400/30"}`}>
+                            {item.state ? (
+                              <div className="relative">
+                                <img src={item.state} className="w-full max-h-16 object-contain rounded-lg" />
+                                <button type="button" onClick={(e) => { e.preventDefault(); item.setter(null); }} className="absolute top-0 right-0 w-4 h-4 bg-red-500/80 rounded-full text-white text-[10px] flex items-center justify-center font-black">×</button>
+                              </div>
+                            ) : (
+                              <p className="text-white/20 text-[10px]">上傳</p>
+                            )}
+                          </div>
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) { const reader = new FileReader(); reader.onload = () => item.setter(reader.result as string); reader.readAsDataURL(file); }
+                          }} />
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Tab 3：設定 ── */}
+          {uploadTab === 2 && (
+            <div className="p-5 space-y-4">
+              {/* 影片比例 */}
+              <div>
+                <p className="text-white/40 text-xs mb-2">影片比例</p>
+                <div className="flex gap-2 flex-wrap">
+                  {["1:1", "16:9", "9:16", "4:3", "3:4"].map((r) => (
+                    <button key={r} onClick={() => setVideoRatio(r)} className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${videoRatio === r ? "bg-[#89f5a2] text-[#0d2318] border-[#89f5a2]" : "bg-white/5 text-white/50 border-white/10 hover:border-white/30"}`}>{r}</button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 影片秒數 */}
+              <div>
+                <p className="text-white/40 text-xs mb-2">影片長度</p>
+                {selectedFunction === "avatar" ? (
+                  <div className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white/40 text-xs">
+                    🗣️ 說話影片固定 5 秒，字數上限 30 字
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    {[{ s: 5, label: "5 秒", cost: "4–6 點" }, { s: 10, label: "10 秒", cost: "8–12 點" }].map((item) => (
+                      <button key={item.s} onClick={() => setVideoDuration(item.s)} className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all ${videoDuration === item.s ? "bg-[#89f5a2] text-[#0d2318] border-[#89f5a2]" : "bg-white/5 text-white/50 border-white/10 hover:border-white/30"}`}>{item.label} <span className="opacity-60">{item.cost}</span></button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 動作描述（非 AI 自由發揮才顯示） */}
+              {(uploadTextMode || selectedFunction === "motion_video" || selectedFunction === "multi_reference") && (
+                <div>
+                  <p className="text-white/40 text-xs mb-2">
+                    {selectedFunction === "motion_video" ? "補充畫面風格（選填）" : "動作描述（選填）"}
+                  </p>
+                  <div className="relative">
+                    <textarea
+                      value={videoPrompt}
+                      onChange={(e) => { setVideoPrompt(e.target.value); setVideoTranslatedPrompt(null); }}
+                      placeholder={selectedFunction === "motion_video"
+                        ? "例如：cinematic quality, 4K, natural lighting\n⚠️ 動作以參考影片為主，文字不影響動作"
+                        : "例如：轉身微笑、緩緩走向鏡頭...（中文也可以！）"}
+                      className="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/20 text-xs resize-none focus:outline-none focus:ring-1 focus:ring-[#89f5a2]/40"
+                      rows={3}
+                    />
+                    <div className="absolute bottom-2 right-2">
+                      {hasChinese(videoPrompt) && !videoTranslatedPrompt && (
+                        <button type="button" onClick={handleVideoTranslate} disabled={isVideoTranslating}
+                          className="px-2 py-1 bg-[#89f5a2]/20 border border-[#89f5a2]/40 text-[#89f5a2] text-xs rounded-lg font-bold hover:bg-[#89f5a2]/30 transition-all disabled:opacity-40">
+                          {isVideoTranslating ? "翻譯中..." : "🌐 翻譯"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  {videoTranslatedPrompt && (
+                    <div className="mt-2 bg-[#89f5a2]/10 border border-[#89f5a2]/30 rounded-xl p-3 space-y-2">
+                      <p className="text-white/40 text-xs font-bold uppercase">🌐 翻譯結果</p>
+                      <p className="text-[#89f5a2] text-sm">{videoTranslatedPrompt}</p>
+                      <div className="flex gap-2">
+                        <button type="button" onClick={() => { setVideoPrompt(videoTranslatedPrompt); setVideoTranslatedPrompt(null); }} className="flex-1 py-1.5 bg-[#89f5a2] text-[#0d2318] rounded-lg text-xs font-black hover:opacity-90 transition-all">✅ 採用</button>
+                        <button type="button" onClick={() => setVideoTranslatedPrompt(null)} className="px-3 py-1.5 bg-white/5 border border-white/10 text-white/40 rounded-lg text-xs font-bold hover:bg-white/10 transition-all">略過</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 預估點數 */}
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl px-3 py-2.5 text-blue-300 text-xs">
+                {selectedFunction === "avatar"
+                  ? "💰 預估消耗：Avatar 8–10 點"
+                  : <>💰 預估消耗：影片 {videoDuration === 5 ? "4–6" : "8–12"} 點{selectedFunction === "multi_reference" && <span className="text-orange-300">（Seedance 另計）</span>}</>
+                }
+              </div>
+            </div>
+          )}
+
+          {/* ── Footer ── */}
+          <div className="px-5 pb-5 pt-3 flex gap-3 border-t border-white/8">
+            <button
+              onClick={() => {
+                setShowUploadModal(false); setAgreedToTerms(false); setTermsChecked(false);
+                setUploadedImage(null); setVideoPrompt(""); setVideoTranslatedPrompt(null);
+                setMotionVideoUrl(null); setMotionVideoFile(null); setMotionVideoError('');
+                setMotionExpanded(false); setSelectedFunction("free_motion"); setFunctionDropdownOpen(false);
+                setOmniRef1(null); setOmniRef2(null); setOmniRef3(null);
+                setUploadTab(0); setUploadTextMode(false);
+                setAvatarText(""); setAvatarVoiceId("female-2");
+                setAvatarTtsAudio(null); setAvatarTtsCache({}); setAvatarTtsPreviewCount(0);
+              }}
+              className="px-5 py-2.5 rounded-xl border border-white/10 text-white/50 text-sm font-bold hover:bg-white/5 transition-all"
+            >取消</button>
+
+            {uploadTab < 2 ? (
+              <button
+                onClick={() => setUploadTab(t => t + 1)}
+                className="flex-1 py-2.5 rounded-xl bg-[#89f5a2] text-[#0d2318] text-sm font-bold hover:opacity-90 transition-all"
+              >下一步 →</button>
+            ) : (
+              <button
+                onClick={() => {
+                  if (!uploadedImage) { alert("⚠️ 請先上傳主角照片"); setUploadTab(1); return; }
+                  if (selectedFunction === "motion_video" && !motionVideoUrl) { alert("⚠️ 請先上傳動作參考影片"); setUploadTab(1); return; }
+                  setShowUploadModal(false); setAgreedToTerms(false); setTermsChecked(false);
+                  setUploadTab(0); setUploadTextMode(false);
+                  setLoading(true);
+setRetryMessage("準備中...");
+                  setTimeout(() => progressRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
+                  (async () => {
+                    let mainUrl = uploadedImage;
+                    if (mainUrl && mainUrl.startsWith("data:")) {
+                      try {
+                        const res = await fetch("/api/upload-image", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ imageUrl: mainUrl, email: session?.user?.email }) });
+                        const d = await res.json(); mainUrl = d.url || mainUrl;
+                      } catch {}
+                    }
+                    if (!mainUrl) { alert("⚠️ 圖片上傳失敗，請重試"); return; }
+
+                    if (selectedFunction === "avatar") {
+                      handleUploadAvatar(mainUrl);
+                    } else if (selectedFunction === "motion_video" && motionVideoUrl) {
+                      handleUploadDirect(mainUrl, "motion_video", motionVideoUrl);
+                    } else if (selectedFunction === "multi_reference") {
+                      const uploadBase64 = async (b64: string | null, label: string): Promise<string | null> => {
+                        if (!b64 || !b64.startsWith("data:")) return b64;
+                        try {
+                          const res = await fetch("/api/upload-image", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ imageUrl: b64, email: session?.user?.email }) });
+                          const d = await res.json();
+                          if (!d.url) { console.warn(`⚠️ ${label} 上傳失敗，略過此參考圖`); return null; }
+                          return d.url;
+                        } catch { console.warn(`⚠️ ${label} 上傳例外，略過此參考圖`); return null; }
+                      };
+                      const [r1, r2, r3] = await Promise.all([
+                        uploadBase64(omniRef1, "第二角色"),
+                        uploadBase64(omniRef2, "場景風格"),
+                        uploadBase64(omniRef3, "動作參考"),
+                      ]);
+                      const successCount = [r1, r2, r3].filter(Boolean).length;
+                      const failCount = [omniRef1, omniRef2, omniRef3].filter(Boolean).length - successCount;
+                      if (failCount > 0) {
+                        setRetryMessage(`⚠️ ${failCount} 張參考圖上傳失敗，已略過，繼續生成...`);
+                        setTimeout(() => setRetryMessage(""), 3000);
+                      }
+                      setOmniRef1(null); setOmniRef2(null); setOmniRef3(null);
+                      handleUploadDirect(mainUrl, "multi_reference", null, [r1, r2, r3].filter(Boolean) as string[]);
+                    } else {
+                      handleUploadDirect(mainUrl, "free_motion");
+                    }
+
+                    setFaceLockImageUrl(null);
+                    setUploadedImage(null); setVideoPrompt("");
+                    setMotionVideoUrl(null); setMotionVideoFile(null); setMotionExpanded(false);
+                    setSelectedFunction("free_motion"); setFunctionDropdownOpen(false);
+                  })();
+                }}
+                disabled={!uploadedImage}
+                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#89f5a2] to-[#4ade80] text-[#0d2318] text-sm font-bold disabled:opacity-30 hover:opacity-90 transition-all"
+              >🎬 開始生成</button>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  </div>
+)}
+{/* [DNA_PATCH_END] */}
+      <div className="w-full max-w-lg mb-24 relative z-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
+        {/* Tab 切換 */}
+        <div className="flex items-center gap-3 mb-4 px-1">
+          <div className="flex-1 h-px bg-white/10" />
+          <div className="flex bg-white/5 rounded-xl p-1 border border-white/10">
+            <button
+              onClick={() => setActiveTab("gallery")}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === "gallery" ? "bg-[#89f5a2] text-[#0d2318]" : "text-white/40 hover:text-white/70"}`}
+            >
+              ✨ 靈感畫廊
+            </button>
+            <button
+              onClick={() => setActiveTab("history")}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === "history" ? "bg-[#89f5a2] text-[#0d2318]" : "text-white/40 hover:text-white/70"}`}
+            >
+              🕘 我的歷史
+            </button>
+          </div>
+          <div className="flex-1 h-px bg-white/10" />
+        </div>
+
+        {/* 靈感畫廊 */}
+        {activeTab === "gallery" && (
+          <div className="flex gap-3 overflow-x-auto pb-2 px-1 scrollbar-hide">
+            {galleryItems.map((item, idx) => (
+              <div
+                key={idx}
+                className="group flex-shrink-0 w-32 cursor-pointer"
+                // [DNA_PATCH_START] 靈感畫廊點擊：填入prompt並捲動到輸入框
+onClick={() => {
+  setPrompt(item.prompt);
+  setTranslatedPrompt(null);
+  setUseTranslated(false);
+  setActiveStep(6);
+  setTimeout(() => {
+    const el = document.getElementById('step6-section');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    else window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, 100);
+}}
+// [DNA_PATCH_END]
+              >
+                <div className="w-32 h-32 rounded-2xl border border-white/10 overflow-hidden shadow-lg transition-all duration-200 hover:scale-105 hover:border-[#89f5a2]/50 hover:shadow-[0_0_20px_rgba(137,245,162,0.15)] relative">
+                  <img src={item.image} loading="lazy" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-200 flex items-end justify-center pb-2">
+                    <span className="text-white text-[10px] font-black opacity-0 group-hover:opacity-100 transition-opacity duration-200 drop-shadow-lg bg-black/50 px-2 py-0.5 rounded-full">套用靈感</span>
+                  </div>
+                </div>
+                <p className="text-white/40 text-[10px] text-center mt-1.5 font-bold">{item.title}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* 我的歷史 */}
+        {activeTab === "history" && (
+          <>
+            {Array.isArray(history) && history.length > 0 ? (
+              <div className="flex gap-3 overflow-x-auto pb-2 px-1 scrollbar-hide">
+                {history.slice(0, 50).map((item, idx) => {
+                  const url = typeof item === 'string' ? item : (item.video_url || item.image_url);
+                  const isVideo = !!(typeof item === 'object' && (item.video_url || (typeof item.image_url === 'string' && item.image_url?.includes('.mp4'))));
+                  return (
+                    <div
+                      key={idx}
+                      className="group flex-shrink-0 w-32 h-32 rounded-2xl border border-white/10 overflow-hidden shadow-lg cursor-pointer relative transition-all duration-200 hover:scale-105 hover:border-[#89f5a2]/50 hover:shadow-[0_0_20px_rgba(137,245,162,0.15)]"
+                      onClick={() => { setPrediction({ output: url, status: 'succeeded' }); setGenType(isVideo ? "video" : "image"); }}
+                    >
+                      {isVideo ? (
+                        <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-900 flex flex-col items-center justify-center gap-1">
+                          <span className="text-2xl">🎬</span>
+                          <span className="text-[9px] text-[#89f5a2] font-black tracking-wider">VIDEO</span>
+                        </div>
+                      ) : (
+                        <img src={url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
+                      )}
+                      <div className="absolute inset-0 bg-[#89f5a2]/0 group-hover:bg-[#89f5a2]/10 transition-colors duration-200 flex items-center justify-center">
+                        <span className="text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 drop-shadow-lg">點擊查看</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                {session ? (
+                  <p className="text-white/30 text-sm">還沒有歷史紀錄，快去生成第一張吧！</p>
+                ) : (
+                  <p className="text-white/30 text-sm">登入後可查看歷史紀錄</p>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+      {/* [DNA_PATCH_END] */}
+        {/* [DNA_PATCH_START] TTS Modal — Code Split */}
+{showTtsModal && (
+  <TtsModal
+    plan={plan}
+    videoDuration={videoDuration}
+    ttsText={ttsText}
+    setTtsText={setTtsText}
+    ttsVoice={ttsVoice}
+    setTtsVoice={setTtsVoice}
+    ttsAudio={ttsAudio}
+    setTtsAudio={setTtsAudio}
+    isTtsLoading={isTtsLoading}
+    setIsTtsLoading={setIsTtsLoading}
+    ttsTrimmed={ttsTrimmed}
+    setTtsTrimmed={setTtsTrimmed}
+    ttsCache={ttsCache}
+    setTtsCache={setTtsCache}
+    ttsPreviewCount={ttsPreviewCount}
+    setTtsPreviewCount={setTtsPreviewCount}
+    TTS_MAX_PREVIEW={TTS_MAX_PREVIEW}
+    ttsSeconds={ttsSeconds}
+    isWav2lipLoading={isWav2lipLoading}
+    setIsWav2lipLoading={setIsWav2lipLoading}
+    wav2lipResult={wav2lipResult}
+    setWav2lipResult={setWav2lipResult}
+    wav2lipSeconds={wav2lipSeconds}
+    prediction={prediction}
+    lockedCharacterUrl={lockedCharacterUrl}
+    userEmail={session?.user?.email}
+    setCredits={(fn) => setCredits(fn as any)}
+    onClose={() => setShowTtsModal(false)}
+    downloadFile={downloadFile}
+  />
+)}
+{/* [DNA_PATCH_END] */}
+{/* [DNA_PATCH_START] 批次生成 Modal — Code Split */}
+{showBatchModal && (
+  <BatchModal
+    plan={plan}
+    batchCount={batchCount}
+    setBatchCount={setBatchCount}
+    batchPrompts={batchPrompts}
+    setBatchPrompts={setBatchPrompts}
+    batchResults={batchResults}
+    isBatchGenerating={isBatchGenerating}
+    batchCurrentIndex={batchCurrentIndex}
+    onClose={() => { setShowBatchModal(false); setBatchResults([]); setBatchCurrentIndex(-1); }}
+    onGenerate={handleBatchGenerate}
+  />
+)}
+{/* [DNA_PATCH_END] */}
+{/* [DNA_PATCH_START] 收藏命名 Modal — Code Split */}
+{showSaveModal && (
+  <SaveCharacterModal
+    saveCharacterName={saveCharacterName}
+    setSaveCharacterName={setSaveCharacterName}
+    isSaving={isSaving}
+    selectedPersonality={selectedPersonality}
+    selectedJob={selectedJob}
+    customPersonality={customPersonality}
+    selectedHair={selectedHair}
+selectedEye={selectedEye}
+selectedBody={selectedBody}
+customAppearance={customAppearance}
+    predictionOutput={prediction?.output ?? null}
+    userEmail={session?.user?.email}
+    plan={plan}
+    lockedCharacterId={lockedCharacterId}
+    savedCharacters={savedCharacters}
+    onSaveSuccess={(data) => {
+      setSavedCharacters(prev => [data, ...prev]);
+      setShowSaveModal(false);
+    }}
+    onClose={() => setShowSaveModal(false)}
+  />
+)}
+{/* [DNA_PATCH_END] */}
+        {/* [DNA_PATCH_START] 推薦賺點 Modal — Code Split */}
+{showReferralModal && (
+  <ReferralModal
+    referralCode={referralCode}
+    referralCredits={referralCredits}
+    copiedCode={copiedCode}
+    setCopiedCode={setCopiedCode}
+    copiedLink={copiedLink}
+    setCopiedLink={setCopiedLink}
+    onClose={() => setShowReferralModal(false)}
+  />
+)}
+{/* [DNA_PATCH_END] */}
+{/* [DNA_PATCH_START] promo-floating-card */}
+      {showPromoCard && (
+        <div
+          className="fixed bottom-6 right-5 z-[9990]"
+          style={{
+            width: promoCollapsed ? '180px' : '300px',
+            transition: 'width 0.3s ease',
+            animation: 'promoSlideUp 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards',
+          }}
+        >
+          <div className="rounded-2xl overflow-hidden"
+            style={{ background: '#0f2318', border: '1px solid rgba(137,245,162,0.4)', boxShadow: '0 8px 40px rgba(0,0,0,0.65), 0 0 24px rgba(137,245,162,0.08)' }}>
+
+            {/* Header */}
+            <div className="flex items-center gap-2 px-3 py-2.5 cursor-pointer"
+              style={{ background: 'linear-gradient(90deg,#1a4d2a,#0f2318)', borderBottom: promoCollapsed ? 'none' : '1px solid rgba(137,245,162,0.15)' }}
+              onClick={() => setPromoCollapsed(c => !c)}
+            >
+              <span style={{ fontSize: 18, display: 'inline-block', animation: 'promoFlicker 1.3s ease-in-out infinite alternate' }}>🔥</span>
+              <div className="flex-1 min-w-0">
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#b8ffc8', letterSpacing: '0.03em' }}>今日限定優惠！</div>
+                {!promoCollapsed && (
+                  <div style={{ fontSize: 10, color: 'rgba(184,255,200,0.5)', marginTop: 1 }}>今天午夜前購買即享加贈點數</div>
+                )}
+              </div>
+              <button
+                onClick={e => { e.stopPropagation(); setPromoCollapsed(c => !c) }}
+                className="flex items-center justify-center rounded-full flex-shrink-0 mr-1.5"
+                style={{ width: 22, height: 22, border: '1px solid rgba(184,255,200,0.35)', background: 'rgba(184,255,200,0.08)', color: 'rgba(184,255,200,0.9)', fontSize: 14 }}
+              >
+                {promoCollapsed ? '+' : '−'}
+              </button>
+              <button
+                onClick={e => { e.stopPropagation(); setShowPromoCard(false) }}
+                className="flex items-center justify-center rounded-full flex-shrink-0"
+                style={{ width: 22, height: 22, border: '1px solid rgba(255,120,120,0.35)', background: 'rgba(255,100,100,0.08)', color: 'rgba(255,160,160,0.9)', fontSize: 11 }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Body */}
+            {!promoCollapsed && (
+              <>
+                <div className="px-3 pt-3 pb-2">
+                  <PromoTimer />
+                  <div className="flex flex-col gap-2 mt-3">
+
+                    <div className="rounded-xl px-3 py-2 flex items-center justify-between"
+                      style={{ background: 'rgba(137,245,162,0.06)', border: '1px solid rgba(137,245,162,0.18)' }}>
+                      <div>
+                        <div style={{ fontSize: 11, color: 'rgba(184,255,200,0.55)', marginBottom: 2 }}>🌱 入門包</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#d4ffe0' }}>30 點</div>
+                      </div>
+                      <div className="text-right">
+                        <div style={{ fontSize: 10, color: 'rgba(184,255,200,0.4)', marginBottom: 2 }}>今日額外贈送</div>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: '#89f5a2' }}>+5 點 🎁</div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl px-3 py-2 flex items-center justify-between"
+                      style={{ background: 'rgba(137,245,162,0.11)', border: '1px solid rgba(137,245,162,0.38)' }}>
+                      <div>
+                        <div className="flex items-center gap-1" style={{ marginBottom: 2 }}>
+                          <span style={{ fontSize: 11, color: 'rgba(184,255,200,0.6)' }}>⭐ 標準包</span>
+                          <span style={{ fontSize: 9, background: 'linear-gradient(90deg,#ff6b2b,#ff3d3d)', color: '#fff', borderRadius: 4, padding: '1px 6px', fontWeight: 900, letterSpacing: '0.05em', textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>推薦</span>
+                        </div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#d4ffe0' }}>80 點</div>
+                      </div>
+                      <div className="text-right">
+                        <div style={{ fontSize: 10, color: 'rgba(184,255,200,0.4)', marginBottom: 2 }}>今日額外贈送</div>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: '#89f5a2' }}>+7 點 🎁</div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl px-3 py-2 flex items-center justify-between"
+                      style={{ background: 'rgba(137,245,162,0.06)', border: '1px solid rgba(137,245,162,0.18)' }}>
+                      <div>
+                        <div style={{ fontSize: 11, color: 'rgba(184,255,200,0.55)', marginBottom: 2 }}>🚀 專業包</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#d4ffe0' }}>200 點</div>
+                      </div>
+                      <div className="text-right">
+                        <div style={{ fontSize: 10, color: 'rgba(184,255,200,0.4)', marginBottom: 2 }}>今日額外贈送</div>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: '#89f5a2' }}>+10 點 🎁</div>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+                <div className="px-3 pb-3 pt-1">
+                  <a href="/pricing#plans"
+                    className="block w-full text-center rounded-xl py-2.5 font-bold text-white"
+                    style={{ fontSize: 13, background: 'linear-gradient(90deg,#2d8a42,#3db558)', letterSpacing: '0.04em', textDecoration: 'none', textShadow: '0 1px 2px rgba(0,0,0,0.25)' }}
+                  >
+                    立即搶購優惠 →
+                  </a>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+      {/* [DNA_PATCH_END] */}
+        </main>
+{/* [DNA_PATCH_START] Toast 通知元件 */}
+{showToast && (
+  <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] px-6 py-3 rounded-2xl bg-[#1a3a25] border border-[#89f5a2]/40 text-[#89f5a2] text-sm font-black shadow-xl shadow-black/40 transition-all flex items-center gap-3">
+    <span>{toastMessage}</span>
+    <button onClick={() => setShowToast(false)} className="text-[#89f5a2]/60 hover:text-[#89f5a2] text-base leading-none">✕</button>
+  </div>
+)}
+{/* [DNA_PATCH_END] */}
+  </>
+  );
+}

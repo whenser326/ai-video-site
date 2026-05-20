@@ -9,6 +9,7 @@ interface Message {
   content: string;
   characterName?: string;
   characterId?: string;
+  mediaUrl?: string;
 }
 
 const DEFAULT_CHARACTERS = [
@@ -47,6 +48,7 @@ export default function DefaultGroupChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [plan, setPlan] = useState("free");
   const [remainingQuota, setRemainingQuota] = useState<number | null>(null);
@@ -231,16 +233,16 @@ const searchResults = searchQuery.trim()
       setLoading(false);
 
       if (data.responses && Array.isArray(data.responses)) {
-        // ✅ 問題2修正：隨機抽取部分角色發言（至少1人，最多3人或全部）
         const shuffled = [...data.responses].sort(() => Math.random() - 0.5);
         const maxResponders = Math.min(shuffled.length, 3);
         const count = Math.floor(Math.random() * maxResponders) + 1;
         const picked = shuffled.slice(0, count);
 
-        // 不擋主流程，獨立跑顯示邏輯
         (async () => {
           for (const r of picked) {
+            setIsTyping(true);
             await new Promise(resolve => setTimeout(resolve, randomDelay()));
+            setIsTyping(false);
             setMessages(prev => [...prev, { role: "assistant", content: r.content, characterName: r.characterName, characterId: r.characterId }]);
           }
         })();
@@ -345,7 +347,7 @@ const searchResults = searchQuery.trim()
       </div>
 
       {/* 訊息區 */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-black">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full space-y-3 py-16">
             <div className="flex -space-x-3">
@@ -377,6 +379,9 @@ const searchResults = searchQuery.trim()
                     ? "bg-[#89f5a2]/20 border border-[#89f5a2]/30 text-white"
                     : "bg-black/30 border border-white/10 text-white/85"
                 }`}>
+                  {msg.mediaUrl && (
+                    <img src={msg.mediaUrl} alt="uploaded" className="w-48 rounded-xl mb-2 object-cover" />
+                  )}
                   {msg.content}
                 </div>
                 {msg.role === "assistant" && (
@@ -402,7 +407,7 @@ const searchResults = searchQuery.trim()
             </div>
           );
         })}
-        {loading && (
+        {(loading || isTyping) && (
           <div className="flex justify-start gap-2">
             <div className="w-8 h-8 rounded-full flex items-center justify-center text-xl bg-white/8 border border-white/10 flex-shrink-0 mt-1">💬</div>
             <div className="bg-black/30 border border-white/10 rounded-2xl px-4 py-3">
@@ -419,6 +424,15 @@ const searchResults = searchQuery.trim()
 
       {/* 輸入列 */}
       <div className="px-4 py-3 border-t border-white/8 bg-black/20 flex-shrink-0">
+        {replyTo && (
+          <div className="mb-2 flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/10 rounded-xl">
+            <div className="flex-1 min-w-0">
+              <p className="text-[#89f5a2]/60 text-[10px] font-bold mb-0.5">↩ 回覆 {replyTo.characterName}</p>
+              <p className="text-white/30 text-[10px] truncate">{replyTo.content.slice(0, 40)}{replyTo.content.length > 40 ? "..." : ""}</p>
+            </div>
+            <button onClick={() => setReplyTo(null)} className="text-white/20 hover:text-white/50 text-xs flex-shrink-0">✕</button>
+          </div>
+        )}
         <div className="flex gap-2 items-end">
           <label className="flex-shrink-0 w-11 h-11 rounded-2xl bg-white/5 border border-white/15 flex items-center justify-center cursor-pointer hover:bg-white/10 transition-all">
             <span className="text-base">📎</span>
@@ -433,7 +447,31 @@ const searchResults = searchQuery.trim()
                   const res = await fetch('/api/upload-chat-image', { method: 'POST', body: formData });
                   const data = await res.json();
                   if (data.url) {
-                    setMessages(prev => [...prev, { role: 'user', content: '（傳送了一張圖片）' }]);
+                    setMessages(prev => [...prev, { role: 'user', content: '（傳送了一張圖片）', mediaUrl: data.url }]);
+                    await fetch("/api/chat", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        userEmail: session?.user?.email,
+                        sessionId,
+                        message: "（用戶傳了一張圖片）",
+                        imageUrl: data.url,
+                        defaultCharacters: selectedChars.map(c => ({ id: c.id, name: c.name, description: c.description, image_url: null })),
+                      }),
+                    }).then(r => r.json()).then(async d => {
+                      if (d.sessionId) {
+                        setSessionId(d.sessionId);
+                        localStorage.setItem(sessionKey, d.sessionId);
+                      }
+                      if (Array.isArray(d.responses)) {
+                        for (const r of d.responses) {
+                          setIsTyping(true);
+                          await new Promise(resolve => setTimeout(resolve, randomDelay()));
+                          setIsTyping(false);
+                          setMessages(prev => [...prev, { role: 'assistant', content: r.content, characterName: r.characterName, characterId: r.characterId }]);
+                        }
+                      }
+                    });
                   }
                 } catch { }
                 e.target.value = '';
@@ -448,15 +486,6 @@ const searchResults = searchQuery.trim()
             className={`flex-shrink-0 w-11 h-11 rounded-2xl border text-lg transition-all flex items-center justify-center ${showStylePanel ? "bg-[#89f5a2]/20 border-[#89f5a2]/50 text-[#89f5a2]" : "bg-white/5 border-white/15 text-white/50 hover:border-white/30"}`}>
             🎨
           </button>
-          {replyTo && (
-            <div className="mb-2 flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/10 rounded-xl">
-              <div className="flex-1 min-w-0">
-                <p className="text-[#89f5a2]/60 text-[10px] font-bold mb-0.5">↩ 回覆 {replyTo.characterName}</p>
-                <p className="text-white/30 text-[10px] truncate">{replyTo.content.slice(0, 40)}{replyTo.content.length > 40 ? "..." : ""}</p>
-              </div>
-              <button onClick={() => setReplyTo(null)} className="text-white/20 hover:text-white/50 text-xs flex-shrink-0">✕</button>
-            </div>
-          )}
           {tagMenu && (
             <div className="mb-2 bg-[#0a1e12] border border-[#89f5a2]/20 rounded-xl p-2 flex gap-2 flex-wrap">
               <p className="w-full text-[#89f5a2]/50 text-[10px] mb-1">Tag 誰來回覆？</p>
@@ -480,7 +509,7 @@ const searchResults = searchQuery.trim()
             onKeyDown={handleKeyDown}
             placeholder="跟大家說點什麼..."
             rows={2}
-            className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-white/20 text-sm resize-none focus:outline-none focus:border-[#89f5a2]/40 leading-relaxed"
+            className="flex-1 px-4 py-3 bg-black border border-white/10 rounded-2xl text-white placeholder-white/20 text-sm resize-none focus:outline-none focus:border-[#89f5a2]/40 leading-relaxed"
           />
           <button
             onClick={handleSend}
