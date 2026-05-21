@@ -16,7 +16,7 @@ admin_settings 的 key 欄位已加 UNIQUE constraint（admin_settings_key_uniqu
 表格：checkin_logs（欄位：id, email, ip, checkin_date, streak, credits_earned, created_at）
 表格：feedback_messages（欄位：見 API）
 表格：credit_adjustments（欄位：admin_email, user_email, amount, reason, created_at）
-RLS：已停用，用 Service Role Key
+RLS：大部分表已停用，用 Service Role Key。chat_sessions 和 chat_messages 原本開啟導致 insert 失敗，2026/05/20 已關閉。
 admin_settings 整張表初始為空，後台儲存才會逐一寫入各 key。注意：upsert onConflict:"key" 需要 UNIQUE constraint 存在才能運作（已建立 admin_settings_key_unique）。首次部署時必須先執行初始化 SQL 把所有 key 寫入，否則後台儲存會靜默失敗只存入部分 key（已知：未初始化時只有 adult_section_enabled 能成功寫入）。初始化 SQL 已記錄於開發紀錄，執行後再按一次後台「儲存設定」即可正常運作。
 plan 預設值：free
 新用戶自動建立 profiles 並給 5 點
@@ -524,14 +524,21 @@ ANTHROPIC_API_KEY=sk-ant-你的金鑰
 ✅ 聊天室 isTyping 統一（2026/05/20）：五個聊天室均已加入 isTyping state，打字動畫改用 loading || isTyping 控制，API回來後立刻解鎖輸入，角色逐則顯示前才顯示打字動畫
 ✅ 聊天室風格面板位置統一（2026/05/20）：五個聊天室風格面板統一移至輸入列下方（showSuggest 之後）
 ✅ 聊天室上傳圖片補角色回應（2026/05/20）：五個聊天室 📎上傳圖片後均會呼叫 /api/chat 讓角色看圖回應
-✅ 聊天室上傳圖片預覽（2026/05/20）：五個聊天室均已補上 mediaUrl 顯示，含 Message interface 補欄位、氣泡補渲染、setMessages 補 mediaUrl
+✅ 聊天室上傳圖片預覽（2026/05/20）：五個聊天室均已補上 mediaUrl 顯示，含 Message interface 補欄位、氣泡補渲染、setMessages 補 mediaUrl、replyTo 移到輸入列上方
 ✅ GlobalHeader 新增「角色生成」按鈕（2026/05/20）：導向 /create，涵蓋桌面版和手機 Drawer
 ✅ 單人聊天室顏色統一（2026/05/20）：訊息區 bg-black、header 漸層改純黑、無圖時 bg-black/20、textarea bg-black
 ✅ gallery 聊天室新增📎上傳圖片功能（2026/05/19）：對標其他四個聊天室，呼叫 /api/upload-chat-image，帶入 defaultCharacter fakeChar 參數
 ✅ 後台產圖永久URL修正（2026/05/19）：generate-image/route.ts GET polling成功後自動下載上傳Supabase Storage，回傳permanentUrl。gallery/page.tsx優先用permanentUrl，fallback才用Replicate URL。舊資料若為Replicate臨時URL（約24小時過期）需重新產圖修復。
-✅ 後台產圖差異化臉孔（2026/05/19）：generate-image/route.ts加入隨機seed(0~2147483647)和randomFeature(16種臉部特徵隨機抽一)。generate/route.ts appearance描述強化為六維度（髮型/臉型/眼睛/膚色/特色/表情氣質），禁止重複用shoulder-length chestnut brown hair。
+✅ 後台產圖差異化臉孔（2026/05/19 起持續優化至 2026/05/21）：
+- generate-image/route.ts：隨機seed + randomFeature(16種) + randomHair(12種髮型) + randomFace(8種臉型) + randomSkin(6種膚色) + randomLighting(6種打光) + randomAngle(8種角度)
+- generate/route.ts：appearance六維度描述，髮色限制為亞洲人常見色（禁止blonde/platinum/silver/white/golden/ash）
+- gallery/page.tsx：imgPrompt帶入appearance + 職業對應場景(25種) + 體型(5種) + 表情(7種) + 細化年齡分段(20s/28/35/40/50)
+- generate/route.ts：職業去重機制，查最近30筆已用職業注入prompt排除，職業清單擴充至30個
+- generate/route.ts：max_tokens 500→1000，修復長故事偶爾當掉問題
+- 故事字數：中故事100字→200字，長故事200字→400字（2026/05/21）
 ✅ admin_settings 新增key（2026/05/19，共13個）：referral_milestone_1/2/3（JSON {"count":N,"credits":N}）、promo_countdown_end、promo_banner_text、promo_firstbuy_text、promo_countdown_text、promo_badge_starter/standard/pro、promo_quota_starter/standard/pro
 ✅ Supabase 新表 referral_milestone_logs（2026/05/19）：欄位 id uuid PK, email text, milestone_index integer, credits_awarded integer, created_at timestamptz。UNIQUE INDEX referral_milestone_logs_unique on (email, milestone_index)。RLS停用。
 ✅ /api/referral/milestone/route.ts（2026/05/19）：GET 查詢推薦里程碑進度，回傳 referralCount + milestones 陣列（index/count/credits/claimed/reached）
-✅ /api/referral/settings-public/route.ts 擴充（2026/05/19）：新增回傳 plan_bonus_credits_* 及所有 promo_* key
+✅ 聊天記憶系統修復（2026/05/20）：修復所有聊天室記憶完全失效的大 bug。根本原因：chat_sessions.character_ids 為 uuid[] 但 saved_characters.id 為 integer；chat_messages.character_id 為 uuid 同樣不相容；兩表 RLS 開著擋住 insert。修復：DB schema 改 text[]/text、RLS 關閉、/api/chat/route.ts 加 String(c.id) 轉型、history 讀取改 ascending:false + reverse() 確保帶入最新20筆。
+✅ 預設角色聊天室補「無自拍」提示（2026/05/20）：default單人/default-group header 藍色「預設角色」標籤旁加「無自拍」小字，預設角色記憶已隨 DB 修復自動生效。
 ✅ 聊天記憶系統修復（2026/05/20）：修復所有聊天室記憶完全失效的大 bug。根本原因：chat_sessions.character_ids 為 uuid[] 但 saved_characters.id 為 integer；chat_messages.character_id 為 uuid 同樣不相容；兩表 RLS 開著擋住 Service Role Key insert。修復內容：DB schema 改 text[]/text、RLS 關閉、/api/chat/route.ts 加 String(c.id) 轉型、history 讀取改 ascending:false + reverse() 確保帶入最新20筆。

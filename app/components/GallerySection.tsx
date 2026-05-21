@@ -287,7 +287,7 @@ export default function GallerySection({ userEmail, plan }: Props) {
             </div>
 
             {/* CTA 按鈕：圖片外面，卡片底部 */}
-            <div className="flex gap-3 px-4 py-4">
+            <div className="flex gap-3 px-4 pt-4 pb-2">
               <button onClick={() => handleChat(selected)}
                 className="flex-1 py-3 bg-[#89f5a2] text-[#0d2318] rounded-2xl text-sm font-black hover:bg-[#89f5a2]/90 transition-all">
                 💬 開始聊天
@@ -295,6 +295,12 @@ export default function GallerySection({ userEmail, plan }: Props) {
               <button onClick={() => handleCreate(selected)}
                 className="flex-1 py-3 bg-transparent border border-white/20 text-white/60 rounded-2xl text-sm font-black hover:border-white/40 hover:text-white transition-all">
                 🎨 生成同款
+              </button>
+            </div>
+            <div className="px-4 pb-4">
+              <button onClick={() => router.push(`/gallery/${selected.id}`)}
+                className="w-full py-2 text-white/25 text-xs hover:text-white/50 transition-all text-center">
+                查看角色詳細頁面 →
               </button>
             </div>
           </div>

@@ -55,10 +55,25 @@ const appearanceDesc = body.appearance ? `${body.appearance}, ` : "";
   ];
   const randomAngle = cameraAngles[Math.floor(Math.random() * cameraAngles.length)];
 
+  // 從 body.prompt 萃取年齡，組成強年齡提示
+  const ageMatch = body.prompt ? body.prompt.match(/(\d+)\s*years?\s*old/i) : null;
+  const ageNum = ageMatch ? parseInt(ageMatch[1]) : null;
+  const ageHint = ageNum
+    ? ageNum >= 60
+      ? `${ageNum}-year-old person, deeply wrinkled face, white or silver hair, prominent nasolabial folds, drooping eyelids, age spots, loose neck skin, realistic elderly appearance, `
+      : ageNum >= 50
+      ? `${ageNum}-year-old person, visibly wrinkled face, graying hair, nasolabial folds, mild age spots, slightly sagging cheeks, realistic middle-aged appearance, `
+      : ageNum >= 40
+      ? `${ageNum}-year-old person, mature face, noticeable nasolabial folds, under-eye bags, slightly looser skin, realistic age, `
+      : ageNum >= 30
+      ? `${ageNum}-year-old person, early fine lines around eyes and mouth, slightly defined facial structure, realistic age, `
+      : `${ageNum}-year-old person, smooth youthful skin, full cheeks, no wrinkles, `
+    : "";
+
   const prediction = await replicate.predictions.create({
     model: "black-forest-labs/flux-1.1-pro",
     input: {
-      prompt: `${appearanceDesc}${randomHair}, ${randomFace}, ${randomSkin}, ${randomFeature}, ${randomAngle}, ${body.prompt ? body.prompt + ", " : ""}${randomLighting}, photorealistic, real person, 8k, professional photography, highly distinctive unique facial features, unique individual appearance`,
+      prompt: `${ageHint}${appearanceDesc}${randomHair}, ${randomFace}, ${randomSkin}, ${randomFeature}, ${randomAngle}, ${body.prompt ? body.prompt + ", " : ""}${randomLighting}, photorealistic, real person, 8k, professional photography, highly distinctive unique facial features, unique individual appearance`,
       aspect_ratio: "2:3",
       output_format: "png",
       seed: seed,
