@@ -3,7 +3,7 @@
 import { signIn, signOut, useSession } from "next-auth/react";
 import { useState, useEffect, useRef } from "react";
 // [DNA_PATCH_START] 防止視窗切換時自動刷新
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 // [DNA_PATCH_START] Code Splitting — dynamic import 懶載入 Modal
 import dynamic from "next/dynamic";
@@ -58,6 +58,7 @@ export default function Home() {
   const progressRef = useRef<HTMLDivElement>(null);
   const { data: session, status } = useSession();
   const router = useRouter();
+const searchParams = useSearchParams();
   const [prompt, setPrompt] = useState("");
   const [selectedStyle, setSelectedStyle] = useState("");
   const [prediction, setPrediction] = useState<any>(null);
@@ -230,6 +231,18 @@ const [adultEnabled, setAdultEnabled] = useState(false)
 const [showOnboarding, setShowOnboarding] = useState(false);
 const [onboardingDismissed, setOnboardingDismissed] = useState(false);
 // [DNA_PATCH_END]
+// [DNA_PATCH_START] 讀取 URL ?prompt= 參數，自動帶入提示詞並捲動到 step6
+useEffect(() => {
+  const urlPrompt = searchParams.get("prompt");
+  if (urlPrompt) {
+    setPrompt(urlPrompt);
+    setActiveStep(6);
+    setTimeout(() => {
+      const el = document.getElementById("step6-section");
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 500);
+  }
+}, []);
 // [DNA_PATCH_END]
   // 1. 初始化與點數同步
   useEffect(() => {

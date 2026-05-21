@@ -542,3 +542,8 @@ ANTHROPIC_API_KEY=sk-ant-你的金鑰
 ✅ 聊天記憶系統修復（2026/05/20）：修復所有聊天室記憶完全失效的大 bug。根本原因：chat_sessions.character_ids 為 uuid[] 但 saved_characters.id 為 integer；chat_messages.character_id 為 uuid 同樣不相容；兩表 RLS 開著擋住 insert。修復：DB schema 改 text[]/text、RLS 關閉、/api/chat/route.ts 加 String(c.id) 轉型、history 讀取改 ascending:false + reverse() 確保帶入最新20筆。
 ✅ 預設角色聊天室補「無自拍」提示（2026/05/20）：default單人/default-group header 藍色「預設角色」標籤旁加「無自拍」小字，預設角色記憶已隨 DB 修復自動生效。
 ✅ 聊天記憶系統修復（2026/05/20）：修復所有聊天室記憶完全失效的大 bug。根本原因：chat_sessions.character_ids 為 uuid[] 但 saved_characters.id 為 integer；chat_messages.character_id 為 uuid 同樣不相容；兩表 RLS 開著擋住 Service Role Key insert。修復內容：DB schema 改 text[]/text、RLS 關閉、/api/chat/route.ts 加 String(c.id) 轉型、history 讀取改 ascending:false + reverse() 確保帶入最新20筆。
+✅ M02 角色詳細頁（2026/05/21 完成）：新建 app/gallery/[id]/page.tsx，獨立角色詳細頁，含完整故事/標籤/喜歡次數/聊天次數/CTA按鈕。首頁 GallerySection 彈窗底部加「查看角色詳細頁面 →」按鈕。
+✅ M03 留言區（2026/05/21 完成）：新建 Supabase 表 gallery_comments（id uuid PK, gallery_id uuid, user_email text, content text, created_at timestamptz），RLS停用，建 gallery_id 索引。新建 app/api/gallery/comments/route.ts（GET讀留言/POST新增）。留言區顯示在角色詳細頁底部，🗨️ 顯示真實留言數，email 自動遮罩。
+✅ 喜歡/聊天次數跨頁一致（2026/05/21 完成）：GallerySection.tsx 和 gallery/[id]/page.tsx 統一改用 seededRandom(id+"_like"/_chat") 產生固定數字，同一角色在首頁卡片/彈窗/詳細頁顯示完全一致。gallery/route.ts 單筆查詢補齊 like_count_min/max/chat_count_min/max 欄位。
+✅ 後台產圖年齡強化（2026/05/21 完成）：generate-image/route.ts 新增5段年齡 prompt 強化（18-29/30-39/40-49/50-59/60+），60歲以上強制加 deeply wrinkled/white or silver hair/age spots 等描述，放在 prompt 最前面確保模型優先識別。
+✅ create/page.tsx 讀取 URL ?prompt= 參數（2026/05/21 完成）：新增 useSearchParams，頁面載入時自動帶入 prompt、setActiveStep(6)、捲動到 step6-section，解決「生成同款」跳轉後無帶入問題。
