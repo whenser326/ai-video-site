@@ -444,7 +444,9 @@ GlobalHeader 「使用指南」改為直接跳 /guide，不再觸發 open-onboar
 ## UI/UX 架構（2026/05/01 定案）
 
 頁面結構：
-- / 創作工作室（現有主頁優化）
+- / 首頁（已登入：GallerySection瀑布流畫廊 / 未登入：Landing Page）
+- /create 創作工作室（六步驟生成，原主頁功能移至此）
+- /gallery/[id] 角色詳細頁（M02，2026/05/21完成）
 - /characters 我的角色（新建）
 - /chat/[characterId] 單人聊天（新建）
 - /chat/group 群組聊天（新建）
@@ -532,8 +534,8 @@ ANTHROPIC_API_KEY=sk-ant-你的金鑰
 ✅ 後台產圖差異化臉孔（2026/05/19 起持續優化至 2026/05/21）：
 - generate-image/route.ts：隨機seed + randomFeature(16種) + randomHair(12種髮型) + randomFace(8種臉型) + randomSkin(6種膚色) + randomLighting(6種打光) + randomAngle(8種角度)
 - generate/route.ts：appearance六維度描述，髮色限制為亞洲人常見色（禁止blonde/platinum/silver/white/golden/ash）
-- gallery/page.tsx：imgPrompt帶入appearance + 職業對應場景(25種) + 體型(5種) + 表情(7種) + 細化年齡分段(20s/28/35/40/50)
-- generate/route.ts：職業去重機制，查最近30筆已用職業注入prompt排除，職業清單擴充至30個
+- gallery/page.tsx：imgPrompt帶入appearance + 職業對應場景+穿著(50種) + 體型(5種) + 表情(7種) + 細化年齡分段(20s/28/35/40/50)
+- generate/route.ts：職業去重機制，查最近50筆已用職業注入prompt排除，職業清單擴充至50個
 - generate/route.ts：max_tokens 500→1000，修復長故事偶爾當掉問題
 - 故事字數：中故事100字→200字，長故事200字→400字（2026/05/21）
 ✅ admin_settings 新增key（2026/05/19，共13個）：referral_milestone_1/2/3（JSON {"count":N,"credits":N}）、promo_countdown_end、promo_banner_text、promo_firstbuy_text、promo_countdown_text、promo_badge_starter/standard/pro、promo_quota_starter/standard/pro
@@ -541,9 +543,12 @@ ANTHROPIC_API_KEY=sk-ant-你的金鑰
 ✅ /api/referral/milestone/route.ts（2026/05/19）：GET 查詢推薦里程碑進度，回傳 referralCount + milestones 陣列（index/count/credits/claimed/reached）
 ✅ 聊天記憶系統修復（2026/05/20）：修復所有聊天室記憶完全失效的大 bug。根本原因：chat_sessions.character_ids 為 uuid[] 但 saved_characters.id 為 integer；chat_messages.character_id 為 uuid 同樣不相容；兩表 RLS 開著擋住 insert。修復：DB schema 改 text[]/text、RLS 關閉、/api/chat/route.ts 加 String(c.id) 轉型、history 讀取改 ascending:false + reverse() 確保帶入最新20筆。
 ✅ 預設角色聊天室補「無自拍」提示（2026/05/20）：default單人/default-group header 藍色「預設角色」標籤旁加「無自拍」小字，預設角色記憶已隨 DB 修復自動生效。
-✅ 聊天記憶系統修復（2026/05/20）：修復所有聊天室記憶完全失效的大 bug。根本原因：chat_sessions.character_ids 為 uuid[] 但 saved_characters.id 為 integer；chat_messages.character_id 為 uuid 同樣不相容；兩表 RLS 開著擋住 Service Role Key insert。修復內容：DB schema 改 text[]/text、RLS 關閉、/api/chat/route.ts 加 String(c.id) 轉型、history 讀取改 ascending:false + reverse() 確保帶入最新20筆。
 ✅ M02 角色詳細頁（2026/05/21 完成）：新建 app/gallery/[id]/page.tsx，獨立角色詳細頁，含完整故事/標籤/喜歡次數/聊天次數/CTA按鈕。首頁 GallerySection 彈窗底部加「查看角色詳細頁面 →」按鈕。
 ✅ M03 留言區（2026/05/21 完成）：新建 Supabase 表 gallery_comments（id uuid PK, gallery_id uuid, user_email text, content text, created_at timestamptz），RLS停用，建 gallery_id 索引。新建 app/api/gallery/comments/route.ts（GET讀留言/POST新增）。留言區顯示在角色詳細頁底部，🗨️ 顯示真實留言數，email 自動遮罩。
 ✅ 喜歡/聊天次數跨頁一致（2026/05/21 完成）：GallerySection.tsx 和 gallery/[id]/page.tsx 統一改用 seededRandom(id+"_like"/_chat") 產生固定數字，同一角色在首頁卡片/彈窗/詳細頁顯示完全一致。gallery/route.ts 單筆查詢補齊 like_count_min/max/chat_count_min/max 欄位。
 ✅ 後台產圖年齡強化（2026/05/21 完成）：generate-image/route.ts 新增5段年齡 prompt 強化（18-29/30-39/40-49/50-59/60+），60歲以上強制加 deeply wrinkled/white or silver hair/age spots 等描述，放在 prompt 最前面確保模型優先識別。
 ✅ create/page.tsx 讀取 URL ?prompt= 參數（2026/05/21 完成）：新增 useSearchParams，頁面載入時自動帶入 prompt、setActiveStep(6)、捲動到 step6-section，解決「生成同款」跳轉後無帶入問題。
+✅ 後台職業清單擴充（2026/05/21 完成）：generate/route.ts 職業清單從30個擴充至50個，去重查詢 limit 從30改為50。admin/gallery/page.tsx occupationScene 對照表補齊原本5個缺漏職業 + 新增20個職業，每個職業均包含場景背景和對應穿著描述。
+✅ gallery 聊天室加詳情按鈕（2026/05/21 完成）：chat/gallery/[id]/page.tsx header 右側加入「詳情」按鈕，點擊跳轉 /gallery/[galleryId]。
+✅ 角色詳細頁分享按鈕（2026/05/21 完成）：gallery/[id]/page.tsx 加入「🔗 分享角色」按鈕，點擊複製當前頁面 URL，顯示「✅ 已複製連結」2秒後還原。新增 copied state。
+✅ Supabase 新表 gallery_comments（2026/05/21）：欄位 id uuid PK, gallery_id uuid, user_email text, content text, created_at timestamptz。RLS停用。建立 gallery_comments_gallery_id_idx 索引。新建 app/api/gallery/comments/route.ts（GET讀取留言/POST新增留言，200字上限，email遮罩顯示）。

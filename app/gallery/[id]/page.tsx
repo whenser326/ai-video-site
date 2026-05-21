@@ -57,6 +57,7 @@ export default function GalleryDetailPage() {
   const [commentInput, setCommentInput] = useState("");
   const [commentLoading, setCommentLoading] = useState(false);
   const [commentError, setCommentError] = useState("");
+  const [copied, setCopied] = useState(false);
 
   // 讀取角色資料
   useEffect(() => {
@@ -168,7 +169,21 @@ export default function GalleryDetailPage() {
           </div>
           <p className="text-white/55 text-sm leading-relaxed">{character.story}</p>
         </div>
-
+{/* 分享按鈕 */}
+        <div className="flex justify-end mb-3">
+          <button
+            onClick={() => {
+              const url = `${window.location.origin}/gallery/${character.id}`;
+              navigator.clipboard.writeText(url).then(() => {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              });
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 rounded-full text-white/30 text-xs hover:border-white/30 hover:text-white/60 transition-all"
+          >
+            {copied ? "✅ 已複製連結" : "🔗 分享角色"}
+          </button>
+        </div>
         {/* CTA 按鈕 */}
         <div className="flex gap-3 mb-8">
           <button onClick={() => router.push(`/chat/gallery/${character.id}`)}

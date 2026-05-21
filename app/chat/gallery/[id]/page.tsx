@@ -310,6 +310,7 @@ export default function GalleryChatPage() {
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
+            <button onClick={() => router.push(`/gallery/${galleryId}`)} className="text-white/30 hover:text-white/60 transition-all text-xs">詳情</button>
             <button onClick={() => { setSearchOpen(p => !p); setSearchQuery(""); setSearchIndex(0); }} className="text-white/30 hover:text-white/60 transition-all text-base">🔍</button>
             {remainingQuota !== null && (
               <span className="text-[10px] text-white/20">{remainingQuota} 次剩餘</span>
