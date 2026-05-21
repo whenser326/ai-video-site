@@ -15,35 +15,43 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const appearanceDesc = body.appearance ? `${body.appearance}, ` : "";
+const appearanceDesc = body.appearance ? `${body.appearance}, ` : "";
   const seed = Math.floor(Math.random() * 2147483647);
+
   const diversifiers = [
     "freckles on nose", "strong brow", "dimples", "sharp cheekbones",
     "full lips", "thin lips", "button nose", "aquiline nose",
     "deep-set eyes", "wide-set eyes", "upturned eyes", "hooded eyes",
     "gap teeth", "defined jawline", "soft round face", "angular face",
   ];
-  const randomFeature = diversifiers[Math.floor(Math.random() * diversifiers.length)];
-
-  const ethnicities = [
-    "East Asian", "Southeast Asian", "South Asian", "mixed East-Southeast Asian",
-    "mixed Asian-European", "Taiwanese", "Japanese", "Korean", "Vietnamese", "Thai"
+  const hairStyles = [
+    "short pixie cut", "chin-length bob", "curly medium hair", "wavy shoulder-length hair",
+    "tight curls", "braided hair", "asymmetric short hair", "layered medium hair",
+    "straight short hair", "voluminous curly hair", "side-swept bangs", "undercut",
   ];
-  const ageGroups = [
-    "early 20s", "mid 20s", "late 20s", "early 30s", "mid 30s", "late 30s"
+  const faceTypes = [
+    "round face", "square jawline", "heart-shaped face", "long oval face",
+    "wide forehead", "strong chin", "prominent cheekbones", "soft round cheeks",
+  ];
+  const skinTones = [
+    "warm golden tan skin", "light olive complexion", "deep brown skin",
+    "fair skin with warm undertone", "medium caramel skin", "cool beige complexion",
   ];
   const lightingStyles = [
     "soft natural window light", "golden hour sunlight", "studio rim lighting",
-    "overcast outdoor light", "warm cafe lighting", "cool blue morning light"
+    "overcast outdoor light", "warm cafe lighting", "cool blue morning light",
   ];
-  const randomEthnicity = ethnicities[Math.floor(Math.random() * ethnicities.length)];
-  const randomAge = ageGroups[Math.floor(Math.random() * ageGroups.length)];
+
+  const randomFeature = diversifiers[Math.floor(Math.random() * diversifiers.length)];
+  const randomHair = hairStyles[Math.floor(Math.random() * hairStyles.length)];
+  const randomFace = faceTypes[Math.floor(Math.random() * faceTypes.length)];
+  const randomSkin = skinTones[Math.floor(Math.random() * skinTones.length)];
   const randomLighting = lightingStyles[Math.floor(Math.random() * lightingStyles.length)];
 
   const prediction = await replicate.predictions.create({
     model: "black-forest-labs/flux-1.1-pro",
     input: {
-      prompt: `${appearanceDesc}${randomFeature}, ${randomEthnicity} person, ${randomAge}, ${body.prompt ? body.prompt + ", " : ""}${randomLighting}, photorealistic, real person, 8k, professional photography, highly distinctive unique facial features, NOT generic, NOT idealized beauty standard, natural imperfections, unique individual appearance`,
+      prompt: `${appearanceDesc}${randomHair}, ${randomFace}, ${randomSkin}, ${randomFeature}, ${body.prompt ? body.prompt + ", " : ""}${randomLighting}, photorealistic, real person, 8k, professional photography, highly distinctive unique facial features, unique individual appearance`,
       aspect_ratio: "2:3",
       output_format: "png",
       seed: seed,

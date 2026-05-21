@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 500,
+        max_tokens: 1000,
         messages: [{
           role: 'user',
           content: `請生成一個虛構的AI角色，用繁體中文，只回傳純JSON，不要任何說明文字。
