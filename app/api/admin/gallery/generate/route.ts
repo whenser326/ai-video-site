@@ -66,6 +66,7 @@ export async function POST(req: NextRequest) {
   5. 其他特色（例如：high cheekbones、button nose、defined jawline、soft round cheeks）
   6. 表情氣質（例如：gentle warm smile、confident smirk、shy downward gaze）
 - 每次產生的appearance必須跟之前完全不同，禁止重複用shoulder-length chestnut brown hair
+- 髮色必須是亞洲人常見髮色（黑色/深棕色/深褐色），禁止使用blonde、platinum、silver、white、golden、ash等淺色系髮色
 ${occupationExclusion}- personality_tags 第一個標籤必須是職業，從以下清單隨機選一個「沒有被禁止」的職業：廚師、外科醫生、建築師、飛行員、刑警、音樂製作人、律師、電競選手、海洋研究員、釀酒師、街舞老師、紋身師、消防員、心理諮商師、登山嚮導、珠寶設計師、獸醫、氣象主播、調酒師、動畫導演、賽車手、潛水教練、馴獸師、爆破工程師、考古學家、義肢師、魔術師、戰地記者、密室設計師、茶藝師；若清單全被禁止則自由發揮罕見職業，減少使用學生、設計師、護士、老師、工程師、模特兒、攝影師
 - personality_tags 第二個標籤是個性特質（例如：冷靜型、熱血型、神秘感、反差萌）
 

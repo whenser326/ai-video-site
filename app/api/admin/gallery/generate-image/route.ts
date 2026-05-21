@@ -34,8 +34,9 @@ const appearanceDesc = body.appearance ? `${body.appearance}, ` : "";
     "wide forehead", "strong chin", "prominent cheekbones", "soft round cheeks",
   ];
   const skinTones = [
-    "warm golden tan skin", "light olive complexion", "deep brown skin",
-    "fair skin with warm undertone", "medium caramel skin", "cool beige complexion",
+    "warm golden tan skin", "light olive complexion",
+    "fair skin with warm undertone", "medium caramel skin",
+    "peachy fair skin", "warm ivory skin",
   ];
   const lightingStyles = [
     "soft natural window light", "golden hour sunlight", "studio rim lighting",

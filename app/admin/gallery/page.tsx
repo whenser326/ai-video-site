@@ -81,7 +81,36 @@ export default function AdminGalleryPage() {
         const age = genData.character.age
         const ageHint = age >= 50 ? 'middle-aged, mature face, visible age' : age >= 35 ? 'adult, mature' : 'young adult'
         const appearanceHint = genData.character.appearance || ''
-        setImgPrompt(`${genderHint}, ${age} years old, ${ageHint}${appearanceHint ? ', ' + appearanceHint : ''}`)
+        const occupation = (genData.character.personality_tags || [])[0] || ''
+        const occupationScene: Record<string, string> = {
+          '刑警': 'detective office, dim lighting, serious atmosphere',
+          '外科醫生': 'hospital corridor, clinical lighting',
+          '建築師': 'modern office with blueprints, natural light',
+          '飛行員': 'airport terminal, bright lighting',
+          '音樂製作人': 'recording studio, warm lighting',
+          '律師': 'law office, bookshelves background',
+          '電競選手': 'gaming setup, RGB lighting',
+          '街舞老師': 'dance studio, urban setting',
+          '紋身師': 'tattoo parlor, artistic background',
+          '消防員': 'fire station, dramatic lighting',
+          '心理諮商師': 'therapy office, soft warm lighting',
+          '登山嚮導': 'mountain background, outdoor natural light',
+          '珠寶設計師': 'jewelry workshop, studio lighting',
+          '獸醫': 'veterinary clinic, bright lighting',
+          '氣象主播': 'TV studio, broadcast lighting',
+          '調酒師': 'bar counter, moody lighting',
+          '動畫導演': 'creative studio, colorful background',
+          '廚師': 'professional kitchen, warm lighting',
+          '賽車手': 'race track, dramatic sunlight',
+          '潛水教練': 'tropical beach, bright outdoor lighting',
+          '馴獸師': 'nature reserve, outdoor lighting',
+          '考古學家': 'excavation site, natural outdoor light',
+          '魔術師': 'stage setting, dramatic spotlight',
+          '戰地記者': 'urban environment, photojournalism style',
+          '茶藝師': 'traditional tea house, warm soft lighting',
+        }
+        const sceneHint = occupationScene[occupation] || 'natural outdoor lighting, lifestyle photography'
+        setImgPrompt(`${genderHint}, ${age} years old, ${ageHint}${appearanceHint ? ', ' + appearanceHint : ''}, ${sceneHint}`)
       }
     } catch {
       setMsg('❌ 產生失敗')
