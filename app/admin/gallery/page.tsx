@@ -79,7 +79,7 @@ export default function AdminGalleryPage() {
         setTagsInput((genData.character.personality_tags || []).join('、'))
         const genderHint = genData.character.gender === '男性' ? 'man, male' : 'woman, female'
         const age = genData.character.age
-        const ageHint = age >= 50 ? 'middle-aged, mature face, visible age' : age >= 35 ? 'adult, mature' : 'young adult'
+        const ageHint = age >= 50 ? 'middle-aged, visible age signs, slight wrinkles, mature face' : age >= 40 ? 'early middle-aged, mature face, slight laugh lines' : age >= 35 ? 'adult, mature, late 30s look' : age >= 28 ? 'young adult, late 20s' : 'young adult, early 20s'
         const appearanceHint = genData.character.appearance || ''
         const occupation = (genData.character.personality_tags || [])[0] || ''
         const occupationScene: Record<string, string> = {
@@ -110,7 +110,11 @@ export default function AdminGalleryPage() {
           '茶藝師': 'traditional tea house, warm soft lighting',
         }
         const sceneHint = occupationScene[occupation] || 'natural outdoor lighting, lifestyle photography'
-        setImgPrompt(`${genderHint}, ${age} years old, ${ageHint}${appearanceHint ? ', ' + appearanceHint : ''}, ${sceneHint}`)
+        const bodyTypes = ['slender build', 'athletic build', 'average build', 'petite frame', 'tall and lean']
+        const expressions = ['serious expression', 'gentle smile', 'confident look', 'thoughtful expression', 'calm composed look', 'warm smile', 'focused expression']
+        const randomBody = bodyTypes[Math.floor(Math.random() * bodyTypes.length)]
+        const randomExpression = expressions[Math.floor(Math.random() * expressions.length)]
+        setImgPrompt(`${genderHint}, ${age} years old, ${ageHint}, ${randomBody}, ${randomExpression}${appearanceHint ? ', ' + appearanceHint : ''}, ${sceneHint}`)
       }
     } catch {
       setMsg('❌ 產生失敗')
