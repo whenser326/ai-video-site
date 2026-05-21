@@ -259,8 +259,8 @@ export default function AdminGalleryPage() {
                     <select value={storyLength} onChange={e => setStoryLength(e.target.value as 'short'|'mid'|'long')}
                       className="bg-[#0d2318] border border-[#2d5a3d] rounded-lg px-3 py-1.5 text-white text-sm">
                       <option value="short">短故事（20字）</option>
-                      <option value="mid">中故事（100字）</option>
-                      <option value="long">長故事（200字）</option>
+                      <option value="mid">中故事（200字）</option>
+                      <option value="long">長故事（400字）</option>
                     </select>
                     <button onClick={handleGenerate} disabled={generating}
                       className="px-4 py-1.5 bg-purple-500/20 border border-purple-500/40 rounded-lg text-purple-300 text-sm font-bold hover:bg-purple-500/30 transition disabled:opacity-40">

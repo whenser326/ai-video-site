@@ -1,14 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { createClient } from "@supabase/supabase-js";
+
 const ADMIN_EMAIL = "whenser@gmail.com";
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
   if (body.adminEmail !== ADMIN_EMAIL) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  // 查詢最近30筆已使用職業，避免重複
+  const { data: recentGallery } = await supabase
+    .from('public_gallery')
+    .select('personality_tags')
+    .order('created_at', { ascending: false })
+    .limit(30);
+
+  const usedOccupations = (recentGallery || [])
+    .map((g: any) => g.personality_tags?.[0])
+    .filter(Boolean)
+    .filter((v: string, i: number, arr: string[]) => arr.indexOf(v) === i)
+    .join('、');
+
+  const occupationExclusion = usedOccupations
+    ? `- 以下職業最近已使用過，本次絕對禁止使用：${usedOccupations}\n`
+    : '';
+
   const storyLength = body.storyLength || 'mid';
-  const lengthHint = storyLength === 'short' ? '20字以內' : storyLength === 'mid' ? '100字以內' : '200字以內';
+  const lengthHint = storyLength === 'short' ? '20字以內' : storyLength === 'mid' ? '200字以內' : '400字以內';
   const gender = Math.random() > 0.5 ? '女性' : '男性';
   const age = Math.floor(Math.random() * 23) + 18;
   const surnames = ['陳','林','黃','張','李','王','吳','劉','蔡','楊','許','鄭','謝','洪','郭','邱','曾','廖','賴','徐'];
@@ -42,7 +66,7 @@ export async function POST(req: NextRequest) {
   5. 其他特色（例如：high cheekbones、button nose、defined jawline、soft round cheeks）
   6. 表情氣質（例如：gentle warm smile、confident smirk、shy downward gaze）
 - 每次產生的appearance必須跟之前完全不同，禁止重複用shoulder-length chestnut brown hair
-- personality_tags 第一個標籤必須是職業，優先從以下清單隨機選一個：廚師、外科醫生、建築師、飛行員、刑警、音樂製作人、律師、電競選手、海洋研究員、釀酒師、街舞老師、紋身師、消防員、心理諮商師、登山嚮導、珠寶設計師、獸醫、氣象主播、調酒師、動畫導演；也可以自由發揮其他有趣且少見的職業，但避免重複使用學生、設計師、護士、老師、工程師、廚師、模特兒、攝影師這類常見職業
+${occupationExclusion}- personality_tags 第一個標籤必須是職業，從以下清單隨機選一個「沒有被禁止」的職業：廚師、外科醫生、建築師、飛行員、刑警、音樂製作人、律師、電競選手、海洋研究員、釀酒師、街舞老師、紋身師、消防員、心理諮商師、登山嚮導、珠寶設計師、獸醫、氣象主播、調酒師、動畫導演、賽車手、潛水教練、馴獸師、爆破工程師、考古學家、義肢師、魔術師、戰地記者、密室設計師、茶藝師；若清單全被禁止則自由發揮罕見職業，減少使用學生、設計師、護士、老師、工程師、模特兒、攝影師
 - personality_tags 第二個標籤是個性特質（例如：冷靜型、熱血型、神秘感、反差萌）
 
 回傳格式：{"name":"姓名","age":${age},"personality_tags":["職業","個性標籤","選填第三標籤"],"story":"故事","appearance":"非常具體的外觀英文描述至少30個英文字"}`

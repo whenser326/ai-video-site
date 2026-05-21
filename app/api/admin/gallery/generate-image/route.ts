@@ -25,10 +25,25 @@ export async function POST(req: NextRequest) {
   ];
   const randomFeature = diversifiers[Math.floor(Math.random() * diversifiers.length)];
 
+  const ethnicities = [
+    "East Asian", "Southeast Asian", "South Asian", "mixed East-Southeast Asian",
+    "mixed Asian-European", "Taiwanese", "Japanese", "Korean", "Vietnamese", "Thai"
+  ];
+  const ageGroups = [
+    "early 20s", "mid 20s", "late 20s", "early 30s", "mid 30s", "late 30s"
+  ];
+  const lightingStyles = [
+    "soft natural window light", "golden hour sunlight", "studio rim lighting",
+    "overcast outdoor light", "warm cafe lighting", "cool blue morning light"
+  ];
+  const randomEthnicity = ethnicities[Math.floor(Math.random() * ethnicities.length)];
+  const randomAge = ageGroups[Math.floor(Math.random() * ageGroups.length)];
+  const randomLighting = lightingStyles[Math.floor(Math.random() * lightingStyles.length)];
+
   const prediction = await replicate.predictions.create({
     model: "black-forest-labs/flux-1.1-pro",
     input: {
-      prompt: `${appearanceDesc}${randomFeature}, ${body.prompt ? body.prompt + ", " : ""}photorealistic, real person, 8k, professional photography, cinematic lighting, highly distinctive unique facial features, unique individual appearance`,
+      prompt: `${appearanceDesc}${randomFeature}, ${randomEthnicity} person, ${randomAge}, ${body.prompt ? body.prompt + ", " : ""}${randomLighting}, photorealistic, real person, 8k, professional photography, highly distinctive unique facial features, NOT generic, NOT idealized beauty standard, natural imperfections, unique individual appearance`,
       aspect_ratio: "2:3",
       output_format: "png",
       seed: seed,
