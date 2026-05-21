@@ -27,8 +27,14 @@ interface Comment {
   created_at: string;
 }
 
-function randomInRange(min: number, max: number) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+function seededRandom(seed: string, min: number, max: number) {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+    hash |= 0;
+  }
+  const normalized = Math.abs(hash) / 2147483647;
+  return Math.floor(normalized * (max - min + 1)) + min;
 }
 
 function maskEmail(email: string) {
@@ -61,8 +67,8 @@ export default function GalleryDetailPage() {
         if (data.item) {
           const item = data.item;
           setCharacter(item);
-          setLikeCount(randomInRange(item.like_count_min ?? 100, item.like_count_max ?? 500));
-          setChatCount(randomInRange(item.chat_count_min ?? 50, item.chat_count_max ?? 300) + (item.actual_chat_count ?? 0));
+          setLikeCount(seededRandom(item.id + "_like", item.like_count_min ?? 100, item.like_count_max ?? 500));
+          setChatCount(seededRandom(item.id + "_chat", item.chat_count_min ?? 50, item.chat_count_max ?? 300) + (item.actual_chat_count ?? 0));
         }
       })
       .finally(() => setLoading(false));
@@ -157,8 +163,8 @@ export default function GalleryDetailPage() {
             ))}
           </div>
           <div className="flex gap-4 text-xs text-white/25 mb-4">
-            <span>❤️ {likeCount.toLocaleString()}</span>
-            <span>💬 {chatCount.toLocaleString()}</span>
+            <span>❤️ 喜歡次數 {likeCount.toLocaleString()}</span>
+            <span>💬 聊天次數 {chatCount.toLocaleString()}</span>
           </div>
           <p className="text-white/55 text-sm leading-relaxed">{character.story}</p>
         </div>
@@ -180,7 +186,7 @@ export default function GalleryDetailPage() {
 
         {/* 留言區 */}
         <div>
-          <p className="text-white/40 text-xs font-black tracking-widest uppercase mb-4">💬 留言區</p>
+          <p className="text-white/40 text-xs font-black tracking-widest uppercase mb-4">🗨️ {comments.length > 0 ? `${comments.length} 則留言` : "留言區"}</p>
 
           {/* 輸入框 */}
           <div className="mb-5">

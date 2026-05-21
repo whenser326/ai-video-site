@@ -29,6 +29,16 @@ function randomInRange(min: number, max: number) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+function seededRandom(seed: string, min: number, max: number) {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+    hash |= 0;
+  }
+  const normalized = Math.abs(hash) / 2147483647;
+  return Math.floor(normalized * (max - min + 1)) + min;
+}
+
 const HERO_VIDEO = "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/hero.mp4";
 const FREE_LIMIT = 12;
 
@@ -49,8 +59,8 @@ export default function GallerySection({ userEmail, plan }: Props) {
     const map = displayCountsRef.current;
     if (!map.has(item.id)) {
       map.set(item.id, {
-        like: randomInRange(item.like_count_min, item.like_count_max),
-        chat: randomInRange(item.chat_count_min, item.chat_count_max),
+        like: seededRandom(item.id + "_like", item.like_count_min, item.like_count_max),
+        chat: seededRandom(item.id + "_chat", item.chat_count_min, item.chat_count_max),
       });
     }
     return map.get(item.id)!;
