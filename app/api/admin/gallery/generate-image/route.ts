@@ -48,11 +48,17 @@ const appearanceDesc = body.appearance ? `${body.appearance}, ` : "";
   const randomFace = faceTypes[Math.floor(Math.random() * faceTypes.length)];
   const randomSkin = skinTones[Math.floor(Math.random() * skinTones.length)];
   const randomLighting = lightingStyles[Math.floor(Math.random() * lightingStyles.length)];
+  const cameraAngles = [
+    "front facing", "slight left turn", "slight right turn",
+    "three-quarter right angle", "three-quarter left angle",
+    "looking over shoulder", "chin down looking up", "profile view"
+  ];
+  const randomAngle = cameraAngles[Math.floor(Math.random() * cameraAngles.length)];
 
   const prediction = await replicate.predictions.create({
     model: "black-forest-labs/flux-1.1-pro",
     input: {
-      prompt: `${appearanceDesc}${randomHair}, ${randomFace}, ${randomSkin}, ${randomFeature}, ${body.prompt ? body.prompt + ", " : ""}${randomLighting}, photorealistic, real person, 8k, professional photography, highly distinctive unique facial features, unique individual appearance`,
+      prompt: `${appearanceDesc}${randomHair}, ${randomFace}, ${randomSkin}, ${randomFeature}, ${randomAngle}, ${body.prompt ? body.prompt + ", " : ""}${randomLighting}, photorealistic, real person, 8k, professional photography, highly distinctive unique facial features, unique individual appearance`,
       aspect_ratio: "2:3",
       output_format: "png",
       seed: seed,
