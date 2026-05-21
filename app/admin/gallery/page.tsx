@@ -80,7 +80,8 @@ export default function AdminGalleryPage() {
         const genderHint = genData.character.gender === '男性' ? 'man, male' : 'woman, female'
         const age = genData.character.age
         const ageHint = age >= 50 ? 'middle-aged, mature face, visible age' : age >= 35 ? 'adult, mature' : 'young adult'
-        setImgPrompt(`${genderHint}, ${age} years old, ${ageHint}`)
+        const appearanceHint = genData.character.appearance || ''
+        setImgPrompt(`${genderHint}, ${age} years old, ${ageHint}${appearanceHint ? ', ' + appearanceHint : ''}`)
       }
     } catch {
       setMsg('❌ 產生失敗')
