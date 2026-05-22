@@ -96,7 +96,7 @@ export async function PATCH(req: Request) {
   // 取得投稿資料（用於通知用戶）
   const { data: item } = await supabase
     .from("public_characters")
-    .select("user_email, name")
+    .select("user_email, name, image_url, description, tags, gender")
     .eq("id", id)
     .single();
 
@@ -105,6 +105,27 @@ export async function PATCH(req: Request) {
       .from("public_characters")
       .update({ status: "approved", is_active: true })
       .eq("id", id);
+
+    // 複製到 public_gallery 讓前台顯示
+    if (item) {
+      await supabase.from("public_gallery").insert({
+        name: item.name,
+        image_url: item.image_url,
+        story: item.description || "",
+        story_type: "short",
+        personality_tags: item.tags || [],
+        gender: item.gender || "",
+        age: 25,
+        like_count_min: 10,
+        like_count_max: 50,
+        chat_count_min: 5,
+        chat_count_max: 30,
+        is_featured: false,
+        is_active: true,
+        sort_order: 999,
+        actual_chat_count: 0,
+      });
+    }
 
     // 通知用戶核准
     if (item) {
