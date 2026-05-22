@@ -29,7 +29,7 @@ export async function GET(req: Request) {
 
   let query = supabase
     .from("public_gallery")
-    .select("id, name, age, personality_tags, story, story_type, image_url, video_url, like_count_min, like_count_max, chat_count_min, chat_count_max, is_featured, model_label, actual_chat_count, sort_order, created_at")
+    .select("id, name, age, gender, personality_tags, story, story_type, image_url, video_url, like_count_min, like_count_max, chat_count_min, chat_count_max, is_featured, model_label, actual_chat_count, sort_order, created_at")
     .eq("is_active", true);
 
   if (tag) {

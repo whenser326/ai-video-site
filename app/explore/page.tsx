@@ -111,7 +111,7 @@ export default function ExplorePage() {
     const matchSearch = !q || item.name.toLowerCase().includes(q) ||
       (item.personality_tags || []).some(t => t.toLowerCase().includes(q)) ||
       item.story.toLowerCase().includes(q);
-    const matchGender = gender === "all" || item.gender === gender;
+    const matchGender = gender === "all" || item.gender === (gender === "female" ? "女性" : "男性");
     return matchSearch && matchGender;
   });
 
