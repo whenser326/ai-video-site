@@ -8,9 +8,10 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (session?.user?.email !== "whenser@gmail.com") {
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const email = searchParams.get("email");
+  if (email !== "whenser@gmail.com") {
     return NextResponse.json({ error: "無權限" }, { status: 403 });
   }
 

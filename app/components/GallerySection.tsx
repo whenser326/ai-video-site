@@ -508,9 +508,9 @@ export default function GallerySection({ userEmail, plan }: Props) {
                             characterId: selectedChar!.id,
                             name: selectedChar!.name,
                             image_url: selectedImages[0],
-                            image_urls: selectedImages,
                             description: submitDesc,
                             visibility: submitVisibility,
+                            userEmail,
                           }),
                         });
                         const data = await res.json();

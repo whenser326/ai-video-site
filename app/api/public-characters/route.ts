@@ -10,13 +10,12 @@ const supabase = createClient(
 
 // POST 投稿角色
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
+  const body = await req.json();
+  const { characterId, name, image_url, description, voice_id, tags, visibility, userEmail } = body;
+
+  if (!userEmail) {
     return NextResponse.json({ error: "未登入" }, { status: 401 });
   }
-
-  const body = await req.json();
-  const { characterId, name, image_url, description, voice_id, tags, visibility } = body;
 
   if (!name || !image_url) {
     return NextResponse.json({ error: "名稱和圖片為必填" }, { status: 400 });
@@ -31,7 +30,7 @@ export async function POST(req: Request) {
     .from("public_characters")
     .insert({
       original_character_id: characterId || null,
-      user_email: session.user.email,
+      user_email: userEmail,
       name,
       image_url,
       description: description || "",
@@ -51,7 +50,7 @@ export async function POST(req: Request) {
   // 通知管理員（寫入 feedback_messages）
   const visibilityLabel = visibility === "anonymous" ? "匿名公開" : "公開分享";
   await supabase.from("feedback_messages").insert({
-    user_email: session.user.email,
+    user_email: userEmail,
     subject: `📬 新角色投稿：${name}`,
     content: `公開方式：${visibilityLabel}\n角色描述：${description || "無"}\n投稿ID：${inserted.id}\n請至後台 /admin/gallery 待審核分頁審核。`,
     status: "pending",
@@ -83,13 +82,12 @@ export async function GET(req: Request) {
 
 // PATCH 後台審核（核准 / 退件）
 export async function PATCH(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (session?.user?.email !== "whenser@gmail.com") {
+  const body = await req.json();
+  const { id, action, reject_reason, adminEmail } = body;
+
+  if (adminEmail !== "whenser@gmail.com") {
     return NextResponse.json({ error: "無權限" }, { status: 403 });
   }
-
-  const body = await req.json();
-  const { id, action, reject_reason } = body;
 
   if (!id || !["approve", "reject"].includes(action)) {
     return NextResponse.json({ error: "參數錯誤" }, { status: 400 });

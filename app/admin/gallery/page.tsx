@@ -277,7 +277,7 @@ export default function AdminGalleryPage() {
               setAdminTab(t.value)
               if (t.value === 'pending' && pendingItems.length === 0) {
                 setPendingLoading(true)
-                fetch('/api/public-characters/admin')
+                fetch(`/api/public-characters/admin?email=${session?.user?.email}`)
                   .then(r => r.json())
                   .then(d => setPendingItems(d.items || []))
                   .finally(() => setPendingLoading(false))
@@ -331,7 +331,7 @@ export default function AdminGalleryPage() {
                           const res = await fetch('/api/public-characters', {
                             method: 'PATCH',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ id: item.id, action: 'reject', reject_reason: rejectReason }),
+                            body: JSON.stringify({ id: item.id, action: 'reject', reject_reason: rejectReason, adminEmail: session?.user?.email }),
                           })
                           const d = await res.json()
                           if (d.success) {
@@ -353,7 +353,7 @@ export default function AdminGalleryPage() {
                         const res = await fetch('/api/public-characters', {
                           method: 'PATCH',
                           headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ id: item.id, action: 'approve' }),
+                          body: JSON.stringify({ id: item.id, action: 'approve', adminEmail: session?.user?.email }),
                         })
                         const d = await res.json()
                         if (d.success) {
