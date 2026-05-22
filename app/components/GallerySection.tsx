@@ -62,6 +62,7 @@ export default function GallerySection({ userEmail, plan }: Props) {
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [submitVisibility, setSubmitVisibility] = useState<"anonymous" | "public">("public");
   const [submitDesc, setSubmitDesc] = useState("");
+  const [submitGender, setSubmitGender] = useState<"女性" | "男性" | "">("");
   const [submitLoading, setSubmitLoading] = useState(false);
   const [submitMsg, setSubmitMsg] = useState("");
   const displayCountsRef = useRef<Map<string, { like: number; chat: number }>>(new Map());
@@ -471,6 +472,18 @@ export default function GallerySection({ userEmail, plan }: Props) {
                 </div>
 
                 <div>
+                  <label className="text-white/50 text-xs mb-1 block">角色性別</label>
+                  <div className="flex gap-2">
+                    {(["女性", "男性", "不設定"] as const).map(g => (
+                      <button key={g} onClick={() => setSubmitGender(g === "不設定" ? "" : g)}
+                        className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${(g === "不設定" ? submitGender === "" : submitGender === g) ? "bg-[#89f5a2]/15 border-[#89f5a2]/40 text-[#89f5a2]" : "border-white/10 text-white/40 hover:border-white/25"}`}>
+                        {g === "女性" ? "👩 女性" : g === "男性" ? "👨 男性" : "❓ 不設定"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
                   <label className="text-white/50 text-xs mb-2 block">公開方式</label>
                   <div className="flex gap-2">
                     {([
@@ -491,7 +504,7 @@ export default function GallerySection({ userEmail, plan }: Props) {
                 )}
 
                 <div className="flex gap-3 pt-1">
-                  <button onClick={() => { setShowSubmitModal(false); setSubmitMsg(""); setSubmitStep("selectChar"); setSelectedChar(null); setSelectedImages([]); }}
+                  <button onClick={() => { setShowSubmitModal(false); setSubmitMsg(""); setSubmitStep("selectChar"); setSelectedChar(null); setSelectedImages([]); setSubmitGender(""); }}
                     className="flex-1 py-2.5 rounded-xl border border-white/15 text-white/40 text-sm hover:bg-white/5 transition-all">
                     取消
                   </button>
@@ -510,6 +523,7 @@ export default function GallerySection({ userEmail, plan }: Props) {
                             image_url: selectedImages[0],
                             description: submitDesc,
                             visibility: submitVisibility,
+                            gender: submitGender,
                             userEmail,
                           }),
                         });

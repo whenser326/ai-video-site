@@ -11,7 +11,7 @@ const supabase = createClient(
 // POST 投稿角色
 export async function POST(req: Request) {
   const body = await req.json();
-  const { characterId, name, image_url, description, voice_id, tags, visibility, userEmail } = body;
+  const { characterId, name, image_url, description, voice_id, tags, visibility, userEmail, gender } = body;
 
   if (!userEmail) {
     return NextResponse.json({ error: "未登入" }, { status: 401 });
@@ -39,6 +39,7 @@ export async function POST(req: Request) {
       visibility,
       status: "pending",
       is_active: false,
+      gender: gender || "",
     })
     .select("id")
     .single();
@@ -96,7 +97,7 @@ export async function PATCH(req: Request) {
   // 取得投稿資料（用於通知用戶）
   const { data: item } = await supabase
     .from("public_characters")
-    .select("user_email, name, image_url, description, tags")
+    .select("user_email, name, image_url, description, tags, gender")
     .eq("id", id)
     .single();
 
@@ -115,7 +116,7 @@ export async function PATCH(req: Request) {
         story: item.description || "",
         story_type: "short",
         personality_tags: item.tags || [],
-        gender: "",
+        gender: item.gender || "",
         age: 25,
         like_count_min: 10,
         like_count_max: 50,
