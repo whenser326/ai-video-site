@@ -532,11 +532,12 @@ export default function GallerySection({ userEmail, plan }: Props) {
                           setSubmitMsg("✅ 投稿成功！審核通過後會通知你。");
                           setTimeout(() => {
                             setShowSubmitModal(false);
-                            setSubmitMsg("");
-                            setSubmitStep("selectChar");
-                            setSelectedChar(null);
-                            setSelectedImages([]);
-                          }, 2000);
+          setSubmitMsg("");
+          setSubmitStep("selectChar");
+          setSelectedChar(null);
+          setSelectedImages([]);
+          setSubmitGender("");
+        }, 2000);
                         } else {
                           setSubmitMsg(data.error || "投稿失敗，請稍後再試");
                         }
