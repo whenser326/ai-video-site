@@ -53,10 +53,15 @@ export default function GallerySection({ userEmail, plan }: Props) {
   const [expandedStory, setExpandedStory] = useState(false);
   const [showUpgradeHint, setShowUpgradeHint] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
-  const [submitName, setSubmitName] = useState("");
-  const [submitImageUrl, setSubmitImageUrl] = useState("");
-  const [submitDesc, setSubmitDesc] = useState("");
+  const [submitStep, setSubmitStep] = useState<"selectChar" | "selectImages" | "confirm">("selectChar");
+  const [myCharacters, setMyCharacters] = useState<{id: number; name: string; image_url: string}[]>([]);
+  const [myCharLoading, setMyCharLoading] = useState(false);
+  const [selectedChar, setSelectedChar] = useState<{id: number; name: string; image_url: string} | null>(null);
+  const [charImages, setCharImages] = useState<{id: string; image_url: string}[]>([]);
+  const [charImgLoading, setCharImgLoading] = useState(false);
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [submitVisibility, setSubmitVisibility] = useState<"anonymous" | "public">("public");
+  const [submitDesc, setSubmitDesc] = useState("");
   const [submitLoading, setSubmitLoading] = useState(false);
   const [submitMsg, setSubmitMsg] = useState("");
   const displayCountsRef = useRef<Map<string, { like: number; chat: number }>>(new Map());
@@ -212,7 +217,17 @@ export default function GallerySection({ userEmail, plan }: Props) {
 
             {/* 投稿入口 */}
             <div className="mt-8 border-2 border-dashed border-[#89f5a2]/20 rounded-2xl p-8 flex flex-col items-center gap-2 cursor-pointer hover:border-[#89f5a2]/40 transition-all"
-              onClick={() => setShowSubmitModal(true)}>
+              onClick={() => {
+                setShowSubmitModal(true);
+                setSubmitStep("selectChar");
+                setSelectedChar(null);
+                setSelectedImages([]);
+                setMyCharLoading(true);
+                fetch(`/api/saved-characters?email=${userEmail}`)
+                  .then(r => r.json())
+                  .then(data => setMyCharacters(Array.isArray(data) ? data : []))
+                  .finally(() => setMyCharLoading(false));
+              }}>
               <p className="text-[#89f5a2]/40 text-2xl">＋</p>
               <p className="text-[#89f5a2]/50 text-xs font-bold">投稿你的角色</p>
               <p className="text-white/20 text-[10px]">讓更多人認識你的角色</p>
@@ -327,95 +342,202 @@ export default function GallerySection({ userEmail, plan }: Props) {
       {showSubmitModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4"
           style={{ background: "rgba(0,0,0,0.85)" }}
-          onClick={() => { setShowSubmitModal(false); setSubmitMsg(""); }}>
-          <div className="w-full max-w-sm bg-[#0d2318] border border-white/15 rounded-3xl p-6 space-y-4"
+          onClick={() => { setShowSubmitModal(false); setSubmitMsg(""); setSubmitStep("selectChar"); setSelectedChar(null); setSelectedImages([]); }}>
+          <div className="w-full max-w-sm bg-[#0d2318] border border-white/15 rounded-3xl p-6 space-y-4 max-h-[85vh] overflow-y-auto"
             onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-            <p className="text-white font-black text-base">📬 投稿你的角色</p>
-            <p className="text-white/30 text-xs leading-relaxed">審核通過後會出現在探索頁，讓更多人與你的角色聊天。</p>
 
-            <div>
-              <label className="text-white/50 text-xs mb-1 block">角色名稱 *</label>
-              <input value={submitName} onChange={e => setSubmitName(e.target.value)}
-                placeholder="輸入角色名稱"
-                className="w-full px-3 py-2 rounded-xl text-sm text-white placeholder-white/20 outline-none border border-white/10 focus:border-[#89f5a2]/40 transition-all"
-                style={{ background: "#111" }} />
+            {/* 標題 + 步驟 */}
+            <div className="flex items-center justify-between">
+              <p className="text-white font-black text-base">📬 投稿你的角色</p>
+              <p className="text-white/25 text-xs">
+                {submitStep === "selectChar" ? "1/3" : submitStep === "selectImages" ? "2/3" : "3/3"}
+              </p>
             </div>
 
-            <div>
-              <label className="text-white/50 text-xs mb-1 block">角色圖片 URL *</label>
-              <input value={submitImageUrl} onChange={e => setSubmitImageUrl(e.target.value)}
-                placeholder="https://..."
-                className="w-full px-3 py-2 rounded-xl text-sm text-white placeholder-white/20 outline-none border border-white/10 focus:border-[#89f5a2]/40 transition-all"
-                style={{ background: "#111" }} />
-            </div>
-
-            <div>
-              <label className="text-white/50 text-xs mb-1 block">角色描述（選填）</label>
-              <textarea value={submitDesc} onChange={e => setSubmitDesc(e.target.value)}
-                placeholder="描述角色個性、背景..."
-                rows={3}
-                className="w-full px-3 py-2 rounded-xl text-sm text-white placeholder-white/20 outline-none border border-white/10 focus:border-[#89f5a2]/40 transition-all resize-none"
-                style={{ background: "#111" }} />
-            </div>
-
-            <div>
-              <label className="text-white/50 text-xs mb-2 block">公開方式</label>
-              <div className="flex gap-2">
-                {([
-                  { value: "public", label: "🌐 公開分享", desc: "顯示投稿者" },
-                  { value: "anonymous", label: "🎭 匿名公開", desc: "隱藏投稿者" },
-                ] as const).map(v => (
-                  <button key={v.value} onClick={() => setSubmitVisibility(v.value)}
-                    className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${submitVisibility === v.value ? "bg-[#89f5a2]/15 border-[#89f5a2]/40 text-[#89f5a2]" : "border-white/10 text-white/40 hover:border-white/25"}`}>
-                    <p>{v.label}</p>
-                    <p className="text-[10px] opacity-60 mt-0.5">{v.desc}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {submitMsg && (
-              <p className={`text-xs ${submitMsg.includes("成功") ? "text-[#89f5a2]" : "text-red-400"}`}>{submitMsg}</p>
+            {/* Step 1：選角色 */}
+            {submitStep === "selectChar" && (
+              <>
+                <p className="text-white/30 text-xs">選擇你要投稿的角色</p>
+                {myCharLoading && <p className="text-white/30 text-sm text-center py-4">載入中...</p>}
+                {!myCharLoading && myCharacters.length === 0 && (
+                  <p className="text-white/20 text-sm text-center py-4">還沒有收藏角色，請先建立角色</p>
+                )}
+                <div className="space-y-2">
+                  {myCharacters.map(char => (
+                    <div key={char.id}
+                      onClick={() => setSelectedChar(char)}
+                      className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${selectedChar?.id === char.id ? "border-[#89f5a2]/50 bg-[#89f5a2]/10" : "border-white/10 hover:border-white/25"}`}>
+                      <img src={char.image_url} alt={char.name} className="w-12 h-12 rounded-xl object-cover flex-shrink-0" />
+                      <p className="text-white text-sm font-bold">{char.name}</p>
+                      {selectedChar?.id === char.id && <span className="ml-auto text-[#89f5a2] text-sm">✓</span>}
+                    </div>
+                  ))}
+                </div>
+                <button
+                  disabled={!selectedChar}
+                  onClick={async () => {
+                    setSubmitStep("selectImages");
+                    setCharImgLoading(true);
+                    setCharImages([]);
+                    setSelectedImages([]);
+                    // 撈該角色歷史圖片（含角色主圖）
+                    const res = await fetch(`/api/history?email=${userEmail}&character_id=${selectedChar!.id}`);
+                    const data = await res.json();
+                    const imgs = Array.isArray(data)
+                      ? data.filter((g: any) => g.image_url).map((g: any) => ({ id: g.id, image_url: g.image_url }))
+                      : [];
+                    // 角色主圖放最前面（如果不在歷史裡）
+                    const mainImg = selectedChar!.image_url;
+                    const hasMain = imgs.some(i => i.image_url === mainImg);
+                    if (!hasMain && mainImg) imgs.unshift({ id: "main", image_url: mainImg });
+                    setCharImages(imgs);
+                    setCharImgLoading(false);
+                  }}
+                  className="w-full py-2.5 rounded-xl bg-[#89f5a2] text-[#0d2318] text-sm font-black hover:bg-[#89f5a2]/90 transition-all disabled:opacity-40">
+                  下一步：選擇圖片 →
+                </button>
+              </>
             )}
 
-            <div className="flex gap-3 pt-1">
-              <button onClick={() => { setShowSubmitModal(false); setSubmitMsg(""); }}
-                className="flex-1 py-2.5 rounded-xl border border-white/15 text-white/40 text-sm hover:bg-white/5 transition-all">
-                取消
-              </button>
-              <button
-                disabled={submitLoading || !submitName || !submitImageUrl}
-                onClick={async () => {
-                  setSubmitLoading(true);
-                  setSubmitMsg("");
-                  try {
-                    const res = await fetch("/api/public-characters", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        name: submitName,
-                        image_url: submitImageUrl,
-                        description: submitDesc,
-                        visibility: submitVisibility,
-                      }),
-                    });
-                    const data = await res.json();
-                    if (data.success) {
-                      setSubmitMsg("✅ 投稿成功！審核通過後會通知你。");
-                      setSubmitName(""); setSubmitImageUrl(""); setSubmitDesc("");
-                    } else {
-                      setSubmitMsg(data.error || "投稿失敗，請稍後再試");
-                    }
-                  } catch {
-                    setSubmitMsg("投稿失敗，請稍後再試");
-                  } finally {
-                    setSubmitLoading(false);
-                  }
-                }}
-                className="flex-1 py-2.5 rounded-xl bg-[#89f5a2] text-[#0d2318] text-sm font-black hover:bg-[#89f5a2]/90 transition-all disabled:opacity-40">
-                {submitLoading ? "投稿中..." : "📬 送出投稿"}
-              </button>
-            </div>
+            {/* Step 2：選圖片（可多選） */}
+            {submitStep === "selectImages" && (
+              <>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setSubmitStep("selectChar")} className="text-white/30 hover:text-white/60 text-sm transition-all">← 返回</button>
+                  <p className="text-white/30 text-xs">選擇要投稿的圖片（可多選）</p>
+                </div>
+                {charImgLoading && <p className="text-white/30 text-sm text-center py-4">載入中...</p>}
+                {!charImgLoading && charImages.length === 0 && (
+                  <p className="text-white/20 text-sm text-center py-4">找不到圖片，請先生成角色圖片</p>
+                )}
+                <div className="grid grid-cols-3 gap-2">
+                  {charImages.map(img => {
+                    const isSelected = selectedImages.includes(img.image_url);
+                    return (
+                      <div key={img.id}
+                        onClick={() => setSelectedImages(prev =>
+                          isSelected ? prev.filter(u => u !== img.image_url) : [...prev, img.image_url]
+                        )}
+                        className={`relative aspect-square rounded-xl overflow-hidden border-2 cursor-pointer transition-all ${isSelected ? "border-[#89f5a2]" : "border-transparent hover:border-white/30"}`}>
+                        <img src={img.image_url} alt="" className="w-full h-full object-cover" />
+                        {isSelected && (
+                          <div className="absolute inset-0 bg-[#89f5a2]/20 flex items-center justify-center">
+                            <span className="text-[#89f5a2] text-xl font-black">✓</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                {selectedImages.length > 0 && (
+                  <p className="text-[#89f5a2]/60 text-xs text-center">已選 {selectedImages.length} 張</p>
+                )}
+                <button
+                  disabled={selectedImages.length === 0}
+                  onClick={() => setSubmitStep("confirm")}
+                  className="w-full py-2.5 rounded-xl bg-[#89f5a2] text-[#0d2318] text-sm font-black hover:bg-[#89f5a2]/90 transition-all disabled:opacity-40">
+                  下一步：確認投稿 →
+                </button>
+              </>
+            )}
+
+            {/* Step 3：確認送出 */}
+            {submitStep === "confirm" && (
+              <>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setSubmitStep("selectImages")} className="text-white/30 hover:text-white/60 text-sm transition-all">← 返回</button>
+                  <p className="text-white/30 text-xs">確認投稿資訊</p>
+                </div>
+
+                {/* 預覽已選圖片 */}
+                <div className="flex gap-2 flex-wrap">
+                  {selectedImages.slice(0, 4).map((url, i) => (
+                    <img key={i} src={url} alt="" className="w-16 h-16 rounded-xl object-cover border border-white/10" />
+                  ))}
+                  {selectedImages.length > 4 && (
+                    <div className="w-16 h-16 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/30 text-xs">
+                      +{selectedImages.length - 4}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="text-white/50 text-xs mb-1 block">角色描述（選填）</label>
+                  <textarea value={submitDesc} onChange={e => setSubmitDesc(e.target.value)}
+                    placeholder="描述角色個性、背景，讓其他用戶更了解這個角色..."
+                    rows={3}
+                    className="w-full px-3 py-2 rounded-xl text-sm text-white placeholder-white/20 outline-none border border-white/10 focus:border-[#89f5a2]/40 transition-all resize-none"
+                    style={{ background: "#111" }} />
+                </div>
+
+                <div>
+                  <label className="text-white/50 text-xs mb-2 block">公開方式</label>
+                  <div className="flex gap-2">
+                    {([
+                      { value: "public", label: "🌐 公開分享", desc: "顯示投稿者" },
+                      { value: "anonymous", label: "🎭 匿名公開", desc: "隱藏投稿者" },
+                    ] as const).map(v => (
+                      <button key={v.value} onClick={() => setSubmitVisibility(v.value)}
+                        className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${submitVisibility === v.value ? "bg-[#89f5a2]/15 border-[#89f5a2]/40 text-[#89f5a2]" : "border-white/10 text-white/40 hover:border-white/25"}`}>
+                        <p>{v.label}</p>
+                        <p className="text-[10px] opacity-60 mt-0.5">{v.desc}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {submitMsg && (
+                  <p className={`text-xs ${submitMsg.includes("成功") ? "text-[#89f5a2]" : "text-red-400"}`}>{submitMsg}</p>
+                )}
+
+                <div className="flex gap-3 pt-1">
+                  <button onClick={() => { setShowSubmitModal(false); setSubmitMsg(""); setSubmitStep("selectChar"); setSelectedChar(null); setSelectedImages([]); }}
+                    className="flex-1 py-2.5 rounded-xl border border-white/15 text-white/40 text-sm hover:bg-white/5 transition-all">
+                    取消
+                  </button>
+                  <button
+                    disabled={submitLoading}
+                    onClick={async () => {
+                      setSubmitLoading(true);
+                      setSubmitMsg("");
+                      try {
+                        const res = await fetch("/api/public-characters", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            characterId: selectedChar!.id,
+                            name: selectedChar!.name,
+                            image_url: selectedImages[0],
+                            image_urls: selectedImages,
+                            description: submitDesc,
+                            visibility: submitVisibility,
+                          }),
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                          setSubmitMsg("✅ 投稿成功！審核通過後會通知你。");
+                          setTimeout(() => {
+                            setShowSubmitModal(false);
+                            setSubmitMsg("");
+                            setSubmitStep("selectChar");
+                            setSelectedChar(null);
+                            setSelectedImages([]);
+                          }, 2000);
+                        } else {
+                          setSubmitMsg(data.error || "投稿失敗，請稍後再試");
+                        }
+                      } catch {
+                        setSubmitMsg("投稿失敗，請稍後再試");
+                      } finally {
+                        setSubmitLoading(false);
+                      }
+                    }}
+                    className="flex-1 py-2.5 rounded-xl bg-[#89f5a2] text-[#0d2318] text-sm font-black hover:bg-[#89f5a2]/90 transition-all disabled:opacity-40">
+                    {submitLoading ? "投稿中..." : "📬 送出投稿"}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
