@@ -159,11 +159,6 @@ if (!session) return (
 
   const menuItems = [
     {
-      label: '🎨 角色生成',
-      onClick: () => { router.push('/create'); setMenuOpen(false); },
-      className: 'text-orange-300 border-orange-400/30 bg-orange-400/10 hover:bg-orange-400/20',
-    },
-    {
       label: '📖 使用指南',
       onClick: () => {
         if (pathname === '/') {
@@ -174,6 +169,16 @@ if (!session) return (
         setMenuOpen(false);
       },
       className: 'text-emerald-300 border-emerald-400/30 bg-emerald-400/10 hover:bg-emerald-400/20',
+    },
+    {
+      label: '🎨 角色生成',
+      onClick: () => { router.push('/create'); setMenuOpen(false); },
+      className: 'text-orange-300 border-orange-400/30 bg-orange-400/10 hover:bg-orange-400/20',
+    },
+    {
+      label: '🌐 探索角色',
+      onClick: () => { router.push('/explore'); setMenuOpen(false); },
+      className: 'text-sky-300 border-sky-400/30 bg-sky-400/10 hover:bg-sky-400/20',
     },
     {      
       label: '🎭 我的角色',
