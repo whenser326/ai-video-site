@@ -242,6 +242,9 @@ useEffect(() => {
       if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 500);
   }
+  if (searchParams.get("upload") === "1") {
+    setShowUploadModal(true);
+  }
 }, []);
 // [DNA_PATCH_END]
   // 1. 初始化與點數同步

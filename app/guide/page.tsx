@@ -107,6 +107,99 @@ export default function GuidePage() {
           選擇你的主線，每條線都有詳細步驟和點數說明
         </p>
 
+        {/* 社群功能區塊 */}
+        {(() => {
+          const communityExpanded = expanded === '__community__';
+          return (
+            <div style={{
+              background: 'rgba(91,212,240,0.08)',
+              border: '1px solid rgba(91,212,240,0.25)',
+              borderRadius: 20,
+              overflow: 'hidden',
+              transition: 'all 0.2s',
+            }}>
+              <button
+                onClick={() => toggle('__community__')}
+                style={{
+                  width: '100%', padding: '16px 20px',
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left',
+                }}
+              >
+                <span style={{ fontSize: 24, flexShrink: 0 }}>🌐</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 15, fontWeight: 900, color: '#5bd4f0' }}>社群功能 - 探索・投稿・互動</div>
+                  <div style={{ fontSize: 11, color: 'rgba(184,255,200,0.4)', marginTop: 2 }}>
+                    探索角色 → 角色詳細頁 → 投稿角色
+                  </div>
+                </div>
+                <span style={{ color: '#5bd4f0', fontSize: 16, transition: 'transform 0.2s', transform: communityExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}>›</span>
+              </button>
+
+              {communityExpanded && (
+                <div style={{ padding: '0 16px 20px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
+                    {[
+                      {
+                        icon: '🌐',
+                        label: '探索角色',
+                        cost: '免費瀏覽',
+                        detail: '瀏覽所有上架角色，依熱門／最新排序，可用性別和標籤篩選，免費可瀏覽前 12 張，付費無限探索',
+                        href: '/explore',
+                      },
+                      {
+                        icon: '📋',
+                        label: '角色詳細頁',
+                        cost: '免費',
+                        detail: '點任一角色卡片可進入詳細頁，查看完整故事、留言區，並直接開始聊天或生成同款',
+                        href: null,
+                      },
+                      {
+                        icon: '📤',
+                        label: '投稿角色',
+                        cost: '免費',
+                        detail: '把自己收藏的角色投稿給社群，審核通過後上架到探索頁，讓更多人看見你的角色',
+                        href: null,
+                      },
+                    ].map((item, idx, arr) => (
+                      <div key={idx} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
+                          <div style={{
+                            width: 36, height: 36, borderRadius: 10,
+                            background: 'rgba(91,212,240,0.08)', border: '1px solid rgba(91,212,240,0.25)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18,
+                          }}>{item.icon}</div>
+                          {idx < arr.length - 1 && (
+                            <div style={{ width: 1, height: 10, background: 'rgba(91,212,240,0.25)', margin: '3px 0' }} />
+                          )}
+                        </div>
+                        <div style={{ flex: 1, paddingTop: 4 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: '#d4ffe0' }}>{item.label}</span>
+                            <span style={{
+                              fontSize: 10, fontWeight: 700, color: '#5bd4f0',
+                              background: 'rgba(91,212,240,0.08)', border: '1px solid rgba(91,212,240,0.25)',
+                              borderRadius: 20, padding: '1px 8px',
+                            }}>{item.cost}</span>
+                          </div>
+                          <div style={{ fontSize: 11, color: 'rgba(184,255,200,0.45)', lineHeight: 1.5 }}>{item.detail}</div>
+                          
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{
+                    background: 'rgba(0,0,0,0.2)', borderRadius: 12, padding: '10px 14px',
+                    fontSize: 11, color: 'rgba(184,255,200,0.5)', lineHeight: 1.6,
+                  }}>
+                    💡 首頁瀑布流點任一角色卡片即可進入詳細頁。投稿入口在首頁底部虛線框，審核通過後自動上架。
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         {/* 四條主線 */}
         {lines.map((line) => (
           <div

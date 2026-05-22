@@ -123,7 +123,7 @@ page.tsx 已知 TypeScript 舊錯誤（4個）：
 - 已登入桌面版：Logo + 主導覽（🎨 創作 / 💬 我的角色）+ 點數徽章 + 按鈕列 + 登出
 - 已登入手機版：Logo + 點數徽章 + 漢堡按鈕 → Drawer 展開
 - pricing 頁面：顯示完整 Header（與其他頁面相同）
-- 漢堡 Drawer menuItems 順序：📖 使用指南 / 🎭 我的角色 / 📅 每日簽到 / 💳 儲值點數 / 🎁 推薦賺點 / 💬 意見回饋 / 🚪 登出
+- 漢堡 Drawer menuItems 順序：📖 使用指南 / 🎨 角色生成 / 🌐 探索角色 / 🎭 我的角色 / 📅 每日簽到 / 💳 儲值點數 / 🎁 推薦賺點 / 💬 意見回饋 / 🚪 登出
 - 「使用指南」onClick：首頁時 dispatchEvent('open-onboarding') 觸發 Onboarding 彈窗，其他頁面 router.push('/guide')
 - FeedbackModal + unreadCount 60秒輪詢
 

@@ -1396,9 +1396,10 @@ return (
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {[
-          { icon: '🌟', title: '生成 AI 角色', sub: '選風格 → 設定外觀 → 生成圖片或影片', href: null },
+          { icon: '🌐', title: '探索角色', sub: '瀏覽社群角色 → 查看詳細頁面 → 直接開始聊天', href: '/explore' },
+          { icon: '🌟', title: '生成 AI 角色', sub: '選風格 → 設定外觀 → 生成圖片或影片', href: '/create' },
           { icon: '💬', title: '和 AI 角色聊天', sub: '選角色 → 設定個性 → 開始對話・AI 自拍・說話影片', href: '/characters' },
-          { icon: '📁', title: '上傳照片轉影片', sub: '說話影片・自由動作・套用動作・高精度影片', href: null, openUpload: true },
+          { icon: '📁', title: '上傳照片轉影片', sub: '說話影片・自由動作・套用動作・高精度影片', href: '/create?upload=1' },
         ].map((opt) => (
           <div
             key={opt.title}
@@ -1408,9 +1409,7 @@ const key = `onboarding_done_${session?.user?.email}_${today}`;
 localStorage.setItem(key, '1');
                 setShowOnboarding(false);
                 setOnboardingDismissed(true);
-                if ((opt as any).openUpload) {
-                setShowUploadModal(true);
-              } else if (opt.href) {
+                if (opt.href) {
                 router.push(opt.href);
               }
               }}
