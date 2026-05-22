@@ -67,7 +67,15 @@ export default function AdminGalleryPage() {
     setLoading(false)
   }
 
-  useEffect(() => { if (session?.user?.email) loadItems() }, [session])
+  useEffect(() => {
+    if (!session?.user?.email) return;
+    loadItems();
+    setPendingLoading(true);
+    fetch(`/api/public-characters/admin?email=${session.user.email}`)
+      .then(r => r.json())
+      .then(d => setPendingItems(d.items || []))
+      .finally(() => setPendingLoading(false));
+  }, [session])
 
   // 隨機產生角色資料
   const handleGenerate = async () => {
