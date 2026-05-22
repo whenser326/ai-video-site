@@ -350,7 +350,7 @@ const charSystem = `${memoryPrefix}你扮演「${char.name}」。${personality} 
 
     // overloaded_error 自動重試一次
     if (claudeData?.error?.type === "overloaded_error") {
-      await new Promise(r => setTimeout(r, 1500));
+      await new Promise(r => setTimeout(r, 2000));
       claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
