@@ -526,7 +526,7 @@ export default function GalleryChatPage() {
             onKeyDown={handleKeyDown}
             placeholder={`跟 ${character.name} 說點什麼...`}
             rows={2}
-            className="flex-1 px-4 py-3 bg-black border border-white/10 rounded-2xl text-white placeholder-white/20 text-sm resize-none focus:outline-none focus:border-[#89f5a2]/40 leading-relaxed"
+            className="flex-1 px-4 py-3 bg-black border border-white/10 rounded-2xl text-white placeholder-white/20 text-base resize-none focus:outline-none focus:border-[#89f5a2]/40 leading-relaxed"
           />
           <button
             onClick={handleSend}
