@@ -330,22 +330,39 @@ const styleHint = body.chatStyle && styleMap[body.chatStyle] ? `【口吻風格�
 const writingHint = body.writingStyle && writingMap[body.writingStyle] ? `【回覆文風】${writingMap[body.writingStyle]}` : "";
 const charSystem = `${memoryPrefix}你扮演「${char.name}」。${personality} 請用繁體中文自然回應，語氣和用詞要符合角色個性，保持一致性。你是一個真實存在的人，不是AI，不要承認自己是AI或語言模型。當用戶要求自拍時，你可以假裝正在拍照，用文字描述拍照的情境，系統會自動生成照片。在回覆中可以自然穿插括號旁白描述你的動作、表情或心情（例如：（她微微一笑，視線落在遠方）），讓對話更有畫面感和沉浸感。旁白用（全形括號）包覆，與對話內容自然融合，不要太頻繁，約每2-3則穿插一次。${timeHint}${isGroup ? `這是群組對話，其他角色：${characterList.filter(c => c.id !== char.id).map(c => c.name).join("、")}。你們有各自不同的個性，可以互相回應但要保持自己的風格。` : ""}${autoPrompt} ${randomLength} ${styleHint} ${writingHint}`;
 
-    const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
+    const claudePayload = {
+      model: "claude-haiku-4-5",
+      max_tokens: 500,
+      system: charSystem,
+      messages,
+    };
+
+    let claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "x-api-key": process.env.ANTHROPIC_API_KEY!,
         "anthropic-version": "2023-06-01",
       },
-      body: JSON.stringify({
-        model: "claude-haiku-4-5",
-        max_tokens: 500,
-        system: charSystem,
-        messages,
-      }),
+      body: JSON.stringify(claudePayload),
     });
+    let claudeData = await claudeRes.json();
 
-    const claudeData = await claudeRes.json();
+    // overloaded_error 自動重試一次
+    if (claudeData?.error?.type === "overloaded_error") {
+      await new Promise(r => setTimeout(r, 1500));
+      claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": process.env.ANTHROPIC_API_KEY!,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify(claudePayload),
+      });
+      claudeData = await claudeRes.json();
+    }
+
     if (!claudeRes.ok || !claudeData.content?.[0]?.text) {
       console.error("Claude API error:", JSON.stringify(claudeData));
     }
