@@ -348,9 +348,10 @@ const charSystem = `${memoryPrefix}你扮演「${char.name}」。${personality} 
     });
     let claudeData = await claudeRes.json();
 
-    // overloaded_error 自動重試一次
-    if (claudeData?.error?.type === "overloaded_error") {
-      await new Promise(r => setTimeout(r, 2000));
+    // overloaded_error 自動重試，最多2次
+    for (let retry = 0; retry < 2; retry++) {
+      if (claudeData?.error?.type !== "overloaded_error") break;
+      await new Promise(r => setTimeout(r, 2000 + retry * 1000));
       claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
@@ -366,7 +367,7 @@ const charSystem = `${memoryPrefix}你扮演「${char.name}」。${personality} 
     if (!claudeRes.ok || !claudeData.content?.[0]?.text) {
       console.error("Claude API error:", JSON.stringify(claudeData));
     }
-    const reply = claudeData.content?.[0]?.text || "（無回應）";
+    const reply = claudeData.content?.[0]?.text || "⚠️ 目前系統有點忙，請再說一次";
 
     // 同時傳入 AI 回應內容，讓場景更準確
     const { intent, selfiePrompt, characterImageUrl } = detectSelfieIntent(
