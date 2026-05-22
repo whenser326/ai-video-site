@@ -378,6 +378,7 @@ export default function AdminGalleryPage() {
         </div>
       )}
         {/* 角色列表 */}
+        {adminTab === 'gallery' && (
         <div className="space-y-3">
           {items.map(item => (
             <div key={item.id} className="bg-[#1a3a28] border border-[#2d5a3d] rounded-2xl p-4 flex items-center gap-4">
@@ -416,6 +417,7 @@ export default function AdminGalleryPage() {
             <div className="text-center text-gray-400 py-12">還沒有角色，點右上角新增</div>
           )}
         </div>
+        )}
 
         {/* 編輯 Modal */}
         {editMode && (

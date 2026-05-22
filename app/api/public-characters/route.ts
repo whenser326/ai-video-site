@@ -52,7 +52,9 @@ export async function POST(req: Request) {
   const visibilityLabel = visibility === "anonymous" ? "匿名公開" : "公開分享";
   await supabase.from("feedback_messages").insert({
     user_email: session.user.email,
-    message: `📬 新角色投稿：${name}（${visibilityLabel}）\n角色描述：${description || "無"}\n投稿ID：${inserted.id}\n請至後台 /admin/gallery 待審核分頁審核。`,
+    subject: `📬 新角色投稿：${name}`,
+    content: `公開方式：${visibilityLabel}\n角色描述：${description || "無"}\n投稿ID：${inserted.id}\n請至後台 /admin/gallery 待審核分頁審核。`,
+    status: "pending",
     created_at: new Date().toISOString(),
   });
 
@@ -110,8 +112,10 @@ export async function PATCH(req: Request) {
     if (item) {
       await supabase.from("feedback_messages").insert({
         user_email: item.user_email,
-        message: `✅ 你的角色「${item.name}」投稿審核通過，已上架到角色探索頁！`,
+        subject: `✅ 角色投稿審核通過`,
+        content: `你的角色「${item.name}」已審核通過，上架到角色探索頁！`,
         admin_reply: "🎉 恭喜！你的角色已成功上架，其他用戶現在可以探索並和你的角色聊天。感謝你的投稿！",
+        status: "replied",
         is_read_by_user: false,
         created_at: new Date().toISOString(),
       });
@@ -126,8 +130,10 @@ export async function PATCH(req: Request) {
     if (item) {
       await supabase.from("feedback_messages").insert({
         user_email: item.user_email,
-        message: `❌ 你的角色「${item.name}」投稿審核未通過`,
+        subject: `❌ 角色投稿審核未通過`,
+        content: `你的角色「${item.name}」審核未通過。`,
         admin_reply: reject_reason || "不符合上架規範，請修改後重新投稿。",
+        status: "replied",
         is_read_by_user: false,
         created_at: new Date().toISOString(),
       });
