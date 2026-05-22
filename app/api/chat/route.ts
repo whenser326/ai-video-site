@@ -346,6 +346,9 @@ const charSystem = `${memoryPrefix}你扮演「${char.name}」。${personality} 
     });
 
     const claudeData = await claudeRes.json();
+    if (!claudeRes.ok || !claudeData.content?.[0]?.text) {
+      console.error("Claude API error:", JSON.stringify(claudeData));
+    }
     const reply = claudeData.content?.[0]?.text || "（無回應）";
 
     // 同時傳入 AI 回應內容，讓場景更準確

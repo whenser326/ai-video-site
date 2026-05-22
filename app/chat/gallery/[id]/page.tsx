@@ -31,6 +31,7 @@ export default function GalleryChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const loadingRef = useRef(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [remainingQuota, setRemainingQuota] = useState<number | null>(null);
   const [isOverQuota, setIsOverQuota] = useState(false);
@@ -102,7 +103,7 @@ export default function GalleryChatPage() {
     const startTimer = () => {
       if (autoMessageTimerRef.current) clearTimeout(autoMessageTimerRef.current);
       autoMessageTimerRef.current = setTimeout(async () => {
-        if (loading) { startTimer(); return; }
+        if (loadingRef.current) { startTimer(); return; }
         try {
           const fakeChar = { id: galleryId, name: character.name, description: character.story, image_url: character.image_url };
           const res = await fetch("/api/chat", {
@@ -181,6 +182,7 @@ export default function GalleryChatPage() {
     setReplyTo(null);
     setMessages(prev => [...prev, { role: "user", content: replyTo ? `↩ 回覆 ${replyTo.characterName}：${userMsg}` : userMsg }]);
     setLoading(true);
+    loadingRef.current = true;
     setIsTyping(true);
 
     // 自拍關鍵字 → 提示付費
@@ -231,6 +233,7 @@ export default function GalleryChatPage() {
       if (data.isOverQuota) setIsOverQuota(true);
 
       setLoading(false);
+      loadingRef.current = false;
 
       if (data.responses && Array.isArray(data.responses)) {
         for (const r of data.responses) {
@@ -244,6 +247,7 @@ export default function GalleryChatPage() {
     } catch {
       setMessages(prev => [...prev, { role: "assistant", content: "（連線失敗，請重試）", characterName: character.name }]);
       setLoading(false);
+      loadingRef.current = false;
       setIsTyping(false);
     }
   };
