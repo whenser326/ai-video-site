@@ -111,6 +111,7 @@ export async function PATCH(req: Request) {
       await supabase.from("public_gallery").insert({
         name: item.name,
         image_url: item.image_url,
+        source_public_character_id: id,
         story: item.description || "",
         story_type: "short",
         personality_tags: item.tags || [],

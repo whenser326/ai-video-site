@@ -50,7 +50,18 @@ export async function DELETE(req: NextRequest) {
   if (email !== ADMIN_EMAIL) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const { data: galleryItem } = await supabase
+    .from("public_gallery")
+    .select("source_public_character_id")
+    .eq("id", id!)
+    .single();
+
   const { error } = await supabase.from("public_gallery").delete().eq("id", id!);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  if (galleryItem?.source_public_character_id) {
+    await supabase.from("public_characters").delete().eq("id", galleryItem.source_public_character_id);
+  }
+
   return NextResponse.json({ ok: true });
 }
