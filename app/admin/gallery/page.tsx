@@ -47,6 +47,12 @@ export default function AdminGalleryPage() {
   const [msg, setMsg] = useState('')
   const [saving, setSaving] = useState(false)
   const [tagsInput, setTagsInput] = useState('')
+  const [adminTab, setAdminTab] = useState<'gallery' | 'pending'>('gallery')
+  const [pendingItems, setPendingItems] = useState<any[]>([])
+  const [pendingLoading, setPendingLoading] = useState(false)
+  const [rejectReason, setRejectReason] = useState('')
+  const [rejectingId, setRejectingId] = useState<string | null>(null)
+  const [reviewMsg, setReviewMsg] = useState('')
 
   useEffect(() => {
     if (status === 'unauthenticated') { router.push('/'); return }
@@ -260,7 +266,117 @@ export default function AdminGalleryPage() {
             </div>
           ))}
         </div>
+{/* Tab 切換 */}
+      <div className="flex gap-2 mb-6">
+        {([
+          { value: 'gallery', label: '📋 角色管理' },
+          { value: 'pending', label: `📬 待審核${pendingItems.length > 0 ? ` (${pendingItems.length})` : ''}` },
+        ] as const).map(t => (
+          <button key={t.value}
+            onClick={() => {
+              setAdminTab(t.value)
+              if (t.value === 'pending' && pendingItems.length === 0) {
+                setPendingLoading(true)
+                fetch('/api/public-characters/admin')
+                  .then(r => r.json())
+                  .then(d => setPendingItems(d.items || []))
+                  .finally(() => setPendingLoading(false))
+              }
+            }}
+            className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all ${adminTab === t.value ? 'bg-[#89f5a2]/20 border-[#89f5a2]/40 text-[#89f5a2]' : 'border-white/15 text-white/40 hover:border-white/30'}`}>
+            {t.label}
+          </button>
+        ))}
+      </div>
 
+      {/* 待審核 Tab 內容 */}
+      {adminTab === 'pending' && (
+        <div className="space-y-4 mb-8">
+          {pendingLoading && <p className="text-white/30 text-sm">載入中...</p>}
+          {!pendingLoading && pendingItems.length === 0 && (
+            <p className="text-white/20 text-sm">目前沒有待審核的投稿</p>
+          )}
+          {pendingItems.map(item => (
+            <div key={item.id} className="bg-[#0d2318]/60 border border-white/10 rounded-2xl p-4 flex gap-4">
+              {item.image_url && (
+                <img src={item.image_url} alt={item.name} className="w-20 h-20 rounded-xl object-cover flex-shrink-0" />
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="text-white font-black text-sm">{item.name}</p>
+                  <span className="text-[10px] bg-yellow-500/20 border border-yellow-500/30 text-yellow-300 rounded-full px-2 py-0.5">
+                    {item.visibility === 'anonymous' ? '🎭 匿名' : '🌐 公開'}
+                  </span>
+                </div>
+                <p className="text-white/30 text-xs mb-1 truncate">{item.user_email}</p>
+                {item.description && <p className="text-white/40 text-xs leading-relaxed line-clamp-2 mb-2">{item.description}</p>}
+
+                {rejectingId === item.id ? (
+                  <div className="space-y-2">
+                    <textarea
+                      value={rejectReason}
+                      onChange={e => setRejectReason(e.target.value)}
+                      placeholder="填寫退件原因（用戶會收到通知）"
+                      rows={2}
+                      className="w-full px-3 py-2 rounded-xl text-xs text-white placeholder-white/20 outline-none border border-red-400/30 resize-none"
+                      style={{ background: "#111" }} />
+                    <div className="flex gap-2">
+                      <button onClick={() => { setRejectingId(null); setRejectReason(''); }}
+                        className="px-3 py-1.5 rounded-lg border border-white/15 text-white/40 text-xs hover:bg-white/5 transition-all">
+                        取消
+                      </button>
+                      <button
+                        disabled={!rejectReason}
+                        onClick={async () => {
+                          const res = await fetch('/api/public-characters', {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id: item.id, action: 'reject', reject_reason: rejectReason }),
+                          })
+                          const d = await res.json()
+                          if (d.success) {
+                            setPendingItems(prev => prev.filter(i => i.id !== item.id))
+                            setRejectingId(null); setRejectReason('')
+                            setReviewMsg('已退件並通知用戶')
+                            setTimeout(() => setReviewMsg(''), 3000)
+                          }
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-red-500/20 border border-red-400/40 text-red-300 text-xs font-bold hover:bg-red-500/30 transition-all disabled:opacity-40">
+                        確認退件
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={async () => {
+                        const res = await fetch('/api/public-characters', {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ id: item.id, action: 'approve' }),
+                        })
+                        const d = await res.json()
+                        if (d.success) {
+                          setPendingItems(prev => prev.filter(i => i.id !== item.id))
+                          setReviewMsg('✅ 已核准上架')
+                          setTimeout(() => setReviewMsg(''), 3000)
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-[#89f5a2]/20 border border-[#89f5a2]/40 text-[#89f5a2] text-xs font-bold hover:bg-[#89f5a2]/30 transition-all">
+                      ✅ 核准上架
+                    </button>
+                    <button onClick={() => { setRejectingId(item.id); setRejectReason(''); }}
+                      className="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-400/30 text-red-300 text-xs font-bold hover:bg-red-500/20 transition-all">
+                      ❌ 退件
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+          {reviewMsg && <p className="text-[#89f5a2] text-sm">{reviewMsg}</p>}
+        </div>
+      )}
         {/* 角色列表 */}
         <div className="space-y-3">
           {items.map(item => (

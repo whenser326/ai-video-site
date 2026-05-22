@@ -52,6 +52,13 @@ export default function GallerySection({ userEmail, plan }: Props) {
   const [selected, setSelected] = useState<GalleryItem | null>(null);
   const [expandedStory, setExpandedStory] = useState(false);
   const [showUpgradeHint, setShowUpgradeHint] = useState(false);
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [submitName, setSubmitName] = useState("");
+  const [submitImageUrl, setSubmitImageUrl] = useState("");
+  const [submitDesc, setSubmitDesc] = useState("");
+  const [submitVisibility, setSubmitVisibility] = useState<"anonymous" | "public">("public");
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const [submitMsg, setSubmitMsg] = useState("");
   const displayCountsRef = useRef<Map<string, { like: number; chat: number }>>(new Map());
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -203,12 +210,12 @@ export default function GallerySection({ userEmail, plan }: Props) {
               </div>
             )}
 
-            {/* 投稿入口佔位 */}
-            <div className="mt-8 border-2 border-dashed border-white/10 rounded-2xl p-8 flex flex-col items-center gap-2 cursor-pointer hover:border-white/20 transition-all"
-              onClick={() => alert("投稿功能即將開放！")}>
-              <p className="text-white/20 text-2xl">＋</p>
-              <p className="text-white/20 text-xs font-bold">投稿你的角色</p>
-              <p className="text-white/10 text-[10px]">即將開放</p>
+            {/* 投稿入口 */}
+            <div className="mt-8 border-2 border-dashed border-[#89f5a2]/20 rounded-2xl p-8 flex flex-col items-center gap-2 cursor-pointer hover:border-[#89f5a2]/40 transition-all"
+              onClick={() => setShowSubmitModal(true)}>
+              <p className="text-[#89f5a2]/40 text-2xl">＋</p>
+              <p className="text-[#89f5a2]/50 text-xs font-bold">投稿你的角色</p>
+              <p className="text-white/20 text-[10px]">讓更多人認識你的角色</p>
             </div>
 
             {/* 免費升級提示 */}
@@ -316,7 +323,102 @@ export default function GallerySection({ userEmail, plan }: Props) {
           </div>
         </div>
       )}
+{/* 投稿 Modal */}
+      {showSubmitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4"
+          style={{ background: "rgba(0,0,0,0.85)" }}
+          onClick={() => { setShowSubmitModal(false); setSubmitMsg(""); }}>
+          <div className="w-full max-w-sm bg-[#0d2318] border border-white/15 rounded-3xl p-6 space-y-4"
+            onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+            <p className="text-white font-black text-base">📬 投稿你的角色</p>
+            <p className="text-white/30 text-xs leading-relaxed">審核通過後會出現在探索頁，讓更多人與你的角色聊天。</p>
 
+            <div>
+              <label className="text-white/50 text-xs mb-1 block">角色名稱 *</label>
+              <input value={submitName} onChange={e => setSubmitName(e.target.value)}
+                placeholder="輸入角色名稱"
+                className="w-full px-3 py-2 rounded-xl text-sm text-white placeholder-white/20 outline-none border border-white/10 focus:border-[#89f5a2]/40 transition-all"
+                style={{ background: "#111" }} />
+            </div>
+
+            <div>
+              <label className="text-white/50 text-xs mb-1 block">角色圖片 URL *</label>
+              <input value={submitImageUrl} onChange={e => setSubmitImageUrl(e.target.value)}
+                placeholder="https://..."
+                className="w-full px-3 py-2 rounded-xl text-sm text-white placeholder-white/20 outline-none border border-white/10 focus:border-[#89f5a2]/40 transition-all"
+                style={{ background: "#111" }} />
+            </div>
+
+            <div>
+              <label className="text-white/50 text-xs mb-1 block">角色描述（選填）</label>
+              <textarea value={submitDesc} onChange={e => setSubmitDesc(e.target.value)}
+                placeholder="描述角色個性、背景..."
+                rows={3}
+                className="w-full px-3 py-2 rounded-xl text-sm text-white placeholder-white/20 outline-none border border-white/10 focus:border-[#89f5a2]/40 transition-all resize-none"
+                style={{ background: "#111" }} />
+            </div>
+
+            <div>
+              <label className="text-white/50 text-xs mb-2 block">公開方式</label>
+              <div className="flex gap-2">
+                {([
+                  { value: "public", label: "🌐 公開分享", desc: "顯示投稿者" },
+                  { value: "anonymous", label: "🎭 匿名公開", desc: "隱藏投稿者" },
+                ] as const).map(v => (
+                  <button key={v.value} onClick={() => setSubmitVisibility(v.value)}
+                    className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${submitVisibility === v.value ? "bg-[#89f5a2]/15 border-[#89f5a2]/40 text-[#89f5a2]" : "border-white/10 text-white/40 hover:border-white/25"}`}>
+                    <p>{v.label}</p>
+                    <p className="text-[10px] opacity-60 mt-0.5">{v.desc}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {submitMsg && (
+              <p className={`text-xs ${submitMsg.includes("成功") ? "text-[#89f5a2]" : "text-red-400"}`}>{submitMsg}</p>
+            )}
+
+            <div className="flex gap-3 pt-1">
+              <button onClick={() => { setShowSubmitModal(false); setSubmitMsg(""); }}
+                className="flex-1 py-2.5 rounded-xl border border-white/15 text-white/40 text-sm hover:bg-white/5 transition-all">
+                取消
+              </button>
+              <button
+                disabled={submitLoading || !submitName || !submitImageUrl}
+                onClick={async () => {
+                  setSubmitLoading(true);
+                  setSubmitMsg("");
+                  try {
+                    const res = await fetch("/api/public-characters", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        name: submitName,
+                        image_url: submitImageUrl,
+                        description: submitDesc,
+                        visibility: submitVisibility,
+                      }),
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                      setSubmitMsg("✅ 投稿成功！審核通過後會通知你。");
+                      setSubmitName(""); setSubmitImageUrl(""); setSubmitDesc("");
+                    } else {
+                      setSubmitMsg(data.error || "投稿失敗，請稍後再試");
+                    }
+                  } catch {
+                    setSubmitMsg("投稿失敗，請稍後再試");
+                  } finally {
+                    setSubmitLoading(false);
+                  }
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-[#89f5a2] text-[#0d2318] text-sm font-black hover:bg-[#89f5a2]/90 transition-all disabled:opacity-40">
+                {submitLoading ? "投稿中..." : "📬 送出投稿"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* 升級提示彈窗 */}
       {showUpgradeHint && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-6"
