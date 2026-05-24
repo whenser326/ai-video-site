@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     elevenlabsForm.append("files", audioFile, audioFile.name);
     elevenlabsForm.append("remove_background_noise", "false");
 
-    const elvRes = await fetch("https://api.elevenlabs.io/v1/voices/ivc/create", {
+    const elvRes = await fetch("https://api.elevenlabs.io/v1/voices/add", {
       method: "POST",
       headers: {
         "xi-api-key": process.env.ELEVENLABS_API_KEY!,
