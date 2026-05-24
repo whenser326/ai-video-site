@@ -220,10 +220,13 @@ userEmail,
               {ttsText.length > maxChars ? "　⚠ 已超過上限，請刪減後再試聽" : ""}
             </p>
           </div>
+          {!ttsText.trim() && (
+            <p className="text-yellow-300 text-xs font-black mb-1.5">👆 請先輸入台詞，才能試聽和合成說話影片</p>
+          )}
           <textarea
             value={ttsText}
             onChange={(e) => { setTtsText(e.target.value); setTtsAudio(null); }}
-            placeholder="中英文皆可，例如：大家好，我是AI生成的角色！"
+            placeholder="中英文皆可，例如：今天也要元氣滿滿！記得正常大小便哦～！"
             rows={3}
             maxLength={maxChars}
             className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 text-sm resize-none focus:outline-none focus:border-purple-500/50"
