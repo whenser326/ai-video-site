@@ -273,7 +273,7 @@ const [searchOpen, setSearchOpen] = useState(false);
         </div>
         <div className="flex items-center gap-2">
           <span className="text-[10px] bg-[#5bd4f0]/10 border border-[#5bd4f0]/20 rounded-full px-2 py-0.5 text-[#5bd4f0]">預設角色</span>
-<span className="text-[10px] text-white/20">無自拍</span>
+<span className="text-[10px] text-white/20">無自拍・無自動發話・無親密度解鎖及對話成就系統</span>
           <button onClick={() => { setSearchOpen(p => !p); setSearchQuery(""); setSearchIndex(0); }} className="text-white/30 hover:text-white/60 transition-all text-base">🔍</button>
           {remainingQuota !== null && (
             <span className="text-[10px] text-white/20">{remainingQuota} 次剩餘</span>

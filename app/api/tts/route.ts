@@ -29,7 +29,7 @@ if (text.length > limit) {
 const trimmedText = text;
 // [DNA_PATCH_END]
 
-  const voice = VOICE_MAP[voiceId] || VOICE_MAP["gentle-female"];
+  const voice = VOICE_MAP[voiceId] || voiceId;
 
   try {
     const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice}`, {

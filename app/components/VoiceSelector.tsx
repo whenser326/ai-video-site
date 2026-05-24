@@ -364,7 +364,10 @@ export default function VoiceSelector({
         {/* 已克隆聲音（有才顯示） */}
         {clonedVoices.length > 0 && (
           <div className="space-y-1.5">
-            <p className="text-white/40 text-[11px] font-bold">🎤 我的克隆聲音</p>
+            <div className="flex items-center gap-2">
+              <p className="text-white/40 text-[11px] font-bold">🎤 我的克隆聲音</p>
+              <p className="text-[#89f5a2] text-[10px]">↓ 點選即可使用，無需試聽</p>
+            </div>
             <div className="flex flex-col gap-1.5">
               {clonedVoices.map(v => (
                 <button

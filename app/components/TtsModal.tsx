@@ -75,6 +75,8 @@ userEmail,
   const wav2lipCredits = plan === "starter" ? 10 : plan === "standard" ? 9 : 8;
   const avatarCredits = plan === "starter" ? 10 : plan === "standard" ? 9 : 8;
 
+  const PRESET_VOICE_IDS = ["female-1","female-2","female-3","female-4","female-5","male-1","male-2","male-3","male-4","male-5"];
+  const isClonedVoice = !PRESET_VOICE_IDS.includes(ttsVoice);
   const [isAvatarLoading, setIsAvatarLoading] = useState(false);
   const [avatarResult, setAvatarResult] = useState<string | null>(null);
   const [avatarStatus, setAvatarStatus] = useState("");
@@ -236,12 +238,14 @@ userEmail,
           <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-3 space-y-3">
             <p className="text-purple-300 text-xs font-bold">🎵 試聽結果</p>
             <audio controls className="w-full" src={`data:audio/mp3;base64,${ttsAudio}`} />
+            {!isClonedVoice && (
             <button
               onClick={handleDownload}
               className="w-full py-2 rounded-xl bg-gradient-to-r from-purple-500 to-blue-500 text-white text-sm font-black hover:opacity-90 transition-all"
             >
               ⬇️ 下載語音（扣 {planCredits} 點）
             </button>
+            )}
 
             {/* Wav2Lip 區塊 */}
             <div className="border border-orange-400/30 bg-orange-400/5 rounded-xl p-3 space-y-2">
@@ -298,12 +302,14 @@ userEmail,
                 </div>
               ) : (
                 <button
-                  disabled={isWav2lipLoading}
+                  disabled={isWav2lipLoading || (!mediaUrl && !prediction?.output)}
                   onClick={handleWav2lip}
                   className="w-full py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white text-sm font-black hover:opacity-90 transition-all disabled:opacity-40"
                 >
                   {isWav2lipLoading
                     ? "⏳ 合成中，請稍候..."
+                    : (!mediaUrl && !prediction?.output)
+                    ? "🎬 合成到影片（需先有圖片/影片）"
                     : `🎬 合成到影片（扣 ${wav2lipCredits} 點）`}
                 </button>
               )}
@@ -430,6 +436,9 @@ userEmail,
         )}
 
         {/* 試聽次數 + 按鈕 */}
+        <p className="text-center text-xs text-white/30">
+          試聽非必要步驟，選好聲音後可直接下載或合成影片
+        </p>
         <p className="text-center text-xs font-black text-yellow-300">
           ⚠️ 本影片免費試聽 {TTS_MAX_PREVIEW} 次（剩餘 {Math.max(TTS_MAX_PREVIEW - ttsPreviewCount, 0)} 次）
         </p>
@@ -448,10 +457,10 @@ userEmail,
             {isTtsLoading
               ? "生成中..."
               : ttsCache[ttsVoice]
-              ? "🔄 重新播放"
+              ? isClonedVoice ? "🔄 重新試聽克隆聲音" : "🔄 重新播放"
               : ttsPreviewCount >= TTS_MAX_PREVIEW
               ? "🚫 試聽次數已用完"
-              : "🎙️ 免費試聽"}
+              : "🎙️ 試聽聲音（可跳過）"}
           </button>
         </div>
       </div>
