@@ -602,5 +602,27 @@ ANTHROPIC_API_KEY=sk-ant-你的金鑰
 - 克隆voice_id存入saved_characters.voice_id，與現有預設聲線共用同一欄位
 - 現有ElevenLabs方案：Starter（$5/月），IVC已包含，不需升級
 
+## VoiceSelector 元件規範（已完成）
+- 路徑：app/components/VoiceSelector.tsx
+- 統一維護預設10種聲線（VOICE_OPTIONS export）、已克隆聲音列表、上傳新聲音克隆按鈕
+- Props：selectedVoiceId / onChange / userEmail / plan / characterId?
+- 三個引用入口：SaveCharacterModal.tsx / app/characters/page.tsx / app/create/page.tsx Upload Modal
+- TtsModal.tsx 也已換成 VoiceSelector 元件
+- 克隆聲音判斷：`!PRESET_VOICE_IDS.includes(ttsVoice)`，預設10個 id 在 TtsModal 內宣告為 PRESET_VOICE_IDS
+
+## Voice Cloning 規範（已完成）
+- API：app/api/clone-voice/route.ts
+- ElevenLabs IVC 正確 endpoint：POST /v1/voices/add（不是 /v1/voices/ivc/create）
+- 流程：接收 FormData（audioFile + email + characterId）→ 驗證付費用戶 → 呼叫 ElevenLabs → 寫入 saved_characters.voice_id → 回傳 voice_id
+- CloneVoiceModal 內建錄音功能：MediaRecorder API，audioBitsPerSecond: 128000，echoCancellation + noiseSuppression 開啟
+- iOS 需用 Safari，輸出 audio/mp4；Chrome 輸出 audio/webm;codecs=opus；副檔名由 recordedBlob.type 動態判斷
+- 免責聲明勾選框必填才能送出
+
+## TtsModal 克隆聲音規範（已完成）
+- 克隆聲音試聽不受 TTS_MAX_PREVIEW 次數限制
+- 選克隆聲音時隱藏「下載語音（扣N點）」按鈕
+- 克隆聲音 voice_id 直接傳給 /api/tts，不經過 VOICE_MAP（/api/tts/route.ts 第33行：`const voice = VOICE_MAP[voiceId] || voiceId`）
+- 台詞空白時顯示黃色提示文字，輸入後自動消失
+
 ## 留存與付費轉換（E系列）
 → 規劃詳見 DNA_ROADMAP.md E 系列章節

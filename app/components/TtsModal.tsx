@@ -185,7 +185,7 @@ userEmail,
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-      <div className="w-full max-w-sm bg-[#0d2318] border border-purple-500/20 rounded-3xl p-6 space-y-4 shadow-2xl overflow-y-auto max-h-[90vh]">
+      <div className="w-full max-w-sm bg-[#0d2318] border border-purple-500/20 rounded-3xl p-6 space-y-4 shadow-2xl overflow-y-auto max-h-[80vh]">
         <div className="text-center">
           <p className="text-3xl mb-1">🎙️</p>
           <h2 className="text-white font-black text-lg">語音合成</h2>
@@ -456,11 +456,11 @@ userEmail,
           >
             {isTtsLoading
               ? "生成中..."
-              : ttsCache[ttsVoice]
-              ? isClonedVoice ? "🔄 重新試聽克隆聲音" : "🔄 重新播放"
+              : (ttsCache[ttsVoice] && !ttsAudio)
+              ? "🔄 重新試聽"
               : (!isClonedVoice && ttsPreviewCount >= TTS_MAX_PREVIEW)
               ? "🚫 試聽次數已用完"
-              : "🎙️ 試聽聲音（必要步驟）"}
+              : "🎙️ 試聽聲音"}
           </button>
         </div>
       </div>
