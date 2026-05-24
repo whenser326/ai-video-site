@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import VoiceSelector from "@/app/components/VoiceSelector";
 
 // app/components/TtsModal.tsx
 // Code Splitting — TTS 語音合成 + Wav2Lip Modal（兩者整合在同一元件）
@@ -192,40 +193,20 @@ userEmail,
         {/* 聲音選擇 */}
         <div>
           <p className="text-white/40 text-xs font-bold mb-2">選擇聲音</p>
-          <div className="grid grid-cols-5 gap-2">
-            {[
-              { id: "female-1", label: "👩 低沉女聲" },
-              { id: "female-2", label: "👩 甜美女聲" },
-              { id: "female-3", label: "👩 清晰女聲" },
-              { id: "female-4", label: "👩 活潑女聲" },
-              { id: "female-5", label: "👩 溫柔女聲" },
-              { id: "male-1", label: "👨 專業男聲" },
-              { id: "male-2", label: "👨 溫暖男聲" },
-              { id: "male-3", label: "👨 成熟男聲" },
-              { id: "male-4", label: "👨 旁白男聲" },
-              { id: "male-5", label: "👨 深沉男聲" },
-            ].map((v) => (
-              <button
-                key={v.id}
-                onClick={() => {
-                  setTtsVoice(v.id);
-                  setTtsTrimmed(false);
-                  if (ttsCache[v.id]) {
-                    setTtsAudio(ttsCache[v.id]);
-                  } else {
-                    setTtsAudio(null);
-                  }
-                }}
-                className={`py-2 rounded-lg text-xs font-bold border transition-all ${
-                  ttsVoice === v.id
-                    ? "bg-purple-500/30 text-purple-200 border-purple-500"
-                    : "bg-white/5 text-white/50 border-white/10 hover:border-white/30"
-                }`}
-              >
-                {v.label}
-              </button>
-            ))}
-          </div>
+          <VoiceSelector
+            selectedVoiceId={ttsVoice}
+            onChange={(vid) => {
+              setTtsVoice(vid);
+              setTtsTrimmed(false);
+              if (ttsCache[vid]) {
+                setTtsAudio(ttsCache[vid]);
+              } else {
+                setTtsAudio(null);
+              }
+            }}
+            userEmail={userEmail ?? ""}
+            plan={plan}
+          />
         </div>
 
         {/* 台詞輸入 */}
