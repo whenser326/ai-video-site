@@ -23,6 +23,8 @@ interface GalleryItem {
 interface Props {
   userEmail: string;
   plan: string;
+  isLoggedIn: boolean;
+  onLoginRequest: () => void;
 }
 
 function randomInRange(min: number, max: number) {
@@ -42,7 +44,7 @@ function seededRandom(seed: string, min: number, max: number) {
 const HERO_VIDEO = "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/hero.mp4";
 const FREE_LIMIT = 12;
 
-export default function GallerySection({ userEmail, plan }: Props) {
+export default function GallerySection({ userEmail, plan, isLoggedIn, onLoginRequest }: Props) {
   const router = useRouter();
   const [items, setItems] = useState<GalleryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,6 +54,7 @@ export default function GallerySection({ userEmail, plan }: Props) {
   const [selected, setSelected] = useState<GalleryItem | null>(null);
   const [expandedStory, setExpandedStory] = useState(false);
   const [showUpgradeHint, setShowUpgradeHint] = useState(false);
+  const [showLoginHint, setShowLoginHint] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [submitStep, setSubmitStep] = useState<"selectChar" | "selectImages" | "confirm">("selectChar");
   const [myCharacters, setMyCharacters] = useState<{id: number; name: string; image_url: string}[]>([]);
@@ -111,6 +114,10 @@ export default function GallerySection({ userEmail, plan }: Props) {
   const regular = items.filter(i => !i.is_featured);
 
   const handleCardClick = (item: GalleryItem, index: number) => {
+    if (!isLoggedIn && index >= FREE_LIMIT) {
+      setShowLoginHint(true);
+      return;
+    }
     if (isFree && index >= FREE_LIMIT) {
       setShowUpgradeHint(true);
       return;
@@ -120,6 +127,10 @@ export default function GallerySection({ userEmail, plan }: Props) {
   };
 
   const handleChat = (item: GalleryItem) => {
+    if (!isLoggedIn) {
+      setShowLoginHint(true);
+      return;
+    }
     router.push(`/chat/gallery/${item.id}`);
   };
 
@@ -336,6 +347,49 @@ export default function GallerySection({ userEmail, plan }: Props) {
                 查看角色詳細頁面 →
               </button>
             </div>
+          </div>
+        </div>
+      )}
+{/* 未登入提示 Modal */}
+      {showLoginHint && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center pb-8 px-4 backdrop-blur-sm"
+          style={{ background: "rgba(0,0,0,0.75)" }}
+          onClick={() => setShowLoginHint(false)}>
+          <div className="w-full max-w-sm bg-[#0d2318] border border-[#89f5a2]/25 rounded-3xl p-6 space-y-4 shadow-2xl"
+            onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+            <div className="text-center space-y-1">
+              <p className="text-white font-black text-base">🔑 登入後繼續</p>
+              <p className="text-white/40 text-xs">登入 Google 帳號，免費獲得 5 點開始體驗</p>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 px-3 py-2 bg-white/5 rounded-xl">
+                <span className="text-sm">💬</span>
+                <p className="text-white/60 text-xs">和 AI 角色即時聊天</p>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-2 bg-white/5 rounded-xl">
+                <span className="text-sm">📸</span>
+                <p className="text-white/60 text-xs">讓角色傳照片給你</p>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-2 bg-white/5 rounded-xl">
+                <span className="text-sm">🎨</span>
+                <p className="text-white/60 text-xs">生成你的專屬 AI 角色</p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                const { signIn } = require("next-auth/react");
+                signIn("google", {}, { prompt: "select_account" });
+              }}
+              className="w-full py-3 bg-[#89f5a2] text-[#0d2318] rounded-2xl text-sm font-black hover:opacity-90 transition-all"
+            >
+              🚀 免費登入開始使用
+            </button>
+            <button
+              onClick={() => setShowLoginHint(false)}
+              className="w-full py-2 text-white/25 text-xs hover:text-white/50 transition-all"
+            >
+              先逛逛
+            </button>
           </div>
         </div>
       )}

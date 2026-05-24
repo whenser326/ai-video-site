@@ -380,12 +380,16 @@ useEffect(() => {
 // [DNA_PATCH_START] 偵測主頁載入完成 → 結束入場動畫
 useEffect(() => {
   const maxWait = setTimeout(() => setPageReady(true), 2500);
+  if (!session && status !== 'loading') {
+    setPageReady(true);
+    clearTimeout(maxWait);
+  }
   if (credits !== null) {
     setPageReady(true);
     clearTimeout(maxWait);
   }
   return () => clearTimeout(maxWait);
-}, [credits]);
+}, [credits, session, status]);
 // [DNA_PATCH_END]
 // [DNA_PATCH_START] selectedFunction 自動同步 videoModel
 useEffect(() => {
@@ -1074,179 +1078,8 @@ const handleUploadDirect = async (
   // [DNA_PATCH_START] 未登入直接 return Landing Page，不渲染主工作室
 // [DNA_PATCH_START] 未登入 Landing Page — 美化版
 if (status === 'loading') return null;
-if (!session) return (
-  <>
-    <div style={{
-      minHeight: '100vh',
-      background: '#0a1f10',
-      display: 'flex',
-      flexDirection: 'column',
-      fontFamily: "'Noto Sans TC', sans-serif",
-    }}>
-      {/* Hero */}
-      <div style={{
-        padding: '72px 24px 40px',
-        textAlign: 'center',
-        position: 'relative',
-        overflow: 'hidden',
-        background: 'linear-gradient(160deg, #0d2318 0%, #1a3a25 50%, #0d2318 100%)',
-      }}>
-        {/* 背景光暈 */}
-        <div style={{
-          position: 'absolute', inset: 0, pointerEvents: 'none',
-          background: 'radial-gradient(ellipse 80% 50% at 50% 0%, rgba(137,245,162,0.10) 0%, transparent 70%)',
-        }} />
-        <div style={{
-          position: 'absolute', top: -60, left: '50%', transform: 'translateX(-50%)',
-          width: 400, height: 400, borderRadius: '50%', pointerEvents: 'none',
-          background: 'radial-gradient(circle, rgba(137,245,162,0.06) 0%, transparent 65%)',
-        }} />
-
-        {/* Badge */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-          background: 'rgba(137,245,162,0.08)',
-          border: '1px solid rgba(137,245,162,0.22)',
-          borderRadius: 20, padding: '5px 14px',
-          fontSize: 10, fontWeight: 600, color: '#89f5a2',
-          letterSpacing: '0.15em',
-          position: 'relative',
-          whiteSpace: 'nowrap',
-          width: 'fit-content',
-          margin: '0 auto 24px',
-        }}>
-          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#89f5a2', display: 'inline-block', boxShadow: '0 0 8px #89f5a2' }} />
-          ✨ AI CHARACTER STUDIO
-        </div>
-
-        {/* 標題 */}
-        <h1 style={{
-          fontSize: 'clamp(24px, 8vw, 38px)',
-          fontWeight: 500,
-          color: '#fff',
-          lineHeight: 1.2,
-          marginBottom: 14,
-          position: 'relative',
-          letterSpacing: '0.01em',
-        }}>
-          打造專屬 AI 角色
-          <br />
-          <span style={{
-            color: '#89f5a2',
-            fontWeight: 400,
-            letterSpacing: '0.06em',
-            textShadow: '0 0 20px rgba(137,245,162,0.6), 0 0 40px rgba(137,245,162,0.25)',
-            display: 'inline-block',
-            marginTop: 6,
-            fontSize: '0.85em',
-            opacity: 0.92,
-          }}>創作・對話・影片</span>
-        </h1>
-
-        {/* 副標 */}
-        <p style={{
-          fontSize: 13,
-          color: 'rgba(255,255,255,0.5)',
-          marginBottom: 32,
-          position: 'relative',
-          lineHeight: 1.9,
-          maxWidth: 300,
-          margin: '0 auto 32px',
-          letterSpacing: '0.03em',
-        }}>
-          生成角色、和他們聊天、製作說話影片<br />一個平台，三種體驗
-        </p>
-
-        {/* CTA 按鈕 */}
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'center', position: 'relative', flexWrap: 'wrap' }}>
-          {/Threads|FBAN|FBAV|Instagram|Line\/|MicroMessenger/i.test(typeof navigator !== 'undefined' ? navigator.userAgent : '') && (
-            <div style={{
-              width: '100%', textAlign: 'center',
-              fontSize: 11, color: 'rgba(255,200,100,0.85)',
-              background: 'rgba(255,180,0,0.08)',
-              border: '1px solid rgba(255,180,0,0.2)',
-              borderRadius: 8, padding: '7px 12px',
-              marginBottom: 4, lineHeight: 1.7,
-            }}>
-              ⚠️ 若登入失敗，請用 <strong>Safari</strong> 或 <strong>Chrome</strong> 開啟本頁
-            </div>
-          )}
-          <button
-            onClick={() => signIn("google", {}, { prompt: "select_account" })}
-            style={{
-              background: 'linear-gradient(135deg, #2d8a42, #3db558)',
-              border: 'none',
-              borderRadius: 12,
-              padding: '12px 28px',
-              fontSize: 14,
-              fontWeight: 800,
-              color: '#fff',
-              cursor: 'pointer',
-              boxShadow: '0 4px 20px rgba(61,181,88,0.35)',
-              letterSpacing: '0.02em',
-            }}
-          >🚀 免費開始試用</button>
-          <button
-            onClick={() => { window.location.href = '/pricing'; }}
-            style={{
-              background: 'rgba(137,245,162,0.06)',
-              border: '1px solid rgba(137,245,162,0.22)',
-              borderRadius: 12,
-              padding: '12px 24px',
-              fontSize: 14,
-              fontWeight: 600,
-              color: '#89f5a2',
-              cursor: 'pointer',
-            }}
-          >查看定價</button>
-        </div>
-      </div>
-
-      {/* 功能卡片 */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)',
-        gap: 10,
-        padding: '24px 16px',
-        maxWidth: 560,
-        margin: '0 auto',
-        width: '100%',
-      }}>
-        {[
-          { icon: '🎨', title: '生成 AI 角色', desc: '高精度圖片與影片，角色外貌高度一致' },
-          { icon: '💬', title: '即時對話', desc: '和角色聊天、群組聊天、AI 自拍' },
-          { icon: '🎬', title: '說話影片', desc: '語音合成 + 嘴型同步，栩栩如生' },
-        ].map((f) => (
-          <div key={f.title} style={{
-            background: 'rgba(137,245,162,0.04)',
-            border: '1px solid rgba(137,245,162,0.10)',
-            borderRadius: 12,
-            padding: '14px 8px',
-            textAlign: 'center',
-          }}>
-            <div style={{ fontSize: 22, marginBottom: 8 }}>{f.icon}</div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#b8ffc8', marginBottom: 4, lineHeight: 1.4 }}>{f.title}</div>
-            <div style={{ fontSize: 9.5, color: 'rgba(184,255,200,0.4)', lineHeight: 1.6 }}>{f.desc}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* 底部提示 */}
-      <div style={{ textAlign: 'center', paddingBottom: 32, marginTop: 4 }}>
-        <div style={{
-          display: 'inline-block',
-          fontSize: 11, color: 'rgba(184,255,200,0.28)',
-          borderTop: '1px solid rgba(137,245,162,0.08)',
-          paddingTop: 16,
-        }}>
-          ↓ 免費獲得 5 點，登入即可使用
-        </div>
-      </div>
-    </div>
-  </>
-);
-// [DNA_PATCH_END]
 return (
+
   <>
 {/* [DNA_PATCH_START] Splash 入場動畫蓋板 */}
 {!splashDone && (
@@ -1514,7 +1347,12 @@ localStorage.setItem(key, '1');
     <main className="flex min-h-screen flex-col bg-gradient-to-br from-[#0d2318] via-[#1a3a25] to-[#2d5a3d] relative overflow-y-auto">
       <div className="h-12" />
       {/* [DNA_PATCH_START] N01 已登入首頁：Hero + 瀑布流 */}
-      <GallerySection userEmail={session?.user?.email || ""} plan={plan} />
+      <GallerySection
+  userEmail={session?.user?.email || ""}
+  plan={plan}
+  isLoggedIn={!!session}
+  onLoginRequest={() => signIn("google", {}, { prompt: "select_account" })}
+/>
       {/* [DNA_PATCH_END] */}
         </main>
 {/* [DNA_PATCH_START] Toast 通知元件 */}
