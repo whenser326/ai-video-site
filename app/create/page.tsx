@@ -226,6 +226,7 @@ const [batchCurrentIndex, setBatchCurrentIndex] = useState(-1);
 // [DNA_PATCH_START] promo-card-state
 const [showPromoCard, setShowPromoCard] = useState(false)
 const [promoCollapsed, setPromoCollapsed] = useState(false)
+const [promoBonus, setPromoBonus] = useState({ starter: 5, standard: 7, pro: 10 })
 const [adultEnabled, setAdultEnabled] = useState(false)
 // [DNA_PATCH_START] Onboarding 引導狀態
 const [showOnboarding, setShowOnboarding] = useState(false);
@@ -376,6 +377,16 @@ useEffect(() => {
   fetch("/api/admin/settings-public?key=adult_section_enabled")
     .then(r => r.json())
     .then(d => { if (d.value === "true") setAdultEnabled(true); })
+    .catch(() => {});
+  fetch("/api/referral/settings-public")
+    .then(r => r.json())
+    .then(d => {
+      if (d) setPromoBonus({
+        starter: Number(d.plan_bonus_credits_starter) || 5,
+        standard: Number(d.plan_bonus_credits_standard) || 7,
+        pro: Number(d.plan_bonus_credits_pro) || 10,
+      });
+    })
     .catch(() => {});
 }, []);
 // [DNA_PATCH_END]
@@ -3405,7 +3416,7 @@ customAppearance={customAppearance}
                       </div>
                       <div className="text-right">
                         <div style={{ fontSize: 10, color: 'rgba(184,255,200,0.4)', marginBottom: 2 }}>今日額外贈送</div>
-                        <div style={{ fontSize: 16, fontWeight: 800, color: '#89f5a2' }}>+5 點 🎁</div>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: '#89f5a2' }}>+{promoBonus.starter} 點 🎁</div>
                       </div>
                     </div>
 
@@ -3420,7 +3431,7 @@ customAppearance={customAppearance}
                       </div>
                       <div className="text-right">
                         <div style={{ fontSize: 10, color: 'rgba(184,255,200,0.4)', marginBottom: 2 }}>今日額外贈送</div>
-                        <div style={{ fontSize: 16, fontWeight: 800, color: '#89f5a2' }}>+7 點 🎁</div>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: '#89f5a2' }}>+{promoBonus.standard} 點 🎁</div>
                       </div>
                     </div>
 
@@ -3432,7 +3443,7 @@ customAppearance={customAppearance}
                       </div>
                       <div className="text-right">
                         <div style={{ fontSize: 10, color: 'rgba(184,255,200,0.4)', marginBottom: 2 }}>今日額外贈送</div>
-                        <div style={{ fontSize: 16, fontWeight: 800, color: '#89f5a2' }}>+10 點 🎁</div>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: '#89f5a2' }}>+{promoBonus.pro} 點 🎁</div>
                       </div>
                     </div>
 

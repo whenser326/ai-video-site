@@ -64,12 +64,6 @@ export default function GalleryChatPage() {
       .then(data => {
         if (data.item) {
           setCharacter(data.item);
-          // actual_chat_count +1
-          fetch(`/api/gallery/chat-count`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id: galleryId }),
-          }).catch(() => {});
         }
       })
       .finally(() => setCharLoading(false));
@@ -242,6 +236,12 @@ export default function GalleryChatPage() {
           setIsTyping(false);
           setMessages(prev => [...prev, { role: "assistant", content: r.content, characterName: r.characterName }]);
         }
+        // 每次聊天成功回應後疊加 actual_chat_count
+        fetch(`/api/gallery/chat-count`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: galleryId }),
+        }).catch(() => {});
       }
       setIsTyping(false);
     } catch {

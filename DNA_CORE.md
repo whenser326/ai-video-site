@@ -149,4 +149,4 @@ page.tsx 已知 TypeScript 舊錯誤（4個）：
 /chat/[characterId] 聊天頁：h-screen + overflow-hidden，底部輸入列有「離開聊天室」紅色按鈕，📎上傳圖片按鈕，打字延遲2-5秒，AI自拍觸發（單人延遲3~10秒），🎬轉成影片Modal，sessionId 存 localStorage 重開延續對話
 /chat/group 群組聊天頁：免費用戶封鎖，入門/標準最多3角色，專業最多5角色，群組回覆隨機順序+逐一顯示間隔2-5秒，AI自拍延遲30秒~3分鐘，sessionId 存 localStorage 重開延續對話
 /guide 使用指南頁：三條主線可展開，點數對照表，底部「開始創作」按鈕
-Onboarding 三選項：生成角色→null（留首頁）、和AI角色聊天或製作說話影片→/characters、上傳自己的照片轉影片→setShowUploadModal(true)
+Onboarding 四選項（2026/05/22 更新）：生成AI角色→/create、🌐探索角色→/explore、和AI角色聊天或製作說話影片→/characters、上傳自己的照片轉影片→/create?upload=1（自動開啟 Upload Modal）

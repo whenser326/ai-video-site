@@ -95,19 +95,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // [DNA_PATCH_START] 累計總生成次數（不受 history 清理影響）
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('total_generations')
-      .eq('email', user_email)
-      .maybeSingle();
-    if (profile) {
-      await supabase
-        .from('profiles')
-        .update({ total_generations: (profile.total_generations || 0) + 1 })
-        .eq('email', user_email);
-    }
-    // [DNA_PATCH_END]
+    // total_generations 已由 /api/character GET 後端寫入，此處不重複計算
 
     return NextResponse.json({ success: true });
   } catch (err) {

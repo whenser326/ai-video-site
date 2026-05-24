@@ -226,6 +226,7 @@ const [batchCurrentIndex, setBatchCurrentIndex] = useState(-1);
 // [DNA_PATCH_START] promo-card-state
 const [showPromoCard, setShowPromoCard] = useState(false)
 const [promoCollapsed, setPromoCollapsed] = useState(false)
+const [promoBonus, setPromoBonus] = useState<{ starter: number; standard: number; pro: number }>({ starter: 5, standard: 7, pro: 10 })
 const [adultEnabled, setAdultEnabled] = useState(false)
 // [DNA_PATCH_START] Onboarding 引導狀態
 const [showOnboarding, setShowOnboarding] = useState(false);
@@ -356,11 +357,23 @@ useEffect(() => {
   }
 }, [showReferralModal]);
 // [DNA_PATCH_END]
-// [DNA_PATCH_START] 讀取成人專區開關
+// [DNA_PATCH_START] 讀取成人專區開關 + 優惠加贈點數
 useEffect(() => {
   fetch("/api/admin/settings-public?key=adult_section_enabled")
     .then(r => r.json())
     .then(d => { if (d.value === "true") setAdultEnabled(true); })
+    .catch(() => {});
+  fetch("/api/referral/settings-public")
+    .then(r => r.json())
+    .then(d => {
+      if (d) {
+        setPromoBonus({
+          starter: Number(d.plan_bonus_credits_starter) || 5,
+          standard: Number(d.plan_bonus_credits_standard) || 7,
+          pro: Number(d.plan_bonus_credits_pro) || 10,
+        });
+      }
+    })
     .catch(() => {});
 }, []);
 // [DNA_PATCH_END]

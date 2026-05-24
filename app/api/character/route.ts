@@ -312,6 +312,7 @@ const seedanceInput: any = {
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
+  const email = searchParams.get("email");
 
   if (!id) {
     return NextResponse.json({ error: "缺少 Prediction ID" }, { status: 400 });
@@ -328,7 +329,22 @@ export async function GET(req: Request) {
       });
     }
 
-      return NextResponse.json(prediction);
+    // 生成成功時後端直接寫 total_generations +1，不依賴前端呼叫
+    if (prediction.status === "succeeded" && email) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('total_generations')
+        .eq('email', email)
+        .maybeSingle();
+      if (profile) {
+        await supabase
+          .from('profiles')
+          .update({ total_generations: (profile.total_generations || 0) + 1 })
+          .eq('email', email);
+      }
+    }
+
+    return NextResponse.json(prediction);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

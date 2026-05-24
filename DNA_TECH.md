@@ -478,9 +478,11 @@ Header 結構（未登入）：
 - 群組聊天入口（選角色→開始）
 
 /guide 使用指南：
-- 三條主線流程圖
+- 四條主線上方新增「🌐 社群功能」可折疊區塊（探索角色/角色詳細頁/投稿角色）（2026/05/22）
+- 四條主線流程圖（含聊天相關主線）
 - 每步驟顯示點數成本
 - 底部補充說明聊天計費規則
+- 「為什麼我們不一樣？」差異化區塊（青藍色，共10條，資料來源 app/data/whyDifferent.ts）
 
 /chat/[characterId]：單人聊天頁（已建立）
 /chat/group：群組聊天頁（已建立）
@@ -557,3 +559,18 @@ ANTHROPIC_API_KEY=sk-ant-你的金鑰
 ✅ public_characters表補gender欄位（2026/05/22）：ALTER TABLE public_characters ADD COLUMN IF NOT EXISTS gender text DEFAULT ''。GallerySection.tsx投稿Modal confirm步驟新增性別選擇（女性/男性/不設定），送出帶gender，route.ts核准insert到public_gallery時帶入item.gender。
 ✅ Claude API overload自動重試（2026/05/22）：/api/chat/route.ts偵測overloaded_error最多重試2次（第一次等2秒/第二次等3秒），全部失敗顯示「⚠️ 目前系統有點忙，請再說一次」，所有聊天室共用此修復。
 ✅ gallery聊天室loadingRef修復（2026/05/22）：app/chat/gallery/[id]/page.tsx新增loadingRef追蹤loading狀態，autoMessage timer改用loadingRef.current檢查，避免closure抓到舊值導致autoMessage和handleSend同時發送。
+✅ 聊天室textarea改text-base（2026/05/22）：五個聊天室（gallery/single/group/default-single/default-group）textarea className從text-sm改為text-base（16px），防止iOS Safari因字體小於16px自動放大頁面導致畫面截斷問題。
+✅ guide頁面社群功能區塊（2026/05/22）：四條主線上方新增「🌐 社群功能」可折疊區塊（探索角色/角色詳細頁/投稿角色）。
+✅ Onboarding Modal 更新（2026/05/22）：新增「🌐 探索角色」選項，「生成AI角色」改跳 /create，「上傳照片轉影片」改跳 /create?upload=1。
+✅ create/page.tsx 讀取 ?upload=1 參數（2026/05/22）：頁面載入時偵測 upload=1 自動開啟 Upload Modal。
+✅ whyDifferent.ts 更新（2026/05/22）：新增第8條「🌐 探索角色社群」，目前共10條。
+✅ /api/chat/route.ts 加錯誤 log（2026/05/22）：console.error("Claude API error:", ...) 方便 Vercel Logs 排查。
+
+⚠️ 重要技術備忘（2026/05/22）：
+- public_gallery.gender 值為中文（女性/男性），篩選時禁止用 female/male，否則篩選失效
+- public_characters 表已有 gender 欄位（2026/05/22 補），投稿時需帶入
+- Claude API overloaded_error 已有 retry 機制（/api/chat/route.ts），不需再另外處理
+- 其他四個聊天室（非 gallery）的 loadingRef 問題理論上存在但尚未觀察到，低優先
+
+## 留存與付費轉換（E系列）
+→ 規劃詳見 DNA_ROADMAP.md E 系列章節
