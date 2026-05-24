@@ -1,6 +1,7 @@
 "use client";
 
 import { signIn, signOut, useSession } from "next-auth/react";
+import VoiceSelector from "@/app/components/VoiceSelector";
 import { useState, useEffect, useRef } from "react";
 // [DNA_PATCH_START] 防止視窗切換時自動刷新
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -2944,36 +2945,12 @@ localStorage.setItem(key, '1');
                       {avatarTtsCache[avatarVoiceId] ? "🔄 重新播放" : avatarTtsPreviewCount >= AVATAR_TTS_MAX_PREVIEW ? "🚫 試聽已用完" : "🎙️ 免費試聽"}
                     </button>
                   </div>
-                  <div className="flex gap-2">
-                    <div className="flex-1 flex flex-col gap-1.5">
-                      {[
-                        { id: "female-1", label: "👩 低沉女聲" },
-                        { id: "female-2", label: "👩 甜美女聲" },
-                        { id: "female-3", label: "👩 清晰女聲" },
-                        { id: "female-4", label: "👩 活潑女聲" },
-                        { id: "female-5", label: "👩 溫柔女聲" },
-                      ].map((v) => (
-                        <button key={v.id} type="button"
-                          onClick={() => { setAvatarVoiceId(v.id); setAvatarTtsAudio(null); }}
-                          className={`py-1.5 rounded-lg text-xs font-bold border transition-all ${avatarVoiceId === v.id ? "bg-[#89f5a2] text-[#0d2318] border-[#89f5a2]" : "bg-white/5 text-white/50 border-white/10 hover:border-white/30"}`}
-                        >{v.label}</button>
-                      ))}
-                    </div>
-                    <div className="flex-1 flex flex-col gap-1.5">
-                      {[
-                        { id: "male-1", label: "👨 專業男聲" },
-                        { id: "male-2", label: "👨 溫暖男聲" },
-                        { id: "male-3", label: "👨 成熟男聲" },
-                        { id: "male-4", label: "👨 旁白男聲" },
-                        { id: "male-5", label: "👨 深沉男聲" },
-                      ].map((v) => (
-                        <button key={v.id} type="button"
-                          onClick={() => { setAvatarVoiceId(v.id); setAvatarTtsAudio(null); }}
-                          className={`py-1.5 rounded-lg text-xs font-bold border transition-all ${avatarVoiceId === v.id ? "bg-[#89f5a2] text-[#0d2318] border-[#89f5a2]" : "bg-white/5 text-white/50 border-white/10 hover:border-white/30"}`}
-                        >{v.label}</button>
-                      ))}
-                    </div>
-                  </div>
+                  <VoiceSelector
+                    selectedVoiceId={avatarVoiceId}
+                    onChange={(vid) => { setAvatarVoiceId(vid); setAvatarTtsAudio(null); }}
+                    userEmail={session?.user?.email ?? ""}
+                    plan={plan}
+                  />
                 </div>
               )}
               {/* 動作參考影片（motion_video 才顯示） */}

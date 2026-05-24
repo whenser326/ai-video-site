@@ -3,19 +3,7 @@
 import { useSession, signIn } from "next-auth/react";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-
-const VOICE_OPTIONS = [
-  { id: "female-1", label: "Jane（女）低沉" },
-  { id: "female-2", label: "Stacy（女）甜美" },
-  { id: "female-3", label: "Anna（女）清晰" },
-  { id: "female-4", label: "Xiaoxi（女）活潑" },
-  { id: "female-5", label: "Maya（女）溫柔" },
-  { id: "male-1", label: "Aliby（男）專業" },
-  { id: "male-2", label: "Evan（男）溫暖" },
-  { id: "male-3", label: "Liu（男）成熟" },
-  { id: "male-4", label: "Adrian（男）旁白" },
-  { id: "male-5", label: "Wilson（男）深沉" },
-];
+import VoiceSelector, { VOICE_OPTIONS } from "@/app/components/VoiceSelector";
 const DEFAULT_CHARACTERS = [
   { id: "default-f1", name: "Yuki", gender: "female", personality: "活潑・大學生", description: "個性開朗活潑，喜歡聊八卦和追劇，說話帶點俏皮語氣，很愛笑。" },
   { id: "default-f2", name: "Luna", gender: "female", personality: "神秘・藝術家", description: "個性神秘冷靜，對藝術和哲學有獨到見解，說話簡短但深刻。" },
@@ -359,15 +347,13 @@ const [defaultExpanded, setDefaultExpanded] = useState(false);
           </div>
           <div className="space-y-1.5">
             <p className="text-white/40 text-xs">🎙️ 選擇聲音</p>
-            <select
-              value={editVoiceId}
-              onChange={e => setEditVoiceId(e.target.value)}
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-[#89f5a2]/50 appearance-none"
-            >
-              {VOICE_OPTIONS.map(v => (
-                <option key={v.id} value={v.id} className="bg-[#0d2318]">{v.label}</option>
-              ))}
-            </select>
+            <VoiceSelector
+              selectedVoiceId={editVoiceId}
+              onChange={setEditVoiceId}
+              userEmail={session?.user?.email ?? ""}
+              plan="starter"
+              characterId={editVoiceChar?.id}
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <button

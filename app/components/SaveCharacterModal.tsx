@@ -1,18 +1,6 @@
 "use client";
 import { useState } from "react";
-
-const VOICE_OPTIONS = [
-  { id: "female-1", label: "Jane（女）低沉" },
-  { id: "female-2", label: "Stacy（女）甜美" },
-  { id: "female-3", label: "Anna（女）清晰" },
-  { id: "female-4", label: "Xiaoxi（女）活潑" },
-  { id: "female-5", label: "Maya（女）溫柔" },
-  { id: "male-1", label: "Aliby（男）專業" },
-  { id: "male-2", label: "Evan（男）溫暖" },
-  { id: "male-3", label: "Liu（男）成熟" },
-  { id: "male-4", label: "Adrian（男）旁白" },
-  { id: "male-5", label: "Wilson（男）深沉" },
-];
+import VoiceSelector from "@/app/components/VoiceSelector";
 
 interface SaveCharacterModalProps {
   saveCharacterName: string;
@@ -238,16 +226,13 @@ export default function SaveCharacterModal({
   </div>
 </div>
             <div className="space-y-1.5">
-              <p className="text-white/40 text-xs">🎙️ 預設聲音</p>
-              <select
-                value={selectedVoice}
-                onChange={e => setSelectedVoice(e.target.value)}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-yellow-400/50 appearance-none"
-              >
-                {VOICE_OPTIONS.map(v => (
-                  <option key={v.id} value={v.id} className="bg-[#0d2318]">{v.label}</option>
-                ))}
-              </select>
+              <p className="text-white/40 text-xs">🎙️ 聲音設定</p>
+              <VoiceSelector
+                selectedVoiceId={selectedVoice}
+                onChange={setSelectedVoice}
+                userEmail={userEmail ?? ""}
+                plan={plan}
+              />
             </div>
           </>
         )}

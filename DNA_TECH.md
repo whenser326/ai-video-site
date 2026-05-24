@@ -585,6 +585,22 @@ ANTHROPIC_API_KEY=sk-ant-你的金鑰
 
 ✅ E04 免費用戶升級提示彈窗（2026/05/24）：五個聊天室（單人自建/群組/gallery/預設單人/預設群組）均已加入 showUpgradeModal state，第5/10/20則 assistant 回應後對 plan==="free" 用戶觸發，彈窗半硬擋（輸入框可見但有壓力），「先不了，繼續聊」可關閉。gallery/預設單人聊天室補讀 plan state（從 /api/user/credits 取得）。
 ✅ 首頁未登入可見瀑布流（2026/05/24）：app/page.tsx 移除 if(!session) return Landing Page 擋牆，未登入直接渲染首頁瀑布流。GallerySection.tsx 新增 isLoggedIn/onLoginRequest props，未登入點卡片第12張後或點「開始聊天」觸發登入提示 Modal（showLoginHint state），登入按鈕走 onLoginRequest callback from page.tsx。Splash 動畫新增未登入時也能結束的條件（session===null && status!=='loading'）。
+## VoiceSelector 元件規範（待實作）
+- 路徑：app/components/VoiceSelector.tsx
+- 用途：統一管理聲線選擇，三個入口共用同一元件，日後新增/修改聲線只改此檔
+- Props：selectedVoiceId(string) / onChange((voiceId:string)=>void) / userEmail(string) / plan(string) / characterId?(number)
+- 三個引用入口：SaveCharacterModal.tsx（建角色）/ app/characters/page.tsx（角色設定）/ create/page.tsx Upload Modal（說話影片）
+- 內容：10種預設聲線（現有）+ 克隆聲音選項（付費限定）+ 上傳新克隆入口
+- 預設聲線清單統一維護於此元件，不再分散在各頁面
+
+## Voice Cloning 規範（待實作）
+- API：/api/clone-voice（POST：接收音頻檔 + email + characterId，呼叫 ElevenLabs IVC，回傳 voice_id 寫入 saved_characters.voice_id）
+- ElevenLabs IVC endpoint：POST /v1/voices/ivc/create（multipart/form-data，files欄位傳音頻）
+- 建議音頻：1-2分鐘清晰無背景噪音的MP3/WAV，128kbps以上
+- 方案限制：入門以上才開放，免費用戶不可用
+- 免責聲明：上傳前需勾選「本人聲音授權」checkbox
+- 克隆voice_id存入saved_characters.voice_id，與現有預設聲線共用同一欄位
+- 現有ElevenLabs方案：Starter（$5/月），IVC已包含，不需升級
 
 ## 留存與付費轉換（E系列）
 → 規劃詳見 DNA_ROADMAP.md E 系列章節
