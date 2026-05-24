@@ -583,5 +583,8 @@ ANTHROPIC_API_KEY=sk-ant-你的金鑰
 - responses型別定義已補isUnlock/unlockLevel欄位，避免TS錯誤
 - app/page.tsx的showPromoCard state和timer為死碼（JSX已移至create/page.tsx），不影響功能但可日後清理
 
+✅ E04 免費用戶升級提示彈窗（2026/05/24）：五個聊天室（單人自建/群組/gallery/預設單人/預設群組）均已加入 showUpgradeModal state，第5/10/20則 assistant 回應後對 plan==="free" 用戶觸發，彈窗半硬擋（輸入框可見但有壓力），「先不了，繼續聊」可關閉。gallery/預設單人聊天室補讀 plan state（從 /api/user/credits 取得）。
+✅ 首頁未登入可見瀑布流（2026/05/24）：app/page.tsx 移除 if(!session) return Landing Page 擋牆，未登入直接渲染首頁瀑布流。GallerySection.tsx 新增 isLoggedIn/onLoginRequest props，未登入點卡片第12張後或點「開始聊天」觸發登入提示 Modal（showLoginHint state），登入按鈕走 onLoginRequest callback from page.tsx。Splash 動畫新增未登入時也能結束的條件（session===null && status!=='loading'）。
+
 ## 留存與付費轉換（E系列）
 → 規劃詳見 DNA_ROADMAP.md E 系列章節

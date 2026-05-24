@@ -76,7 +76,7 @@ export default function GallerySection({ userEmail, plan, isLoggedIn, onLoginReq
     if (!map.has(item.id)) {
       map.set(item.id, {
         like: seededRandom(item.id + "_like", item.like_count_min, item.like_count_max),
-        chat: seededRandom(item.id + "_chat", item.chat_count_min, item.chat_count_max),
+        chat: seededRandom(item.id + "_chat", item.chat_count_min, item.chat_count_max) + (item.actual_chat_count || 0),
       });
     }
     return map.get(item.id)!;
