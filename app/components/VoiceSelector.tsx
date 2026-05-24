@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export const VOICE_OPTIONS = [
   { id: "female-1", label: "👩 低沉女聲", name: "Jane" },
@@ -30,7 +30,7 @@ interface VoiceSelectorProps {
   characterId?: number;
 }
 
-// 克隆聲音上傳 Modal
+// 克隆聲音 Modal（內建錄音 + 上傳檔案兩種模式）
 function CloneVoiceModal({
   userEmail,
   characterId,
@@ -42,26 +42,104 @@ function CloneVoiceModal({
   onSuccess: (voiceId: string) => void;
   onClose: () => void;
 }) {
+  const [mode, setMode] = useState<"record" | "upload">("record");
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [agreed, setAgreed] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState("");
 
-  const handleUpload = async () => {
-    if (!audioFile || !agreed) return;
+  // 錄音相關 state
+  const [recording, setRecording] = useState(false);
+  const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
+  const [recordedUrl, setRecordedUrl] = useState<string | null>(null);
+  const [seconds, setSeconds] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<BlobEvent["data"][]>([]);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // 清掉 objectURL 避免記憶體洩漏
+  useEffect(() => {
+    return () => {
+      if (recordedUrl) URL.revokeObjectURL(recordedUrl);
+    };
+  }, [recordedUrl]);
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 44100,
+        },
+      });
+
+      // 依瀏覽器選最佳 mimeType
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : MediaRecorder.isTypeSupported("audio/mp4")
+        ? "audio/mp4"
+        : "audio/webm";
+
+      const recorder = new MediaRecorder(stream, {
+        mimeType,
+        audioBitsPerSecond: 128000,
+      });
+
+      chunksRef.current = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+      recorder.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        setRecordedBlob(blob);
+        setRecordedUrl(url);
+        // 停止所有 track 釋放麥克風
+        stream.getTracks().forEach(t => t.stop());
+      };
+
+      recorder.start(250); // 每 250ms 觸發一次 ondataavailable
+      mediaRecorderRef.current = recorder;
+      setRecording(true);
+      setSeconds(0);
+      timerRef.current = setInterval(() => setSeconds(s => s + 1), 1000);
+    } catch {
+      alert("無法取得麥克風權限，請確認瀏覽器設定。iOS 請使用 Safari。");
+    }
+  };
+
+  const stopRecording = () => {
+    mediaRecorderRef.current?.stop();
+    setRecording(false);
+    if (timerRef.current) clearInterval(timerRef.current);
+  };
+
+  const resetRecording = () => {
+    if (recordedUrl) URL.revokeObjectURL(recordedUrl);
+    setRecordedBlob(null);
+    setRecordedUrl(null);
+    setSeconds(0);
+  };
+
+  const formatTime = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+
+  const handleSubmit = async () => {
+    const file = mode === "record" ? recordedBlob : audioFile;
+    if (!file || !agreed) return;
+
     setUploading(true);
     setProgress("上傳音頻中...");
 
     const formData = new FormData();
-    formData.append("audioFile", audioFile);
+    const ext = mode === "record" ? "webm" : (audioFile?.name.split(".").pop() ?? "mp3");
+    formData.append("audioFile", file, `recording.${ext}`);
     formData.append("email", userEmail);
     if (characterId != null) formData.append("characterId", String(characterId));
 
     try {
-      const res = await fetch("/api/clone-voice", {
-        method: "POST",
-        body: formData,
-      });
+      setProgress("AI 克隆聲音中（約需 10-30 秒）...");
+      const res = await fetch("/api/clone-voice", { method: "POST", body: formData });
       const data = await res.json();
       if (data.error) {
         alert(data.error);
@@ -77,66 +155,144 @@ function CloneVoiceModal({
     setUploading(false);
   };
 
+  const readyToSubmit = mode === "record" ? !!recordedBlob : !!audioFile;
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm px-4">
-      <div className="w-full max-w-sm bg-[#0d2318] border border-[#89f5a2]/20 rounded-3xl p-6 space-y-4 shadow-2xl">
+      <div className="w-full max-w-sm bg-[#0d2318] border border-[#89f5a2]/20 rounded-3xl p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+
         <div className="text-center">
           <p className="text-3xl mb-1">🎤</p>
-          <h2 className="text-white font-black text-lg">上傳聲音克隆</h2>
-          <p className="text-white/40 text-xs mt-1">
-            上傳 1-2 分鐘本人錄音（MP3/WAV），AI 將克隆此聲音用於說話影片
-          </p>
+          <h2 className="text-white font-black text-lg">聲音克隆</h2>
+          <p className="text-white/40 text-xs mt-1">錄製或上傳本人聲音，AI 將克隆用於說話影片</p>
         </div>
 
-        {/* 建議說明 */}
-        <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 space-y-1">
-          <p className="text-white/60 text-xs font-bold">📋 錄音建議</p>
-          <p className="text-white/35 text-[11px]">• 1-2 分鐘清晰錄音效果最佳</p>
-          <p className="text-white/35 text-[11px]">• 安靜環境，避免背景噪音</p>
-          <p className="text-white/35 text-[11px]">• MP3 或 WAV 格式，128kbps 以上</p>
-        </div>
-
-        {/* 檔案上傳 */}
-        <div>
-          <label className="block w-full cursor-pointer">
-            <div className={`border-2 border-dashed rounded-xl px-4 py-5 text-center transition-all ${
-              audioFile ? "border-[#89f5a2]/50 bg-[#89f5a2]/5" : "border-white/15 hover:border-white/30"
-            }`}>
-              {audioFile ? (
-                <>
-                  <p className="text-[#89f5a2] text-sm font-bold">✅ {audioFile.name}</p>
-                  <p className="text-white/30 text-[11px] mt-0.5">{(audioFile.size / 1024 / 1024).toFixed(1)} MB</p>
-                </>
-              ) : (
-                <>
-                  <p className="text-white/40 text-sm">點擊選擇音頻檔案</p>
-                  <p className="text-white/20 text-[11px] mt-0.5">MP3 / WAV</p>
-                </>
-              )}
-            </div>
-            <input
-              type="file"
-              accept="audio/mp3,audio/mpeg,audio/wav,audio/*"
-              className="hidden"
-              onChange={e => setAudioFile(e.target.files?.[0] ?? null)}
-            />
-          </label>
-        </div>
-
-        {/* 免責聲明 */}
-        <label className="flex items-start gap-3 cursor-pointer">
-          <div
-            onClick={() => setAgreed(prev => !prev)}
-            className={`w-5 h-5 rounded flex-shrink-0 mt-0.5 border-2 flex items-center justify-center transition-all ${
-              agreed ? "bg-[#89f5a2] border-[#89f5a2]" : "border-white/20"
+        {/* 模式切換 */}
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => { setMode("record"); resetRecording(); setAudioFile(null); }}
+            className={`flex-1 py-2 rounded-xl text-xs font-black border transition-all ${
+              mode === "record"
+                ? "bg-[#89f5a2]/20 border-[#89f5a2]/50 text-[#89f5a2]"
+                : "bg-white/5 border-white/10 text-white/40 hover:border-white/20"
             }`}
           >
+            🎙️ 直接錄音
+          </button>
+          <button
+            type="button"
+            onClick={() => { setMode("upload"); stopRecording(); resetRecording(); }}
+            className={`flex-1 py-2 rounded-xl text-xs font-black border transition-all ${
+              mode === "upload"
+                ? "bg-[#89f5a2]/20 border-[#89f5a2]/50 text-[#89f5a2]"
+                : "bg-white/5 border-white/10 text-white/40 hover:border-white/20"
+            }`}
+          >
+            📁 上傳檔案
+          </button>
+        </div>
+
+        {/* 錄音模式 */}
+        {mode === "record" && (
+          <div className="space-y-3">
+            <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 space-y-1">
+              <p className="text-white/60 text-xs font-bold">📋 錄音建議</p>
+              <p className="text-white/35 text-[11px]">• 建議錄 1-3 分鐘，效果更自然</p>
+              <p className="text-white/35 text-[11px]">• 在安靜環境錄音，避免背景噪音</p>
+              <p className="text-white/35 text-[11px]">• iOS 請使用 Safari 瀏覽器</p>
+            </div>
+
+            {/* 錄音控制 */}
+            {!recordedBlob ? (
+              <div className="flex flex-col items-center gap-3">
+                {recording && (
+                  <p className="text-red-400 text-sm font-black animate-pulse">
+                    ● 錄音中 {formatTime(seconds)}
+                  </p>
+                )}
+                {!recording && seconds === 0 && (
+                  <p className="text-white/30 text-xs">按下按鈕開始錄音</p>
+                )}
+                <button
+                  type="button"
+                  onClick={recording ? stopRecording : startRecording}
+                  className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl font-black border-2 transition-all ${
+                    recording
+                      ? "bg-red-500/20 border-red-500 text-red-400 hover:bg-red-500/30"
+                      : "bg-[#89f5a2]/15 border-[#89f5a2]/50 text-[#89f5a2] hover:bg-[#89f5a2]/25"
+                  }`}
+                >
+                  {recording ? "⏹" : "🎙️"}
+                </button>
+                {seconds > 0 && !recording && (
+                  <p className="text-white/30 text-xs">點擊停止錄音</p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-[#89f5a2] text-xs font-bold text-center">✅ 錄音完成（{formatTime(seconds)}）</p>
+                <audio controls className="w-full" src={recordedUrl ?? undefined} />
+                <button
+                  type="button"
+                  onClick={resetRecording}
+                  className="w-full py-2 rounded-xl border border-white/10 text-white/40 text-xs font-bold hover:bg-white/5 transition-all"
+                >
+                  🔄 重新錄音
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 上傳檔案模式 */}
+        {mode === "upload" && (
+          <div className="space-y-3">
+            <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 space-y-1">
+              <p className="text-white/60 text-xs font-bold">📋 檔案建議</p>
+              <p className="text-white/35 text-[11px]">• MP3 192kbps 以上，或 WAV 格式</p>
+              <p className="text-white/35 text-[11px]">• 1-3 分鐘清晰人聲，無背景音樂</p>
+            </div>
+            <label className="block w-full cursor-pointer">
+              <div className={`border-2 border-dashed rounded-xl px-4 py-5 text-center transition-all ${
+                audioFile ? "border-[#89f5a2]/50 bg-[#89f5a2]/5" : "border-white/15 hover:border-white/30"
+              }`}>
+                {audioFile ? (
+                  <>
+                    <p className="text-[#89f5a2] text-sm font-bold">✅ {audioFile.name}</p>
+                    <p className="text-white/30 text-[11px] mt-0.5">{(audioFile.size / 1024 / 1024).toFixed(1)} MB</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-white/40 text-sm">點擊選擇音頻檔案</p>
+                    <p className="text-white/20 text-[11px] mt-0.5">MP3 / WAV</p>
+                  </>
+                )}
+              </div>
+              <input
+                type="file"
+                accept="audio/mp3,audio/mpeg,audio/wav,audio/*"
+                className="hidden"
+                onChange={e => setAudioFile(e.target.files?.[0] ?? null)}
+              />
+            </label>
+          </div>
+        )}
+
+        {/* 免責聲明 */}
+        <div
+          className="flex items-start gap-3 cursor-pointer"
+          onClick={() => setAgreed(prev => !prev)}
+        >
+          <div className={`w-5 h-5 rounded flex-shrink-0 mt-0.5 border-2 flex items-center justify-center transition-all ${
+            agreed ? "bg-[#89f5a2] border-[#89f5a2]" : "border-white/20"
+          }`}>
             {agreed && <span className="text-[#0d2318] text-[10px] font-black">✓</span>}
           </div>
           <p className="text-white/35 text-[11px] leading-relaxed">
             我確認此為本人聲音，已獲授權使用。不得克隆他人聲音，違者自負法律責任。
           </p>
-        </label>
+        </div>
 
         {uploading && (
           <p className="text-[#89f5a2] text-xs text-center animate-pulse">{progress}</p>
@@ -144,6 +300,7 @@ function CloneVoiceModal({
 
         <div className="grid grid-cols-2 gap-3">
           <button
+            type="button"
             onClick={onClose}
             disabled={uploading}
             className="py-3 rounded-xl border border-white/10 text-white/50 text-sm font-bold hover:bg-white/5 transition-all disabled:opacity-40"
@@ -151,13 +308,15 @@ function CloneVoiceModal({
             取消
           </button>
           <button
-            disabled={!audioFile || !agreed || uploading}
-            onClick={handleUpload}
+            type="button"
+            disabled={!readyToSubmit || !agreed || uploading}
+            onClick={handleSubmit}
             className="py-3 rounded-xl bg-gradient-to-r from-[#89f5a2] to-[#4ade80] text-[#0d2318] text-sm font-black disabled:opacity-40 hover:opacity-90 transition-all"
           >
-            {uploading ? "上傳中..." : "🎤 開始克隆"}
+            {uploading ? "處理中..." : "🎤 開始克隆"}
           </button>
         </div>
+
       </div>
     </div>
   );
