@@ -2096,6 +2096,30 @@ localStorage.setItem(key, '1');
                           )}
                         </div>
                       )}
+                      {/* ✨ 服裝快選 */}
+                      <div className="mt-3">
+                        <p className="text-amber-400/50 text-[10px] font-bold tracking-wider uppercase mb-2">✨ 服裝快選（點選會直接填寫到提示詞框，亦可自己填入想要的服裝到提示詞框）</p>
+                        <div className="flex gap-2 flex-wrap">
+                          {[
+                            { label: "👔 西裝外套", en: "wearing a tailored suit jacket" },
+                            { label: "👕 白色棉T", en: "wearing a white cotton t-shirt" },
+                            { label: "🎽 運動背心", en: "wearing a sports tank top" },
+                            { label: "👘 和服", en: "wearing a traditional kimono" },
+                            { label: "🧥 風衣", en: "wearing a long trench coat" },
+                            { label: "👗 碎花裙", en: "wearing a floral sundress" },
+                            { label: "🦺 皮衣", en: "wearing a black leather jacket" },
+                            { label: "🎓 學生制服", en: "wearing a school uniform" },
+                            { label: "🩱 泳裝", en: "wearing a swimsuit" },
+                            { label: "💃 晚禮服", en: "wearing an elegant evening gown" },
+                          ].map((item) => (
+                            <button key={item.en} type="button"
+                              onClick={() => setPrompt(prev => prev ? prev + ", " + item.en : item.en)}
+                              className="px-3 py-1.5 rounded-full text-xs font-bold border transition-all bg-amber-400/8 text-amber-300/70 border-amber-400/25 hover:bg-amber-400/20 hover:border-amber-400/50 hover:text-amber-300">
+                              {item.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                       <button type="button" onClick={() => setActiveStep(generationMode === "image" ? 6 : 5)}
                         className="w-full py-2 mt-3 text-xs text-white/40 hover:text-white/60 transition-all">
                         下一步 →
@@ -2188,6 +2212,32 @@ localStorage.setItem(key, '1');
                           ))}
                         </div>
                       )}
+                      {/* ✨ 活人感快選 */}
+                      <div>
+                        <p className="text-amber-400/50 text-[10px] font-bold tracking-wider uppercase mb-2">✨ 表情 / 動作快選（點選會直接填寫到提示詞框，亦可自己填入想要的動作到提示詞框）</p>
+                        <div className="flex gap-2 flex-wrap mb-3">
+                          {[
+                            { label: "😊 剛笑完", en: "just finished laughing, natural smile lingering" },
+                            { label: "📱 滑手機", en: "looking down at phone, scrolling" },
+                            { label: "☕ 端著咖啡", en: "holding a coffee cup with both hands" },
+                            { label: "🪟 望向窗外", en: "gazing out the window, lost in thought" },
+                            { label: "💬 低頭思考", en: "looking down slightly, deep in thought" },
+                            { label: "📖 翻著書", en: "flipping through a book, reading" },
+                            { label: "🎵 戴著耳機", en: "wearing headphones, eyes closed" },
+                            { label: "😢 眼眶泛紅", en: "eyes slightly red, emotional expression" },
+                            { label: "😤 嘟嘴", en: "pouting lips, slightly annoyed expression" },
+                            { label: "🌬️ 吹頭髮", en: "hair blowing in the wind, natural movement" },
+                            { label: "🤫 比嘴型", en: "mouthing words silently, secretive expression" },
+                            { label: "👀 側目", en: "glancing sideways, subtle expression" },
+                          ].map((item) => (
+                            <button key={item.en} type="button"
+                              onClick={() => setPrompt(prev => prev ? prev + ", " + item.en : item.en)}
+                              className="px-3 py-1.5 rounded-full text-xs font-bold border transition-all bg-amber-400/8 text-amber-300/70 border-amber-400/25 hover:bg-amber-400/20 hover:border-amber-400/50 hover:text-amber-300">
+                              {item.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                       <div className="relative">
                         <textarea
                           value={prompt}
@@ -2747,7 +2797,7 @@ localStorage.setItem(key, '1');
                   id: "avatar" as const,
                   icon: "🗣️",
                   title: "說話影片",
-                  desc: "輸入文字，AI 語音合成 + 嘴型同步，讓角色開口說話",
+                  desc: "輸入文字，AI 語音合成 + 嘴型同步，讓角色開口說話 ✦ 只需一張照片，無需錄音，10 種聲線自選，生成後可直接發 Reels",
                   cost: "Avatar 8–10 點",
                   orange: false,
                   requiresPlan: false,
@@ -3075,6 +3125,13 @@ localStorage.setItem(key, '1');
                 </div>
               )}
 
+              {/* 說話影片差異化強調 */}
+              {selectedFunction === "avatar" && (
+                <div className="bg-[#89f5a2]/6 border border-[#89f5a2]/20 rounded-xl px-3 py-2.5 space-y-1">
+                  <p className="text-[#89f5a2]/80 text-xs font-black">🏆 我們的說話影片有什麼不一樣？</p>
+                  <p className="text-white/40 text-[10px] leading-relaxed">不用先錄音再上傳，直接輸入文字就能生成語音，不用準備任何音檔．Kling Avatar V2 嘴型精準度遠超傳統 Wav2Lip．一張照片 30 秒完成．</p>
+                </div>
+              )}
               {/* 預估點數 */}
               <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl px-3 py-2.5 text-blue-300 text-xs">
                 {selectedFunction === "avatar"
