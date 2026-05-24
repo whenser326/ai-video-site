@@ -450,14 +450,21 @@ userEmail,
             取消
           </button>
           <button
-            disabled={isTtsLoading || !ttsText.trim() || ttsText.length > maxChars}
-            onClick={handlePreview}
+            disabled={isTtsLoading || (!ttsAudio && (!ttsText.trim() || ttsText.length > maxChars))}
+            onClick={() => {
+              if (ttsAudio) {
+                setTtsText("");
+                setTtsAudio(null);
+              } else {
+                handlePreview();
+              }
+            }}
             className="py-3 rounded-xl bg-gradient-to-r from-purple-500 to-blue-500 text-white text-sm font-black disabled:opacity-40 hover:opacity-90 transition-all"
           >
             {isTtsLoading
               ? "生成中..."
-              : (ttsCache[ttsVoice] && !ttsAudio)
-              ? "🔄 重新試聽"
+              : ttsAudio
+              ? "🔄 換台詞重新試聽"
               : (!isClonedVoice && ttsPreviewCount >= TTS_MAX_PREVIEW)
               ? "🚫 試聽次數已用完"
               : "🎙️ 試聽聲音"}
