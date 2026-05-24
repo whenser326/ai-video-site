@@ -87,8 +87,8 @@ userEmail,
       setTtsAudio(ttsCache[ttsVoice]);
       return;
     }
-    // 次數用完
-    if (!ttsCache[ttsVoice] && ttsPreviewCount >= TTS_MAX_PREVIEW) {
+    // 次數用完（克隆聲音不受限制）
+    if (!isClonedVoice && !ttsCache[ttsVoice] && ttsPreviewCount >= TTS_MAX_PREVIEW) {
       alert("本影片試聽次數已用完");
       return;
     }
@@ -436,9 +436,6 @@ userEmail,
         )}
 
         {/* 試聽次數 + 按鈕 */}
-        <p className="text-center text-xs text-white/30">
-          試聽非必要步驟，選好聲音後可直接下載或合成影片
-        </p>
         <p className="text-center text-xs font-black text-yellow-300">
           ⚠️ 本影片免費試聽 {TTS_MAX_PREVIEW} 次（剩餘 {Math.max(TTS_MAX_PREVIEW - ttsPreviewCount, 0)} 次）
         </p>
@@ -458,9 +455,9 @@ userEmail,
               ? "生成中..."
               : ttsCache[ttsVoice]
               ? isClonedVoice ? "🔄 重新試聽克隆聲音" : "🔄 重新播放"
-              : ttsPreviewCount >= TTS_MAX_PREVIEW
+              : (!isClonedVoice && ttsPreviewCount >= TTS_MAX_PREVIEW)
               ? "🚫 試聽次數已用完"
-              : "🎙️ 試聽聲音（可跳過）"}
+              : "🎙️ 試聽聲音（必要步驟）"}
           </button>
         </div>
       </div>
