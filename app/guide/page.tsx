@@ -355,7 +355,7 @@ export default function GuidePage() {
               color: '#89f5a2', fontSize: 13, fontWeight: 900, cursor: 'pointer',
             }}
           >
-            ✨ 開始創作
+            💬 探索角色聊天
           </button>
         </div>
 

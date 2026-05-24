@@ -88,7 +88,10 @@ const randomDelay = () => Math.floor(Math.random() * 3000) + 2000;
     if (!session?.user?.email || !characterId) return;
     fetch(`/api/user/credits?email=${session.user.email}`)
       .then(r => r.json())
-      .then(d => { if (d.remainingQuota !== undefined) setRemainingQuota(d.remainingQuota); });
+      .then(d => {
+        if (d.remainingQuota !== undefined) setRemainingQuota(d.remainingQuota);
+        if (d.plan !== undefined) setPlan(d.plan);
+      });
     const saved = localStorage.getItem(`chat_session_default_${session.user.email}_${characterId}`);
     if (saved) setSessionId(saved);
   }, [session, characterId]);
@@ -144,6 +147,8 @@ const [searchOpen, setSearchOpen] = useState(false);
   const [showStylePanel, setShowStylePanel] = useState(false);
   const [chatStyle, setChatStyle] = useState("");
   const [writingStyle, setWritingStyle] = useState("");
+  const [plan, setPlan] = useState("free");
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const searchResults = searchQuery.trim()
     ? messages.reduce<number[]>((acc, msg, i) => {
         if (msg.content.includes(searchQuery.trim())) acc.push(i);
@@ -220,6 +225,16 @@ const [searchOpen, setSearchOpen] = useState(false);
       }
       setIsTyping(false);
       if (data.remainingQuota !== undefined) setRemainingQuota(data.remainingQuota);
+      // E04：免費用戶升級提示
+      if (plan === "free") {
+        setMessages(prev => {
+          const aCount = prev.filter(m => m.role === "assistant").length;
+          if (aCount === 5 || aCount === 10 || aCount === 20) {
+            setShowUpgradeModal(true);
+          }
+          return prev;
+        });
+      }
     } catch {
       setMessages(prev => [...prev, { role: "assistant", content: "（連線失敗，請重試）", characterName: character.name }]);
     }
@@ -504,6 +519,46 @@ const [searchOpen, setSearchOpen] = useState(false);
           </div>
         </div>
       </div>
+      {/* E04 升級提示 Modal */}
+      {showUpgradeModal && (
+        <div className="fixed inset-0 bg-black/75 z-50 flex items-end justify-center pb-8 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm bg-[#0d2318] border border-[#89f5a2]/25 rounded-3xl p-6 space-y-4 shadow-2xl">
+            <div className="w-16 h-16 rounded-full bg-[#89f5a2]/10 border-2 border-[#89f5a2]/40 flex items-center justify-center text-3xl mx-auto">
+              {character?.gender === "female" ? "👩" : "👨"}
+            </div>
+            <div className="text-center space-y-1">
+              <p className="text-white font-black text-base">{character?.name} 好像更喜歡你了...</p>
+              <p className="text-white/40 text-xs">你們已聊了 {messages.filter(m => m.role === "assistant").length} 則，解鎖更多功能繼續深入互動</p>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 px-3 py-2 bg-white/5 rounded-xl">
+                <span className="text-sm">📸</span>
+                <p className="text-white/60 text-xs">AI 自拍・收藏角色後可用</p>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-2 bg-white/5 rounded-xl">
+                <span className="text-sm">🎬</span>
+                <p className="text-white/60 text-xs">說話影片・讓角色開口說話</p>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-2 bg-white/5 rounded-xl">
+                <span className="text-sm">💬</span>
+                <p className="text-white/60 text-xs">無限對話・不受次數限制</p>
+              </div>
+            </div>
+            <button
+              onClick={() => router.push('/pricing')}
+              className="w-full py-3 bg-[#89f5a2] text-[#0d2318] rounded-2xl text-sm font-black hover:opacity-90 transition-all"
+            >
+              🚀 立即升級，繼續聊
+            </button>
+            <button
+              onClick={() => setShowUpgradeModal(false)}
+              className="w-full py-2 text-white/25 text-xs hover:text-white/50 transition-all"
+            >
+              先不了，繼續聊
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

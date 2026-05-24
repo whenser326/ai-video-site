@@ -560,6 +560,13 @@ ANTHROPIC_API_KEY=sk-ant-你的金鑰
 ✅ Claude API overload自動重試（2026/05/22）：/api/chat/route.ts偵測overloaded_error最多重試2次（第一次等2秒/第二次等3秒），全部失敗顯示「⚠️ 目前系統有點忙，請再說一次」，所有聊天室共用此修復。
 ✅ gallery聊天室loadingRef修復（2026/05/22）：app/chat/gallery/[id]/page.tsx新增loadingRef追蹤loading狀態，autoMessage timer改用loadingRef.current檢查，避免closure抓到舊值導致autoMessage和handleSend同時發送。
 ✅ 聊天室textarea改text-base（2026/05/22）：五個聊天室（gallery/single/group/default-single/default-group）textarea className從text-sm改為text-base（16px），防止iOS Safari因字體小於16px自動放大頁面導致畫面截斷問題。
+✅ Bug修正三項（2026/05/24）：
+- gallery聊天室actual_chat_count：改為每次聊天成功回應後+1（不再是進入時+1），涵蓋handleSend成功後呼叫/api/gallery/chat-count
+- create/page.tsx PromoCard連動後台：新增promoBonus state，fetch /api/referral/settings-public動態讀取plan_bonus_credits_starter/standard/pro，JSX三處寫死數字改為state
+- total_generations後端寫入：character/route.ts GET偵測succeeded時直接寫profiles.total_generations+1（帶email參數），history/route.ts POST移除重複+1邏輯，防止雙重計算
+✅ E01角色間互相提起你（2026/05/24）：/api/chat/route.ts群組charSystem加入groupCrossMemory變數，群組對話中角色可自然提起其他角色說過關於用戶的事
+✅ E02對話成就系統（2026/05/24）：/api/chat/route.ts在回應末尾檢查newChatCount，達到50/100/500則時觸發額外Claude呼叫，角色用人設語氣說出成就提示，responses額外push一則，回傳achievement欄位
+✅ E03聊天解鎖機制（2026/05/24）：/api/chat/route.ts新增unlockMap（50/100/200/500則）、unlockType、unlockPromptMap四個等級，達標時觸發Claude生成解鎖內容，responses push isUnlock:true/unlockLevel欄位。前端三個聊天室（單人自建/群組/gallery）Message interface補isUnlock/unlockLevel欄位，setMessages帶入，氣泡渲染四種視覺風格：50則金色(unlock_secret)、100則紫色(unlock_mood)、200則藍色豎線(unlock_past)、500則金色+藍色豎線並排badge(unlock_confess)，均含「🔓 親密度解鎖」橫線分隔
 ✅ guide頁面社群功能區塊（2026/05/22）：四條主線上方新增「🌐 社群功能」可折疊區塊（探索角色/角色詳細頁/投稿角色）。
 ✅ Onboarding Modal 更新（2026/05/22）：新增「🌐 探索角色」選項，「生成AI角色」改跳 /create，「上傳照片轉影片」改跳 /create?upload=1。
 ✅ create/page.tsx 讀取 ?upload=1 參數（2026/05/22）：頁面載入時偵測 upload=1 自動開啟 Upload Modal。
@@ -571,6 +578,10 @@ ANTHROPIC_API_KEY=sk-ant-你的金鑰
 - public_characters 表已有 gender 欄位（2026/05/22 補），投稿時需帶入
 - Claude API overloaded_error 已有 retry 機制（/api/chat/route.ts），不需再另外處理
 - 其他四個聊天室（非 gallery）的 loadingRef 問題理論上存在但尚未觀察到，低優先
+⚠️ 重要技術備忘（2026/05/24新增）：
+- E02成就(achievement)和E03解鎖(unlock)是兩個獨立機制，同一則newChatCount可能同時觸發（如50則同時是unlock_secret和achievement），需確認不衝突
+- responses型別定義已補isUnlock/unlockLevel欄位，避免TS錯誤
+- app/page.tsx的showPromoCard state和timer為死碼（JSX已移至create/page.tsx），不影響功能但可日後清理
 
 ## 留存與付費轉換（E系列）
 → 規劃詳見 DNA_ROADMAP.md E 系列章節
