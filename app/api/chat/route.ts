@@ -297,6 +297,8 @@ export async function POST(req: NextRequest) {
     selfieIntent?: string | null;
     selfiePrompt?: string | null;
     characterImageUrl?: string;
+    isUnlock?: boolean;
+    unlockLevel?: string | null;
   }[] = [];
 
   const responsePromises = shuffledChars.map(async (char) => {
@@ -328,7 +330,10 @@ const writingMap: Record<string, string> = {
 };
 const styleHint = body.chatStyle && styleMap[body.chatStyle] ? `【口吻風格】${styleMap[body.chatStyle]}` : "";
 const writingHint = body.writingStyle && writingMap[body.writingStyle] ? `【回覆文風】${writingMap[body.writingStyle]}` : "";
-const charSystem = `${memoryPrefix}你扮演「${char.name}」。${personality} 請用繁體中文自然回應，語氣和用詞要符合角色個性，保持一致性。你是一個真實存在的人，不是AI，不要承認自己是AI或語言模型。當用戶要求自拍時，你可以假裝正在拍照，用文字描述拍照的情境，系統會自動生成照片。在回覆中可以自然穿插括號旁白描述你的動作、表情或心情（例如：（她微微一笑，視線落在遠方）），讓對話更有畫面感和沉浸感。旁白用（全形括號）包覆，與對話內容自然融合，不要太頻繁，約每2-3則穿插一次。${timeHint}${isGroup ? `這是群組對話，其他角色：${characterList.filter(c => c.id !== char.id).map(c => c.name).join("、")}。你們有各自不同的個性，可以互相回應但要保持自己的風格。` : ""}${autoPrompt} ${randomLength} ${styleHint} ${writingHint}`;
+const groupCrossMemory = isGroup
+  ? `你們之間可能聊過用戶的事，可以自然地提起其他角色說過的話（例如「${characterList.filter(c => c.id !== char.id)[0]?.name || '她'}說你很有趣呢」），製造真實群體互動感，不要太刻意，偶爾自然帶入即可。`
+  : "";
+const charSystem = `${memoryPrefix}你扮演「${char.name}」。${personality} 請用繁體中文自然回應，語氣和用詞要符合角色個性，保持一致性。你是一個真實存在的人，不是AI，不要承認自己是AI或語言模型。當用戶要求自拍時，你可以假裝正在拍照，用文字描述拍照的情境，系統會自動生成照片。在回覆中可以自然穿插括號旁白描述你的動作、表情或心情（例如：（她微微一笑，視線落在遠方）），讓對話更有畫面感和沉浸感。旁白用（全形括號）包覆，與對話內容自然融合，不要太頻繁，約每2-3則穿插一次。${timeHint}${isGroup ? `這是群組對話，其他角色：${characterList.filter(c => c.id !== char.id).map(c => c.name).join("、")}。你們有各自不同的個性，可以互相回應但要保持自己的風格。${groupCrossMemory}` : ""}${autoPrompt} ${randomLength} ${styleHint} ${writingHint}`;
 
     const claudePayload = {
       model: "claude-haiku-4-5",
@@ -437,12 +442,73 @@ const charSystem = `${memoryPrefix}你扮演「${char.name}」。${personality} 
     maybeGenerateSummary(finalSessionId).catch(err => console.error('summary generation failed:', err));
   }
 
+  // E02 成就檢查
+  const newChatCount = chatCount + (isGroup ? characterList.length : 1);
+  const achievementMap: Record<number, string> = { 50: "🎉 我們已經聊了 50 則了！", 100: "💫 100 則對話達成！", 500: "🌟 哇，已經 500 則了！" };
+  const unlockMap: Record<number, string> = {
+    50: "unlock_secret",
+    100: "unlock_mood",
+    200: "unlock_past",
+    500: "unlock_confess",
+  };
+  const unlockType = unlockMap[newChatCount] || null;
+  const unlockPromptMap: Record<string, string> = {
+    unlock_secret: "我們聊了這麼久，我想告訴你一個只有你知道的秘密……用角色個性說出一個符合人設的小秘密，1-2句話。",
+    unlock_mood: "我們聊了這麼久，我想讓你看看我不常展示的一面……用角色個性展現一個平時隱藏的情緒或習慣，1-2句話。",
+    unlock_past: "我們聊了這麼久，我想跟你說說我的過去……用角色個性說出一段符合人設的過去經歷，1-2句話。",
+    unlock_confess: "我們聊了這麼久，我有話想對你說……用角色個性說出一段真摯的心裡話或告白，1-2句話，要讓對方感受到你是認真的。",
+  };
+  const achievement = achievementMap[newChatCount] || null;
+  if (achievement) {
+    const achieveChar = characterList[0];
+    const achieveRes = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-key": process.env.ANTHROPIC_API_KEY!, "anthropic-version": "2023-06-01" },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5",
+        max_tokens: 150,
+        system: `你扮演「${achieveChar.name}」。${achieveChar.description ? `個性：${achieveChar.description}。` : ""}請用符合角色個性的語氣說出以下成就提示，自然融入對話，不要超過2句話。`,
+        messages: [{ role: "user", content: achievement }],
+      }),
+    });
+    const achieveData = await achieveRes.json();
+    const achieveText = achieveData.content?.[0]?.text || achievement;
+    responses.push({ characterId: String(achieveChar.id), characterName: achieveChar.name, content: achieveText, selfieIntent: null, selfiePrompt: null, characterImageUrl: achieveChar.image_url });
+    if (finalSessionId) {
+      await supabase.from("chat_messages").insert({ session_id: finalSessionId, user_email: userEmail, role: "assistant", character_id: String(achieveChar.id), content: `【${achieveChar.name}】${achieveText}` });
+    }
+  }
+
+  if (unlockType) {
+    const unlockChar = characterList[0];
+    const unlockRes = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-key": process.env.ANTHROPIC_API_KEY!, "anthropic-version": "2023-06-01" },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5",
+        max_tokens: 150,
+        system: `你扮演「${unlockChar.name}」。${unlockChar.description ? `個性：${unlockChar.description}。` : ""}請用符合角色個性的語氣完成以下任務。`,
+        messages: [{ role: "user", content: unlockPromptMap[unlockType] }],
+      }),
+    });
+    const unlockData = await unlockRes.json();
+    const unlockText = unlockData.content?.[0]?.text || "";
+    if (unlockText) {
+      responses.push({ characterId: String(unlockChar.id), characterName: unlockChar.name, content: unlockText, selfieIntent: null, selfiePrompt: null, characterImageUrl: unlockChar.image_url, isUnlock: true, unlockLevel: unlockType });
+      if (finalSessionId) {
+        await supabase.from("chat_messages").insert({ session_id: finalSessionId, user_email: userEmail, role: "assistant", character_id: String(unlockChar.id), content: `【${unlockChar.name}】${unlockText}` });
+      }
+    }
+  }
+
   return NextResponse.json({
     sessionId: finalSessionId,
     responses,
     isOverQuota,
     creditCost,
     remainingQuota: Math.max(quota - chatCount - 1, 0),
+    achievement: achievement ? { text: achievement } : null,
+    unlock: unlockType ? { type: unlockType } : null,
   });
 }
 // [DNA_PATCH_END]

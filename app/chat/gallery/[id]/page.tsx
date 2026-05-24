@@ -8,6 +8,8 @@ interface Message {
   content: string;
   characterName?: string;
   mediaUrl?: string;
+  isUnlock?: boolean;
+  unlockLevel?: string;
 }
 
 interface GalleryCharacter {
@@ -116,7 +118,7 @@ export default function GalleryChatPage() {
           if (data.responses && Array.isArray(data.responses)) {
             for (const r of data.responses) {
               await new Promise(resolve => setTimeout(resolve, randomDelay()));
-              setMessages(prev => [...prev, { role: "assistant", content: r.content, characterName: r.characterName }]);
+              setMessages(prev => [...prev, { role: "assistant", content: r.content, characterName: r.characterName, isUnlock: r.isUnlock, unlockLevel: r.unlockLevel }]);
             }
             if (data.sessionId) {
               setSessionId(data.sessionId);
@@ -234,7 +236,7 @@ export default function GalleryChatPage() {
           setIsTyping(true);
           await new Promise(resolve => setTimeout(resolve, randomDelay()));
           setIsTyping(false);
-          setMessages(prev => [...prev, { role: "assistant", content: r.content, characterName: r.characterName }]);
+          setMessages(prev => [...prev, { role: "assistant", content: r.content, characterName: r.characterName, isUnlock: r.isUnlock, unlockLevel: r.unlockLevel }]);
         }
         // 每次聊天成功回應後疊加 actual_chat_count
         fetch(`/api/gallery/chat-count`, {
@@ -402,15 +404,45 @@ export default function GalleryChatPage() {
                 }
               </div>
             )}
-            <div className={`max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-              msg.role === "user"
-                ? "bg-[#89f5a2]/20 border border-[#89f5a2]/30 text-white"
-                : "bg-black/30 border border-white/10 text-white/85"
-            }`}>
-              {msg.mediaUrl && (
-                <img src={msg.mediaUrl} alt="uploaded" className="w-48 rounded-xl mb-2 object-cover" />
+            <div className="flex flex-col items-start gap-1 max-w-[75%]">
+              {msg.role === "assistant" && msg.isUnlock && (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", marginBottom: 2 }}>
+                  <div style={{ flex: 1, height: "0.5px", background: "rgba(255,255,255,0.15)" }} />
+                  <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", whiteSpace: "nowrap" }}>🔓 親密度解鎖</span>
+                  <div style={{ flex: 1, height: "0.5px", background: "rgba(255,255,255,0.15)" }} />
+                </div>
               )}
-              {msg.content}
+              {msg.role === "assistant" && msg.isUnlock && (
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 2 }}>
+                  {(msg.unlockLevel === "unlock_secret" || msg.unlockLevel === "unlock_confess") && (
+                    <span style={{ fontSize: 11, color: "#B87333", background: "#FFF3DC", border: "0.5px solid #E8C570", borderRadius: 6, padding: "2px 8px", fontWeight: 500 }}>✨ 解鎖新的一面</span>
+                  )}
+                  {msg.unlockLevel === "unlock_mood" && (
+                    <span style={{ fontSize: 11, color: "#534AB7", background: "#EEEDFE", border: "0.5px solid #AFA9EC", borderRadius: 6, padding: "2px 8px", fontWeight: 500 }}>🔓 親密度提升</span>
+                  )}
+                  {(msg.unlockLevel === "unlock_past" || msg.unlockLevel === "unlock_confess") && (
+                    <span style={{ fontSize: 11, color: "#0C447C", background: "#E6F1FB", border: "0.5px solid #85B7EB", borderRadius: 6, padding: "2px 8px", fontWeight: 500 }}>💌 限你專屬</span>
+                  )}
+                </div>
+              )}
+              <div className={`rounded-2xl px-4 py-3 text-sm leading-relaxed w-full ${
+                msg.role === "user"
+                  ? "bg-[#89f5a2]/20 border border-[#89f5a2]/30 text-white"
+                  : msg.isUnlock && msg.unlockLevel === "unlock_secret"
+                    ? "bg-[#FFFBF0]/10 border-[1.5px] border-[#E8C570]/60 text-white/85"
+                    : msg.isUnlock && msg.unlockLevel === "unlock_mood"
+                      ? "bg-[#EEEDFE]/10 border-[1.5px] border-[#AFA9EC]/60 text-white/85"
+                      : msg.isUnlock && msg.unlockLevel === "unlock_past"
+                        ? "bg-black/30 border border-white/10 border-l-[3px] border-l-[#378ADD]/70 rounded-r-2xl rounded-bl-sm text-white/85"
+                        : msg.isUnlock && msg.unlockLevel === "unlock_confess"
+                          ? "bg-[#FFFBF0]/10 border border-[#E8C570]/60 border-l-[3px] border-l-[#378ADD]/70 rounded-r-2xl rounded-bl-sm text-white/85"
+                          : "bg-black/30 border border-white/10 text-white/85"
+              }`}>
+                {msg.mediaUrl && (
+                  <img src={msg.mediaUrl} alt="uploaded" className="w-48 rounded-xl mb-2 object-cover" />
+                )}
+                {msg.content}
+              </div>
             </div>
             {msg.role === "assistant" && (
               <button

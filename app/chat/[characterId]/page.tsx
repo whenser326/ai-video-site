@@ -14,6 +14,8 @@ interface Message {
   mediaUrl?: string;
   selfieLoading?: boolean;
   selfieType?: "photo" | "video";
+  isUnlock?: boolean;
+  unlockLevel?: string;
 }
 
 interface VideoModal {
@@ -355,6 +357,8 @@ const [searchOpen, setSearchOpen] = useState(false);
             role: "assistant",
             content: r.content,
             characterName: r.characterName,
+            isUnlock: r.isUnlock,
+            unlockLevel: r.unlockLevel,
           };
           setMessages(prev => {
             const updated = [...prev, newMsg];
@@ -587,13 +591,41 @@ const [searchOpen, setSearchOpen] = useState(false);
                 </div>
               )}
               <div className={`max-w-[75%] space-y-1 flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}>
+                {msg.role === "assistant" && msg.isUnlock && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                    <div style={{ flex: 1, height: "0.5px", background: "rgba(255,255,255,0.15)" }} />
+                    <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", whiteSpace: "nowrap" }}>🔓 親密度解鎖</span>
+                    <div style={{ flex: 1, height: "0.5px", background: "rgba(255,255,255,0.15)" }} />
+                  </div>
+                )}
+                {msg.role === "assistant" && msg.isUnlock && (
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 2 }}>
+                    {(msg.unlockLevel === "unlock_secret" || msg.unlockLevel === "unlock_confess") && (
+                      <span style={{ fontSize: 11, color: "#B87333", background: "#FFF3DC", border: "0.5px solid #E8C570", borderRadius: 6, padding: "2px 8px", fontWeight: 500 }}>✨ 解鎖新的一面</span>
+                    )}
+                    {msg.unlockLevel === "unlock_mood" && (
+                      <span style={{ fontSize: 11, color: "#534AB7", background: "#EEEDFE", border: "0.5px solid #AFA9EC", borderRadius: 6, padding: "2px 8px", fontWeight: 500 }}>🔓 親密度提升</span>
+                    )}
+                    {(msg.unlockLevel === "unlock_past" || msg.unlockLevel === "unlock_confess") && (
+                      <span style={{ fontSize: 11, color: "#0C447C", background: "#E6F1FB", border: "0.5px solid #85B7EB", borderRadius: 6, padding: "2px 8px", fontWeight: 500 }}>💌 限你專屬</span>
+                    )}
+                  </div>
+                )}
                 {msg.role === "assistant" && msg.characterName && (
                   <p className="text-white/30 text-[10px] px-1">{msg.characterName}</p>
                 )}
-                <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+                <div className={`px-4 py-3 text-sm leading-relaxed ${
                   msg.role === "user"
-                    ? "bg-[#89f5a2]/15 border border-[#89f5a2]/25 text-white rounded-br-sm"
-                    : "bg-black/30 border border-white/10 text-white/85 rounded-bl-sm"
+                    ? "bg-[#89f5a2]/15 border border-[#89f5a2]/25 text-white rounded-2xl rounded-br-sm"
+                    : msg.isUnlock && msg.unlockLevel === "unlock_secret"
+                      ? "bg-[#FFFBF0]/10 border-[1.5px] border-[#E8C570]/60 text-white/85 rounded-2xl rounded-bl-sm"
+                      : msg.isUnlock && msg.unlockLevel === "unlock_mood"
+                        ? "bg-[#EEEDFE]/10 border-[1.5px] border-[#AFA9EC]/60 text-white/85 rounded-2xl rounded-bl-sm"
+                        : msg.isUnlock && msg.unlockLevel === "unlock_past"
+                          ? "bg-black/30 border-white/10 border border-l-[3px] border-l-[#378ADD]/70 text-white/85 rounded-r-2xl rounded-bl-sm"
+                          : msg.isUnlock && msg.unlockLevel === "unlock_confess"
+                            ? "bg-[#FFFBF0]/10 border-[#E8C570]/60 border border-l-[3px] border-l-[#378ADD]/70 text-white/85 rounded-r-2xl rounded-bl-sm"
+                            : "bg-black/30 border border-white/10 text-white/85 rounded-2xl rounded-bl-sm"
                 }`}>
                   {msg.content}
                 </div>
