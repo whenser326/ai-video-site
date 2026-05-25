@@ -442,8 +442,17 @@ const charSystem = `${memoryPrefix}你扮演「${char.name}」。${personality} 
     maybeGenerateSummary(finalSessionId).catch(err => console.error('summary generation failed:', err));
   }
 
-  // E02 成就檢查
-  const newChatCount = chatCount + actualCount;
+  // E02/E03 成就與解鎖：查該角色在此 session 的訊息數（以 characterList[0] 為基準）
+  const newChatCount = chatCount + actualCount; // 仍保留給 remainingQuota 等用途，不刪
+  let charSessionCount = 0;
+  if (finalSessionId && characterList[0]) {
+    const { count } = await supabase
+      .from("chat_messages")
+      .select("*", { count: "exact", head: true })
+      .eq("session_id", finalSessionId)
+      .eq("character_id", String(characterList[0].id));
+    charSessionCount = count || 0;
+  }
   const achievementMap: Record<number, string> = { 50: "🎉 我們已經聊了 50 則了！", 100: "💫 100 則對話達成！", 500: "🌟 哇，已經 500 則了！" };
   const unlockMap: Record<number, string> = {
     50: "unlock_secret",
@@ -451,14 +460,14 @@ const charSystem = `${memoryPrefix}你扮演「${char.name}」。${personality} 
     200: "unlock_past",
     500: "unlock_confess",
   };
-  const unlockType = unlockMap[newChatCount] || null;
+  const unlockType = unlockMap[charSessionCount] || null;
   const unlockPromptMap: Record<string, string> = {
     unlock_secret: "我們聊了這麼久，我想告訴你一個只有你知道的秘密……用角色個性說出一個符合人設的小秘密，1-2句話。",
     unlock_mood: "我們聊了這麼久，我想讓你看看我不常展示的一面……用角色個性展現一個平時隱藏的情緒或習慣，1-2句話。",
     unlock_past: "我們聊了這麼久，我想跟你說說我的過去……用角色個性說出一段符合人設的過去經歷，1-2句話。",
     unlock_confess: "我們聊了這麼久，我有話想對你說……用角色個性說出一段真摯的心裡話或告白，1-2句話，要讓對方感受到你是認真的。",
   };
-  const achievement = achievementMap[newChatCount] || null;
+  const achievement = achievementMap[charSessionCount] || null;
   if (achievement) {
     const achieveChar = characterList[0];
     const achieveRes = await fetch("https://api.anthropic.com/v1/messages", {

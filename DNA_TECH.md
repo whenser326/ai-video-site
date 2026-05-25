@@ -534,6 +534,7 @@ ANTHROPIC_API_KEY=sk-ant-你的金鑰
 ✅ 說話影片扣點修正（2026/05/25）：單人自建和群組自建聊天室說話影片 polling 成功後改為 fetch /api/user/credits 取得真實點數，移除假扣點 setCredits(prev => prev - avatarData.creditCost)。自拍照片/影片完成後同樣改為 fetch 真實點數。
 ✅ gallery 聊天室自拍提示文字修正（2026/05/25）：「需收藏角色才能用」改為「需自創角色才能用，去我的角色建立專屬角色」。
 ✅ 群組超量提示文字修正（2026/05/25）：底部「每次 -{selectedIds.length} 點」改為「每則回覆扣 1 點」，與實際邏輯一致。
+✅ 群組聊天室聲音選項統一（2026/05/25）：/chat/group/page.tsx 說話影片 Modal 的 VOICE_OPTIONS label 格式改為與 VoiceSelector 一致（👩/👨 emoji + 中文描述），如「👩 低沉女聲」。
 ✅ GlobalHeader 新增「角色生成」按鈕（2026/05/20）：導向 /create，涵蓋桌面版和手機 Drawer
 ✅ 單人聊天室顏色統一（2026/05/20）：訊息區 bg-black、header 漸層改純黑、無圖時 bg-black/20、textarea bg-black
 ✅ gallery 聊天室新增📎上傳圖片功能（2026/05/19）：對標其他四個聊天室，呼叫 /api/upload-chat-image，帶入 defaultCharacter fakeChar 參數
