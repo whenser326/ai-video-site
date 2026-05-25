@@ -301,18 +301,30 @@ const [showUpgradeModal, setShowUpgradeModal] = useState(false);
       if (!imageUrl) throw new Error("照片生成逾時");
 
       if (intent === "photo") {
+        // 上傳 Supabase 換永久 URL
+        let permanentImageUrl = imageUrl;
+        try {
+          const upRes = await fetch("/api/upload-image", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ imageUrl, email: session?.user?.email }),
+          });
+          const upData = await upRes.json();
+          if (upData.url) permanentImageUrl = upData.url;
+        } catch { /* fallback 用原始 URL */ }
+
         setMessages(prev => prev.map(m =>
-          m.id === msgId ? { ...m, selfieLoading: false, imageUrl } : m
+          m.id === msgId ? { ...m, selfieLoading: false, imageUrl: permanentImageUrl } : m
         ));
         fetch(`/api/user/credits?email=${session?.user?.email}`).then(r => r.json()).then(d => { if (d.credits !== undefined) setCredits(d.credits); });
-        // 存入歷史
-        if (session?.user?.email && imageUrl) {
+        // 存入歷史（永久 URL）
+        if (session?.user?.email && permanentImageUrl) {
           fetch("/api/history", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               user_email: session.user.email,
-              image_url: imageUrl,
+              image_url: permanentImageUrl,
               video_url: null,
               prompt: "AI 自拍",
               character_id: character?.id || null,
@@ -365,19 +377,33 @@ const [showUpgradeModal, setShowUpgradeModal] = useState(false);
         if (pollData.status === "failed") throw new Error("影片生成失敗");
       }
 
+      // 影片上傳 Supabase 換永久 URL
+      let permanentVideoUrl = videoUrl;
+      if (videoUrl) {
+        try {
+          const upRes = await fetch("/api/upload-image", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ imageUrl: videoUrl, email: session?.user?.email }),
+          });
+          const upData = await upRes.json();
+          if (upData.url) permanentVideoUrl = upData.url;
+        } catch { /* fallback 用原始 URL */ }
+      }
+
       setMessages(prev => prev.map(m =>
-        m.id === msgId ? { ...m, selfieLoading: false, videoUrl: videoUrl || undefined } : m
+        m.id === msgId ? { ...m, selfieLoading: false, videoUrl: permanentVideoUrl || undefined } : m
       ));
       fetch(`/api/user/credits?email=${session?.user?.email}`).then(r => r.json()).then(d => { if (d.credits !== undefined) setCredits(d.credits); });
-      // 存入歷史
-      if (session?.user?.email && videoUrl) {
+      // 存入歷史（永久 URL）
+      if (session?.user?.email && permanentVideoUrl) {
         fetch("/api/history", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             user_email: session.user.email,
             image_url: null,
-            video_url: videoUrl,
+            video_url: permanentVideoUrl,
             prompt: "AI 自拍影片",
             character_id: character?.id || null,
           }),

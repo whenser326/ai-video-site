@@ -235,7 +235,7 @@ const [defaultExpanded, setDefaultExpanded] = useState(false);
           </div>
         )}
 {!loading && characters.length >= 2 && (
-          <div className="mt-6 bg-black/20 border border-white/10 rounded-2xl p-4 space-y-3">
+          <div className="mt-6 bg-black border border-white/10 rounded-2xl p-4 space-y-3">
             <div className="flex items-center justify-between">
               <p className="text-white/70 text-sm font-bold">🎭 群組聊天</p>
               <span className="text-[10px] bg-[#89f5a2]/10 border border-[#89f5a2]/20 rounded-full px-2 py-0.5 text-[#89f5a2]">

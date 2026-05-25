@@ -166,7 +166,7 @@ export default function CharacterDetailPage() {
 
         {/* 角色身份卡 */}
         {character && (
-          <div className="bg-black/25 backdrop-blur-xl rounded-3xl border border-white/10 overflow-hidden">
+          <div className="bg-black backdrop-blur-xl rounded-3xl border border-white/10 overflow-hidden">
             <div className="flex gap-4 p-4">
               <img
                 src={character.image_url}
