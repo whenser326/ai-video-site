@@ -158,7 +158,7 @@ const [defaultExpanded, setDefaultExpanded] = useState(false);
             {characters.map((char) => (
               <div
                 key={char.id}
-                className="relative group bg-black/25 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden hover:border-purple-400/40 hover:shadow-[0_0_20px_rgba(167,139,250,0.15)] transition-all duration-200"
+                className="relative group bg-black backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden hover:border-purple-400/40 hover:shadow-[0_0_20px_rgba(167,139,250,0.15)] transition-all duration-200"
               >
                 <div
                   className="relative w-full aspect-square overflow-hidden cursor-pointer"
@@ -174,12 +174,15 @@ const [defaultExpanded, setDefaultExpanded] = useState(false);
 
                 <div className="p-3 space-y-1">
                   <p className="text-white font-black text-sm truncate">{char.name}</p>
-                  <div className="flex items-center gap-1">
-                    <span className="text-white/20 text-[10px]">🎙️</span>
-                    <span className="text-white/25 text-[10px] truncate">
-                      {VOICE_OPTIONS.find(v => v.id === char.voice_id)?.label || "未設定"}
-                    </span>
-                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1">
+                      <span className="text-white/20 text-[10px]">🎙️</span>
+                      <span className="text-white/25 text-[10px] truncate">
+                        {VOICE_OPTIONS.find(v => v.id === char.voice_id)?.label || "未設定"}
+                      </span>
+                    </div>
+                    </div>
+                  <p className="text-[#89f5a2]/30 text-[9px]">🔓 聊越多解鎖越多</p>
                 </div>
 
                 {openMenuId === char.id && (
@@ -189,7 +192,7 @@ const [defaultExpanded, setDefaultExpanded] = useState(false);
                     onClick={() => setOpenMenuId(null)}
                   >
                     <div
-                      className="w-full bg-[#0f2318] border border-[#89f5a2]/30 rounded-xl overflow-hidden"
+                      className="w-full bg-black border border-[#89f5a2]/30 rounded-xl overflow-hidden"
                       onClick={e => e.stopPropagation()}
                     >
                       <button
@@ -203,7 +206,6 @@ const [defaultExpanded, setDefaultExpanded] = useState(false);
                         className="w-full flex items-center gap-2 px-3 py-3 text-xs font-bold text-[rgba(184,255,200,0.8)] border-b border-[rgba(137,245,162,0.08)] hover:bg-[rgba(137,245,162,0.08)] transition-all"
                       >
                         💬 互動聊天
-                        <span className="ml-auto text-[9px] text-[#89f5a2]/40 border border-[#89f5a2]/20 rounded-full px-1.5 py-0.5">🔓 聊越多解鎖越多</span>
                       </button>
                       <button
                         onClick={() => {
@@ -222,6 +224,9 @@ const [defaultExpanded, setDefaultExpanded] = useState(false);
                       >
                         🗑️ {deletingId === char.id ? '刪除中...' : '刪除角色'}
                       </button>
+                      <div className="px-3 py-2 bg-[#89f5a2]/5">
+                        <p className="text-white/60 text-[9px] leading-relaxed">🔓 聊越多解鎖越多！每聊 <span className="text-[#89f5a2]/70 font-bold">50 / 100 / 200 / 500</span> 則，角色會說出只有你能看的隱藏內容</p>
+                      </div>
                     </div>
                   </div>
                 )}
