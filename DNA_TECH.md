@@ -529,6 +529,11 @@ ANTHROPIC_API_KEY=sk-ant-你的金鑰
 ✅ 聊天室風格面板位置統一（2026/05/20）：五個聊天室風格面板統一移至輸入列下方（showSuggest 之後）
 ✅ 聊天室上傳圖片補角色回應（2026/05/20）：五個聊天室 📎上傳圖片後均會呼叫 /api/chat 讓角色看圖回應
 ✅ 聊天室上傳圖片預覽（2026/05/20）：五個聊天室均已補上 mediaUrl 顯示，含 Message interface 補欄位、氣泡補渲染、setMessages 補 mediaUrl、replyTo 移到輸入列上方
+✅ chat_count 精算修正（2026/05/25）：/api/chat/route.ts chat_count 改為 responses.length（實際回覆數），不再用 characterList.length（全部角色數）。超量 creditCost 改為預扣1點保守值，responses 完成後用 actualCount 精算實際扣點。newChatCount、remainingQuota、回傳 creditCost 均同步修正。
+✅ 自拍等待追問功能（2026/05/25）：單人自建（/chat/[characterId]）和群組自建（/chat/group）的 triggerSelfie 加入 waitTimer，生成期間每60秒發一則等待訊息，最多3次，finally clearInterval 確保清除。
+✅ 說話影片扣點修正（2026/05/25）：單人自建和群組自建聊天室說話影片 polling 成功後改為 fetch /api/user/credits 取得真實點數，移除假扣點 setCredits(prev => prev - avatarData.creditCost)。自拍照片/影片完成後同樣改為 fetch 真實點數。
+✅ gallery 聊天室自拍提示文字修正（2026/05/25）：「需收藏角色才能用」改為「需自創角色才能用，去我的角色建立專屬角色」。
+✅ 群組超量提示文字修正（2026/05/25）：底部「每次 -{selectedIds.length} 點」改為「每則回覆扣 1 點」，與實際邏輯一致。
 ✅ GlobalHeader 新增「角色生成」按鈕（2026/05/20）：導向 /create，涵蓋桌面版和手機 Drawer
 ✅ 單人聊天室顏色統一（2026/05/20）：訊息區 bg-black、header 漸層改純黑、無圖時 bg-black/20、textarea bg-black
 ✅ gallery 聊天室新增📎上傳圖片功能（2026/05/19）：對標其他四個聊天室，呼叫 /api/upload-chat-image，帶入 defaultCharacter fakeChar 參數
@@ -623,6 +628,9 @@ ANTHROPIC_API_KEY=sk-ant-你的金鑰
 - 選克隆聲音時隱藏「下載語音（扣N點）」按鈕
 - 克隆聲音 voice_id 直接傳給 /api/tts，不經過 VOICE_MAP（/api/tts/route.ts 第33行：`const voice = VOICE_MAP[voiceId] || voiceId`）
 - 台詞空白時顯示黃色提示文字，輸入後自動消失
+
+✅ 聊天解鎖成就能見度提升（2026/05/25）：GallerySection.tsx 瀑布流卡片底部加「🔓 聊越多解鎖越多」標籤。gallery/[id]/page.tsx 詳細頁 CTA 按鈕下方加解鎖提示區塊。characters/page.tsx B2 選單「互動聊天」按鈕加🔓標籤。/chat/[characterId] 每日提示框加解鎖說明。guide/page.tsx 線B「開始聊天」加解鎖說明。
+✅ 使用指南聲音克隆說明（2026/05/25）：guide/page.tsx 線A「加語音/說話影片」、線B「讓角色說話」、線C「說話影片」均加入聲音克隆說明文字。whyDifferent.ts 新增第11條聲音克隆差異化說明。
 
 ## 留存與付費轉換（E系列）
 → 規劃詳見 DNA_ROADMAP.md E 系列章節

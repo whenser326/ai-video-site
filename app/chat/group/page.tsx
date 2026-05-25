@@ -62,16 +62,16 @@ const [avatarVideoUrl, setAvatarVideoUrl] = useState("");
 const [avatarVoiceId, setAvatarVoiceId] = useState("female-2");
 
 const VOICE_OPTIONS = [
-  { id: "female-1", label: "Jane（女）低沉" },
-  { id: "female-2", label: "Stacy（女）甜美" },
-  { id: "female-3", label: "Anna（女）清晰" },
-  { id: "female-4", label: "Xiaoxi（女）活潑" },
-  { id: "female-5", label: "Maya（女）溫柔" },
-  { id: "male-1", label: "Aliby（男）專業" },
-  { id: "male-2", label: "Evan（男）溫暖" },
-  { id: "male-3", label: "Liu（男）成熟" },
-  { id: "male-4", label: "Adrian（男）旁白" },
-  { id: "male-5", label: "Wilson（男）深沉" },
+  { id: "female-1", label: "👩 低沉女聲" },
+  { id: "female-2", label: "👩 甜美女聲" },
+  { id: "female-3", label: "👩 清晰女聲" },
+  { id: "female-4", label: "👩 活潑女聲" },
+  { id: "female-5", label: "👩 溫柔女聲" },
+  { id: "male-1", label: "👨 專業男聲" },
+  { id: "male-2", label: "👨 溫暖男聲" },
+  { id: "male-3", label: "👨 成熟男聲" },
+  { id: "male-4", label: "👨 旁白男聲" },
+  { id: "male-5", label: "👨 深沉男聲" },
 ];
   const bottomRef = useRef<HTMLDivElement>(null);
   const autoMessageTimerRef = useRef<NodeJS.Timeout | null>(null);
