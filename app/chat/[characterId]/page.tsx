@@ -178,6 +178,26 @@ const [showUpgradeModal, setShowUpgradeModal] = useState(false);
     const photoCost = 1;
     const videoCost = plan === 'pro' ? 4 : plan === 'standard' ? 5 : 6;
 
+    // 自拍等待追問：每60秒發一則，最多3次
+    const waitingMessages = [
+      "（還在拍喔，等我一下～）",
+      "（稍等一下，幫你調整一下角度...）",
+      "（快好了，再等我一點點～）",
+      "（哎呀快好了，你先等等！）",
+    ];
+    let waitCount = 0;
+    const waitTimer = setInterval(() => {
+      if (waitCount >= 3) { clearInterval(waitTimer); return; }
+      const msg = waitingMessages[Math.floor(Math.random() * waitingMessages.length)];
+      setMessages(prev => [...prev, {
+        role: "assistant",
+        content: msg,
+        characterName: character?.name,
+        characterImage: charImageUrl,
+      }]);
+      waitCount++;
+    }, 60000);
+
     setMessages(prev => prev.map(m =>
       m.id === msgId ? { ...m, selfieLoading: true, selfieType: intent } : m
     ));
@@ -215,7 +235,7 @@ const [showUpgradeModal, setShowUpgradeModal] = useState(false);
         setMessages(prev => prev.map(m =>
           m.id === msgId ? { ...m, selfieLoading: false, imageUrl } : m
         ));
-        setCredits(prev => prev !== null ? prev - photoCost : prev);
+        fetch(`/api/user/credits?email=${session?.user?.email}`).then(r => r.json()).then(d => { if (d.credits !== undefined) setCredits(d.credits); });
         // 存入歷史
         if (session?.user?.email && imageUrl) {
           fetch("/api/history", {
@@ -279,7 +299,7 @@ const [showUpgradeModal, setShowUpgradeModal] = useState(false);
       setMessages(prev => prev.map(m =>
         m.id === msgId ? { ...m, selfieLoading: false, videoUrl: videoUrl || undefined } : m
       ));
-      setCredits(prev => prev !== null ? prev - photoCost - videoCost : prev);
+      fetch(`/api/user/credits?email=${session?.user?.email}`).then(r => r.json()).then(d => { if (d.credits !== undefined) setCredits(d.credits); });
       // 存入歷史
       if (session?.user?.email && videoUrl) {
         fetch("/api/history", {
@@ -299,6 +319,8 @@ const [showUpgradeModal, setShowUpgradeModal] = useState(false);
       setMessages(prev => prev.map(m =>
         m.id === msgId ? { ...m, selfieLoading: false } : m
       ));
+    } finally {
+      clearInterval(waitTimer);
     }
   };
 
@@ -539,6 +561,7 @@ const [showUpgradeModal, setShowUpgradeModal] = useState(false);
             <div className="w-full max-w-sm bg-[#0d2318] border border-[#89f5a2]/25 rounded-3xl p-6 space-y-4 shadow-2xl">
               <p className="text-white font-black text-base">💬 聊天室說明</p>
               <p className="text-white/40 text-xs leading-relaxed">角色由 AI 扮演，可以自由聊天、曖昧互動、情感陪伴。</p>
+              <p className="text-[#89f5a2]/50 text-xs">🔓 聊越多解鎖越多，50則起角色會說出隱藏內容</p>
               <div className="space-y-2">
                 <p className="text-[#89f5a2]/70 text-xs font-bold">✅ 可以聊</p>
                 <div className="space-y-1 pl-2">

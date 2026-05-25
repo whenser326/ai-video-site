@@ -193,7 +193,7 @@ export default function GalleryChatPage() {
       await new Promise(r => setTimeout(r, randomDelay()));
       setMessages(prev => [...prev, {
         role: "assistant",
-        content: `（${character.name} 想錄影片給你，但這個功能需要收藏角色後才能使用 🎬 收藏我之後就可以囉！）`,
+        content: `（${character.name} 想錄影片給你，但這個功能需要自創角色後才能使用 🎬 去「我的角色」建立專屬角色就可以囉！）`,
         characterName: character.name,
       }]);
       setLoading(false);
@@ -203,7 +203,7 @@ export default function GalleryChatPage() {
       await new Promise(r => setTimeout(r, randomDelay()));
       setMessages(prev => [...prev, {
         role: "assistant",
-        content: `（${character.name} 想傳照片給你，但這個功能需要收藏角色後才能使用 📸 收藏我之後就可以囉！）`,
+        content: `（${character.name} 想傳照片給你，但這個功能需要自創角色後才能使用 📸 去「我的角色」建立專屬角色就可以囉！）`,
         characterName: character.name,
       }]);
       setLoading(false);

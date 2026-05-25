@@ -185,7 +185,7 @@ export default function GalleryDetailPage() {
           </button>
         </div>
         {/* CTA 按鈕 */}
-        <div className="flex gap-3 mb-8">
+        <div className="flex gap-3 mb-4">
           <button onClick={() => router.push(`/chat/gallery/${character.id}`)}
             className="flex-1 py-3.5 bg-[#89f5a2] text-[#0d2318] rounded-2xl text-sm font-black hover:bg-[#89f5a2]/90 transition-all">
             💬 開始聊天
@@ -198,7 +198,11 @@ export default function GalleryDetailPage() {
             🎨 生成同款
           </button>
         </div>
-
+{/* 解鎖提示 */}
+        <div className="mb-8 px-4 py-3 bg-[#89f5a2]/5 border border-[#89f5a2]/15 rounded-2xl flex items-center gap-3">
+          <span className="text-xl flex-shrink-0">🔓</span>
+          <p className="text-white/40 text-xs leading-relaxed">聊越多解鎖越多！每聊 <span className="text-[#89f5a2]/70 font-bold">50／100／200／500</span> 則，角色會說出只有你能看的隱藏內容</p>
+        </div>
         {/* 留言區 */}
         <div>
           <p className="text-white/40 text-xs font-black tracking-widest uppercase mb-4">🗨️ {comments.length > 0 ? `${comments.length} 則留言` : "留言區"}</p>

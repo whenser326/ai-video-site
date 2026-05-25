@@ -691,6 +691,9 @@ function GalleryCard({ item, index, isFree, freeLimit, onClick, getCount, featur
           <span>❤️ {counts.like.toLocaleString()}</span>
           <span>💬 {counts.chat.toLocaleString()}</span>
         </div>
+        <div className="pt-0.5">
+          <span className="text-[9px] text-[#89f5a2]/50 border border-[#89f5a2]/20 rounded-full px-1.5 py-0.5">🔓 聊越多解鎖越多</span>
+        </div>
       </div>
     </div>
   );

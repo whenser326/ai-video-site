@@ -203,6 +203,7 @@ const [defaultExpanded, setDefaultExpanded] = useState(false);
                         className="w-full flex items-center gap-2 px-3 py-3 text-xs font-bold text-[rgba(184,255,200,0.8)] border-b border-[rgba(137,245,162,0.08)] hover:bg-[rgba(137,245,162,0.08)] transition-all"
                       >
                         💬 互動聊天
+                        <span className="ml-auto text-[9px] text-[#89f5a2]/40 border border-[#89f5a2]/20 rounded-full px-1.5 py-0.5">🔓 聊越多解鎖越多</span>
                       </button>
                       <button
                         onClick={() => {

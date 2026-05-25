@@ -199,6 +199,27 @@ const [writingStyle, setWritingStyle] = useState("直白");
     const photoCost = 1;
     const videoCost = plan === 'pro' ? 4 : plan === 'standard' ? 5 : 6;
 
+    // 自拍等待追問：每60秒發一則，最多3次
+    const waitingMessages = [
+      "（還在拍喔，等我一下～）",
+      "（稍等一下，幫你調整一下角度...）",
+      "（快好了，再等我一點點～）",
+      "（哎呀快好了，你先等等！）",
+    ];
+    let waitCount = 0;
+    const charForMsg = selectedChars.find(c => c.image_url === charImageUrl) || selectedChars[0];
+    const waitTimer = setInterval(() => {
+      if (waitCount >= 3) { clearInterval(waitTimer); return; }
+      const msg = waitingMessages[Math.floor(Math.random() * waitingMessages.length)];
+      setMessages(prev => [...prev, {
+        role: "assistant",
+        content: msg,
+        characterName: charForMsg?.name,
+        characterImage: charForMsg?.image_url,
+      }]);
+      waitCount++;
+    }, 60000);
+
     setMessages(prev => prev.map(m =>
       m.id === msgId ? { ...m, selfieLoading: true, selfieType: intent } : m
     ));
@@ -236,7 +257,7 @@ const [writingStyle, setWritingStyle] = useState("直白");
       setMessages(prev => prev.map(m =>
         m.id === msgId ? { ...m, selfieLoading: false, imageUrl } : m
       ));
-      setCredits(prev => prev !== null ? prev - photoCost : prev);
+      fetch(`/api/user/credits?email=${session?.user?.email}`).then(r => r.json()).then(d => { if (d.credits !== undefined) setCredits(d.credits); });
       if (session?.user?.email && imageUrl) {
         fetch("/api/history", {
           method: "POST",
@@ -297,7 +318,7 @@ const [writingStyle, setWritingStyle] = useState("直白");
       setMessages(prev => prev.map(m =>
         m.id === msgId ? { ...m, selfieLoading: false, videoUrl: videoUrl || undefined } : m
       ));
-      setCredits(prev => prev !== null ? prev - photoCost - videoCost : prev);
+      fetch(`/api/user/credits?email=${session?.user?.email}`).then(r => r.json()).then(d => { if (d.credits !== undefined) setCredits(d.credits); });
       if (session?.user?.email && videoUrl) {
         fetch("/api/history", {
           method: "POST",
@@ -316,6 +337,8 @@ const [writingStyle, setWritingStyle] = useState("直白");
       setMessages(prev => prev.map(m =>
         m.id === msgId ? { ...m, selfieLoading: false } : m
       ));
+    } finally {
+      clearInterval(waitTimer);
     }
   };
 

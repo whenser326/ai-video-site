@@ -216,9 +216,8 @@ export async function POST(req: NextRequest) {
     if (profile.credits < 1) {
       return NextResponse.json({ error: "對話次數已用完，點數也不足" }, { status: 400 });
     }
-    // 群組最多抽 3 人回覆，超量後最多扣 3 點，不以角色總數計算
-    const maxResponders = characters ? Math.min(characters.length, 3) : 1;
-    creditCost = maxResponders;
+    // 先預扣保守值 1 點做餘額門檻，responses 完成後根據實際回覆數精算
+    creditCost = 1;
   }
   
   let characterList: any[] = [];
@@ -429,11 +428,12 @@ const charSystem = `${memoryPrefix}你扮演「${char.name}」。${personality} 
     await supabase.from("chat_messages").insert(inserts);
   }
 
+  const actualCount = responses.length;
   await supabase
     .from("profiles")
     .update({
-      chat_count: chatCount + (isGroup ? characterList.length : 1),
-      credits: isOverQuota ? profile.credits - creditCost : profile.credits,
+      chat_count: chatCount + actualCount,
+      credits: isOverQuota ? profile.credits - actualCount : profile.credits,
     })
     .eq("email", userEmail);
 
@@ -443,7 +443,7 @@ const charSystem = `${memoryPrefix}你扮演「${char.name}」。${personality} 
   }
 
   // E02 成就檢查
-  const newChatCount = chatCount + (isGroup ? characterList.length : 1);
+  const newChatCount = chatCount + actualCount;
   const achievementMap: Record<number, string> = { 50: "🎉 我們已經聊了 50 則了！", 100: "💫 100 則對話達成！", 500: "🌟 哇，已經 500 則了！" };
   const unlockMap: Record<number, string> = {
     50: "unlock_secret",
@@ -505,8 +505,8 @@ const charSystem = `${memoryPrefix}你扮演「${char.name}」。${personality} 
     sessionId: finalSessionId,
     responses,
     isOverQuota,
-    creditCost,
-    remainingQuota: Math.max(quota - chatCount - 1, 0),
+    creditCost: isOverQuota ? actualCount : 0,
+    remainingQuota: Math.max(quota - chatCount - actualCount, 0),
     achievement: achievement ? { text: achievement } : null,
     unlock: unlockType ? { type: unlockType } : null,
   });
