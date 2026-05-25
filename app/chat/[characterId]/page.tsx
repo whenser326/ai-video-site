@@ -1059,7 +1059,6 @@ const [showUpgradeModal, setShowUpgradeModal] = useState(false);
                     const avatarData = await avatarRes.json();
                     if (!avatarData.id) throw new Error(avatarData.error || "生成失敗");
                     setAvatarStatus("⏳ 生成中，請稍候...");
-                    setCredits(prev => prev !== null ? prev - avatarData.creditCost : prev);
                     for (let i = 0; i < 60; i++) {
                       await new Promise(r => setTimeout(r, 5000));
                       const poll = await fetch(`/api/kling-avatar?id=${avatarData.id}`);
@@ -1068,6 +1067,7 @@ const [showUpgradeModal, setShowUpgradeModal] = useState(false);
                         const url = Array.isArray(pollData.output) ? pollData.output[0] : pollData.output;
                         setAvatarVideoUrl(url);
                         setAvatarStatus("");
+                        fetch(`/api/user/credits?email=${session?.user?.email}`).then(r => r.json()).then(d => { if (d.credits !== undefined) setCredits(d.credits); });
                         return;
                       }
                       if (pollData.status === "failed") throw new Error("影片生成失敗");

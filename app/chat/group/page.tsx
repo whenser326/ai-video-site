@@ -952,7 +952,7 @@ setTimeout(() => {
           )}
           <div className="flex items-center justify-between mt-2">
             <p className="text-white/15 text-[10px]">Enter 送出・Shift+Enter 換行</p>
-            {isOverQuota && <p className="text-yellow-400/50 text-[10px]">次數用完，每次 -{selectedIds.length} 點</p>}
+            {isOverQuota && <p className="text-yellow-400/50 text-[10px]">次數用完，每則回覆扣 1 點</p>}
             <div className="flex items-center gap-2">
               <button
                 onClick={() => {
@@ -1166,7 +1166,6 @@ setTimeout(() => {
                     if (!avatarData.id) throw new Error(avatarData.error || "生成失敗");
 
                     setAvatarStatus("⏳ 生成中，請稍候...");
-                    setCredits(prev => prev !== null ? prev - avatarData.creditCost : prev);
 
                     // Step 3: Polling
                     for (let i = 0; i < 60; i++) {
@@ -1177,6 +1176,7 @@ setTimeout(() => {
                         const url = Array.isArray(pollData.output) ? pollData.output[0] : pollData.output;
                         setAvatarVideoUrl(url);
                         setAvatarStatus("");
+                        fetch(`/api/user/credits?email=${session?.user?.email}`).then(r => r.json()).then(d => { if (d.credits !== undefined) setCredits(d.credits); });
                         return;
                       }
                       if (pollData.status === "failed") throw new Error("影片生成失敗");
