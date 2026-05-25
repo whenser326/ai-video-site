@@ -117,6 +117,45 @@ export default function DefaultGroupChatPage() {
       });
     const saved = localStorage.getItem(sessionKey);
     if (saved) setSessionId(saved);
+
+    // E05：純文字生日訊息，所有角色逐一送祝福
+    const email = session.user.email;
+    const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Taipei" });
+    const birthdayKey = `birthday_msg_${email}_default_group_${today}`;
+    if (!localStorage.getItem(birthdayKey)) {
+      fetch(`/api/user/birthday?email=${email}`)
+        .then(r => r.json())
+        .then(async d => {
+          const todayMMDD = today.slice(5);
+          if (!d.birthday || d.birthday !== todayMMDD) return;
+          await new Promise(r => setTimeout(r, 2000));
+          for (let i = 0; i < selectedChars.length; i++) {
+            const char = selectedChars[i];
+            const res = await fetch("/api/chat/birthday-text", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                characterName: char.name,
+                characterDescription: char.description || "",
+              }),
+            });
+            const data = await res.json();
+            if (data.text) {
+              setMessages(prev => [...prev, {
+                role: "assistant",
+                content: data.text,
+                characterName: char.name,
+                characterId: char.id,
+              }]);
+            }
+            if (i < selectedChars.length - 1) {
+              await new Promise(r => setTimeout(r, 1500));
+            }
+          }
+          localStorage.setItem(birthdayKey, "1");
+        })
+        .catch(() => {});
+    }
   }, [session]);
 
   useEffect(() => {

@@ -93,6 +93,40 @@ export default function GalleryChatPage() {
     if (saved) setSessionId(saved);
   }, [session, galleryId]);
 
+  // E05：純文字生日訊息（等 character 載入後才執行）
+  useEffect(() => {
+    if (!session?.user?.email || !character) return;
+    const email = session.user.email;
+    const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Taipei" });
+    const birthdayKey = `birthday_msg_${email}_gallery_${galleryId}_${today}`;
+    if (localStorage.getItem(birthdayKey)) return;
+    fetch(`/api/user/birthday?email=${email}`)
+      .then(r => r.json())
+      .then(async d => {
+        const todayMMDD = today.slice(5);
+        if (!d.birthday || d.birthday !== todayMMDD) return;
+        await new Promise(r => setTimeout(r, 2000));
+        const res = await fetch("/api/chat/birthday-text", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            characterName: character.name,
+            characterDescription: character.story || "",
+          }),
+        });
+        const data = await res.json();
+        if (data.text) {
+          setMessages(prev => [...prev, {
+            role: "assistant",
+            content: data.text,
+            characterName: character.name,
+          }]);
+        }
+        localStorage.setItem(birthdayKey, "1");
+      })
+      .catch(() => {});
+  }, [session, character]);
+
   // 自動捲動
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });

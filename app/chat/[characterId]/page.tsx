@@ -60,6 +60,7 @@ const [searchOpen, setSearchOpen] = useState(false);
   const [searchIndex, setSearchIndex] = useState(0);
   const [replyTo, setReplyTo] = useState<{ characterName: string; content: string } | null>(null);
 const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [birthdayChecked, setBirthdayChecked] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const messageRefs = useRef<Record<number, HTMLDivElement | null>>({});
   // [DNA_PATCH_END]
@@ -132,6 +133,74 @@ const [showUpgradeModal, setShowUpgradeModal] = useState(false);
     // 從 localStorage 恢復上次 sessionId
     const savedSession = localStorage.getItem(`chat_session_${session.user.email}_${characterId}`);
     if (savedSession) setSessionId(savedSession);
+
+    // E05：生日 / 紀念日觸發
+    const email = session.user.email;
+    const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Taipei" });
+    const birthdayKey = `birthday_msg_${email}_${characterId}_${today}`;
+    const anniversaryKey = `anniversary_msg_${email}_${characterId}_${today}`;
+    if (!localStorage.getItem(birthdayKey) || !localStorage.getItem(anniversaryKey)) {
+      fetch(`/api/user/birthday?email=${email}`)
+        .then(r => r.json())
+        .then(async d => {
+          const todayMMDD = today.slice(5); // MM-DD
+          const messages: { type: "birthday" | "anniversary" }[] = [];
+
+          // 生日判斷
+          if (d.birthday && d.birthday === todayMMDD && !localStorage.getItem(birthdayKey)) {
+            messages.push({ type: "birthday" });
+          }
+          // 紀念日判斷：查此 session 的最早建立日
+          if (!localStorage.getItem(anniversaryKey)) {
+            const annRes = await fetch(`/api/chat/anniversary?email=${email}&characterId=${characterId}`);
+            const annData = await annRes.json();
+            if (annData.firstChatMMDD && annData.firstChatMMDD === todayMMDD && annData.firstChatMMDD !== d.birthday) {
+              messages.push({ type: "anniversary" });
+            }
+          }
+
+          if (messages.length === 0) return;
+          setBirthdayChecked(true);
+
+          // 依序觸發
+          for (const evt of messages) {
+            const isAnniversary = evt.type === "anniversary";
+            const prompt = isAnniversary
+              ? `今天是你們第一次聊天的紀念日！用角色個性說出一段感性的紀念日話語，提到「我們認識已經滿一年了」或類似的時間感，1-2句話。`
+              : `今天是用戶的生日！用角色個性說出一段真摯的生日祝福，要有角色的個性特色，讓人感受到角色真的記得，1-2句話。`;
+
+            await new Promise(r => setTimeout(r, 1500));
+
+            const res = await fetch("/api/chat/birthday", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                userEmail: email,
+                characterId,
+                prompt,
+                generateImage: evt.type === "birthday", // 生日才生圖
+              }),
+            });
+            const data = await res.json();
+
+            if (data.text) {
+              const msgId = `msg-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+              setMessages(prev => [...prev, {
+                id: msgId,
+                role: "assistant",
+                content: data.text,
+                characterName: data.characterName,
+                imageUrl: data.imageUrl || undefined,
+              }]);
+            }
+
+            // 標記已觸發
+            if (evt.type === "birthday") localStorage.setItem(birthdayKey, "1");
+            if (evt.type === "anniversary") localStorage.setItem(anniversaryKey, "1");
+          }
+        })
+        .catch(() => {});
+    }
   }, [session, characterId]);
 
   useEffect(() => {

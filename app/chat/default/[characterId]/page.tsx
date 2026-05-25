@@ -47,6 +47,7 @@ export default function DefaultChatPage() {
   const [isTyping, setIsTyping] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [remainingQuota, setRemainingQuota] = useState<number | null>(null);
+  const [plan, setPlan] = useState("free");
   const [showNotice, setShowNotice] = useState(false);
   const [showSuggest, setShowSuggest] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -94,6 +95,38 @@ const randomDelay = () => Math.floor(Math.random() * 3000) + 2000;
       });
     const saved = localStorage.getItem(`chat_session_default_${session.user.email}_${characterId}`);
     if (saved) setSessionId(saved);
+
+    // E05：純文字生日訊息
+    const email = session.user.email;
+    const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Taipei" });
+    const birthdayKey = `birthday_msg_${email}_default_${characterId}_${today}`;
+    if (!localStorage.getItem(birthdayKey)) {
+      fetch(`/api/user/birthday?email=${email}`)
+        .then(r => r.json())
+        .then(async d => {
+          const todayMMDD = today.slice(5);
+          if (!d.birthday || d.birthday !== todayMMDD) return;
+          await new Promise(r => setTimeout(r, 2000));
+          const res = await fetch("/api/chat/birthday-text", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              characterName: character?.name || "我",
+              characterDescription: character?.description || "",
+            }),
+          });
+          const data = await res.json();
+          if (data.text) {
+            setMessages(prev => [...prev, {
+              role: "assistant",
+              content: data.text,
+              characterName: character?.name || "我",
+            }]);
+          }
+          localStorage.setItem(birthdayKey, "1");
+        })
+        .catch(() => {});
+    }
   }, [session, characterId]);
 
   useEffect(() => {
@@ -147,7 +180,6 @@ const [searchOpen, setSearchOpen] = useState(false);
   const [showStylePanel, setShowStylePanel] = useState(false);
   const [chatStyle, setChatStyle] = useState("");
   const [writingStyle, setWritingStyle] = useState("");
-  const [plan, setPlan] = useState("free");
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const searchResults = searchQuery.trim()
     ? messages.reduce<number[]>((acc, msg, i) => {

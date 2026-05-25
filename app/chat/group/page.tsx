@@ -86,6 +86,7 @@ const [writingStyle, setWritingStyle] = useState("直白");
   const [replyTo, setReplyTo] = useState<{ characterName: string; content: string } | null>(null);
   const [tagMenu, setTagMenu] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [birthdayChecked, setBirthdayChecked] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const messageRefs = useRef<Record<number, HTMLDivElement | null>>({});
   // [DNA_PATCH_END]
@@ -136,6 +137,7 @@ const [writingStyle, setWritingStyle] = useState("直白");
     const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Taipei" });
     const noticeSeen = localStorage.getItem(`chat_notice_seen_${today}`);
     if (!noticeSeen) setShowNotice(true);
+  
   }, [session]);
 
   useEffect(() => {
@@ -577,7 +579,62 @@ setTimeout(() => {
             );
           })}
         </div>
-        <button disabled={selectedIds.length < 2} onClick={() => setStarted(true)}
+        <button disabled={selectedIds.length < 2} onClick={async () => {
+          setStarted(true);
+          // E05：生日觸發（有角色後才能執行）
+          if (!session?.user?.email || selectedIds.length === 0) return;
+          const email = session.user.email;
+          const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Taipei" });
+          const birthdayKey = `birthday_msg_${email}_${today}`;
+          if (localStorage.getItem(birthdayKey)) return;
+          fetch(`/api/user/birthday?email=${email}`)
+            .then(r => r.json())
+            .then(async d => {
+              const todayMMDD = today.slice(5);
+              if (!d.birthday || d.birthday !== todayMMDD) return;
+              await new Promise(r => setTimeout(r, 2000));
+
+              // 查聊天最多的角色，fallback 隨機
+              let mostChatCharId = selectedIds[Math.floor(Math.random() * selectedIds.length)];
+              const savedSession = localStorage.getItem(`chat_session_group_${email}`);
+              if (savedSession) {
+                const countRes = await fetch(`/api/chat/most-active?sessionId=${savedSession}`);
+                const countData = await countRes.json();
+                if (countData.characterId && selectedIds.includes(countData.characterId)) {
+                  mostChatCharId = countData.characterId;
+                }
+              }
+
+              // 所有角色逐一送生日祝福，聊最多的角色附圖
+              for (let i = 0; i < selectedIds.length; i++) {
+                const res = await fetch("/api/chat/birthday", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    userEmail: email,
+                    characterId: selectedIds[i],
+                    prompt: `今天是用戶的生日！用角色個性說出一段真摯的生日祝福，要有角色的個性特色，讓人感受到角色真的記得，1-2句話。`,
+                    generateImage: selectedIds[i] === mostChatCharId,
+                  }),
+                });
+                const data = await res.json();
+                if (data.text) {
+                  setMessages(prev => [...prev, {
+                    id: `msg-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+                    role: "assistant",
+                    content: data.text,
+                    characterName: data.characterName,
+                    imageUrl: data.imageUrl || undefined,
+                  }]);
+                }
+                if (i < selectedIds.length - 1) {
+                  await new Promise(r => setTimeout(r, 1500));
+                }
+              }
+              localStorage.setItem(birthdayKey, "1");
+            })
+            .catch(() => {});
+        }}
           className="w-full py-3 rounded-2xl bg-[#89f5a2]/20 border border-[#89f5a2]/40 text-[#89f5a2] font-black text-sm hover:bg-[#89f5a2]/30 disabled:opacity-30 transition-all"
         >
           {selectedIds.length < 2 ? `還需選 ${2 - selectedIds.length} 個角色` : `🎭 開始群組聊天（${selectedIds.length} 個角色）`}
