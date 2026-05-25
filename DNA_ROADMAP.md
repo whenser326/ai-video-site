@@ -40,7 +40,7 @@
 | E02 | 對話成就系統（50/100/500則達標，角色用人設語氣說出，responses push） | 🟢 低 | 1天 | ✅ 2026/05/24 |
 | E03 | 聊天解鎖機制（50/100/200/500則四等級，四種視覺風格，三個聊天室） | 🟢 低 | 2天 | ✅ 2026/05/24 |
 | E04 | 免費用戶卡在關鍵時刻（固定次數插入升級提示彈窗） | 🟡 中 | 3天 | ✅ 2026/05/24 |
-| E05 | 角色生日/紀念日系統（profiles生日欄位 + Vercel Cron + 特殊訊息+圖片） | 🟡 中 | 3-5天 | ⬜ 待開發 |
+| E05 | 角色生日/紀念日系統（profiles生日欄位 + Vercel Cron + 特殊訊息+圖片） | 🟡 中 | 3-5天 | ✅ 2026/05/25 |
 | E06 | 角色獨家隱藏故事解鎖（付費點數解鎖角色背景後半段/獨白） | 🟡 中 | 5-7天 | ⬜ 待開發 |
 | E07 | 主動推播通知（PWA Web Push + Vercel Cron + Claude生成個人化內容） | 🔴 高 | 1-2週 | ⬜ 待開發 |
 | E08 | 送禮物給角色（點數送虛擬禮物，角色後續對話自然提起） | 🟡 中 | 遠期 | ⬜ 待開發 |
@@ -49,13 +49,13 @@
 
 **E01**：檔案 /api/chat/route.ts，群組聊天 charSystem 加入「可提到其他角色說過關於用戶的事」
 
-**E02**：需讀 profiles.chat_count（已有欄位）判斷達標，前端特殊 badge UI
+**E02**：已完成。觸發條件改為查 chat_messages 表該角色在此 session 的訊息數（charSessionCount），不再用全站累計 newChatCount。只對 characterList[0] 觸發。
 
-**E03**：檔案 /api/chat/route.ts + 對應聊天室 page.tsx，前端需顯示特殊解鎖訊息樣式
+**E03**：已完成。同 E02，觸發條件改為 charSessionCount（各角色各自 session 計算）。unlockMap 四等級：50/100/200/500則。前端三個聊天室（單人自建/群組/gallery）顯示四種視覺風格。
 
 **E04**：固定次數版（非情緒偵測），在情緒高峰付費轉換率最高
 
-**E05**：需 profiles 新增生日欄位 + Vercel Cron Job + 前端設定入口；製造「哇」時刻，用戶會截圖分享
+**E05**：profiles.birthday（MM-DD）欄位已建立。設定入口在每日簽到頁（選填）。觸發邏輯：進入聊天室時即時判斷，不用 Cron Job。五個聊天室均已實作，自創角色生日生圖（Flux Kontext Pro 鎖臉，免費），其他聊天室純文字。紀念日只在自創單人聊天室觸發（chat_sessions.created_at 最早一筆，同月同日）。防重複：localStorage key 含聊天室識別碼，各聊天室各自觸發。新增 API：/api/user/birthday（GET/POST）、/api/chat/birthday（POST，生文字+生圖）、/api/chat/birthday-text（POST，純文字）、/api/chat/anniversary（GET，查紀念日）、/api/chat/most-active（GET，查群組最活躍角色）。群組自創生日：所有角色逐一送祝福，聊最多的角色附圖（fallback 隨機）。
 
 **E06**：需 DB 新增隱藏故事欄位 + 後台編輯介面 + 前端解鎖邏輯 + 點數扣除
 

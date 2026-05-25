@@ -4,7 +4,8 @@
 
 ## 資料庫（Supabase）
 
-表格：profiles（欄位：id, created_at, email, credits, plan, daily_image_count, daily_image_date, daily_video_count, daily_video_date, history_limit, referral_code, referred_by, referral_credits_earned, locked_character, checkin_last_date, checkin_streak）
+表格：profiles（欄位：id, created_at, email, credits, plan, daily_image_count, daily_image_date, daily_video_count, daily_video_date, history_limit, referral_code, referred_by, referral_credits_earned, locked_character, checkin_last_date, checkin_streak, birthday）
+profiles.birthday：TEXT，格式 MM-DD（月份-日期各兩位），用戶生日，選填，設定入口在每日簽到頁
 表格：user_generations（欄位：id, user_email, image_url, video_url, prompt, status, created_at, character_id）
 表格：saved_characters（欄位：id, user_email, name, image_url, description, voice_id, created_at）
 SaveCharacterModal 關係標籤快選（2026/05/10）：app/components/SaveCharacterModal.tsx，六個標籤（初戀/前輩/青梅竹馬/命中注定/契約戀人/死對頭），state: selectedRelation，選完自動帶入 description 最前面
@@ -571,8 +572,8 @@ ANTHROPIC_API_KEY=sk-ant-你的金鑰
 - create/page.tsx PromoCard連動後台：新增promoBonus state，fetch /api/referral/settings-public動態讀取plan_bonus_credits_starter/standard/pro，JSX三處寫死數字改為state
 - total_generations後端寫入：character/route.ts GET偵測succeeded時直接寫profiles.total_generations+1（帶email參數），history/route.ts POST移除重複+1邏輯，防止雙重計算
 ✅ E01角色間互相提起你（2026/05/24）：/api/chat/route.ts群組charSystem加入groupCrossMemory變數，群組對話中角色可自然提起其他角色說過關於用戶的事
-✅ E02對話成就系統（2026/05/24）：/api/chat/route.ts在回應末尾檢查newChatCount，達到50/100/500則時觸發額外Claude呼叫，角色用人設語氣說出成就提示，responses額外push一則，回傳achievement欄位
-✅ E03聊天解鎖機制（2026/05/24）：/api/chat/route.ts新增unlockMap（50/100/200/500則）、unlockType、unlockPromptMap四個等級，達標時觸發Claude生成解鎖內容，responses push isUnlock:true/unlockLevel欄位。前端三個聊天室（單人自建/群組/gallery）Message interface補isUnlock/unlockLevel欄位，setMessages帶入，氣泡渲染四種視覺風格：50則金色(unlock_secret)、100則紫色(unlock_mood)、200則藍色豎線(unlock_past)、500則金色+藍色豎線並排badge(unlock_confess)，均含「🔓 親密度解鎖」橫線分隔
+✅ E02對話成就系統（2026/05/24）：/api/chat/route.ts在回應末尾檢查newChatCount，達到50/100/500則時觸發額外Claude呼叫，角色用人設語氣說出成就提示，responses額外push一則，回傳achievement欄位。⚠️ 2026/05/25修正：觸發條件改為charSessionCount（查chat_messages該角色在此session的訊息數），不再用全站累計newChatCount，各角色各自獨立計算。
+✅ E03聊天解鎖機制（2026/05/24）：/api/chat/route.ts新增unlockMap（50/100/200/500則）、unlockType、unlockPromptMap四個等級，達標時觸發Claude生成解鎖內容，responses push isUnlock:true/unlockLevel欄位。前端三個聊天室（單人自建/群組/gallery）Message interface補isUnlock/unlockLevel欄位，setMessages帶入，氣泡渲染四種視覺風格：50則金色(unlock_secret)、100則紫色(unlock_mood)、200則藍色豎線(unlock_past)、500則金色+藍色豎線並排badge(unlock_confess)，均含「🔓 親密度解鎖」橫線分隔。⚠️ 2026/05/25修正：觸發條件同E02改為charSessionCount，各角色各自獨立計算。
 ✅ guide頁面社群功能區塊（2026/05/22）：四條主線上方新增「🌐 社群功能」可折疊區塊（探索角色/角色詳細頁/投稿角色）。
 ✅ Onboarding Modal 更新（2026/05/22）：新增「🌐 探索角色」選項，「生成AI角色」改跳 /create，「上傳照片轉影片」改跳 /create?upload=1。
 ✅ create/page.tsx 讀取 ?upload=1 參數（2026/05/22）：頁面載入時偵測 upload=1 自動開啟 Upload Modal。
@@ -584,8 +585,8 @@ ANTHROPIC_API_KEY=sk-ant-你的金鑰
 - public_characters 表已有 gender 欄位（2026/05/22 補），投稿時需帶入
 - Claude API overloaded_error 已有 retry 機制（/api/chat/route.ts），不需再另外處理
 - 其他四個聊天室（非 gallery）的 loadingRef 問題理論上存在但尚未觀察到，低優先
-⚠️ 重要技術備忘（2026/05/24新增）：
-- E02成就(achievement)和E03解鎖(unlock)是兩個獨立機制，同一則newChatCount可能同時觸發（如50則同時是unlock_secret和achievement），需確認不衝突
+⚠️ 重要技術備忘（2026/05/24新增，2026/05/25更新）：
+- E02成就(achievement)和E03解鎖(unlock)是兩個獨立機制，同一則charSessionCount可能同時觸發（如50則同時是unlock_secret和achievement），需確認不衝突。注意：2026/05/25已改為charSessionCount，不再是newChatCount
 - responses型別定義已補isUnlock/unlockLevel欄位，避免TS錯誤
 - app/page.tsx的showPromoCard state和timer為死碼（JSX已移至create/page.tsx），不影響功能但可日後清理
 
@@ -632,6 +633,35 @@ ANTHROPIC_API_KEY=sk-ant-你的金鑰
 
 ✅ 聊天解鎖成就能見度提升（2026/05/25）：GallerySection.tsx 瀑布流卡片底部加「🔓 聊越多解鎖越多」標籤。gallery/[id]/page.tsx 詳細頁 CTA 按鈕下方加解鎖提示區塊。characters/page.tsx B2 選單「互動聊天」按鈕加🔓標籤。/chat/[characterId] 每日提示框加解鎖說明。guide/page.tsx 線B「開始聊天」加解鎖說明。
 ✅ 使用指南聲音克隆說明（2026/05/25）：guide/page.tsx 線A「加語音/說話影片」、線B「讓角色說話」、線C「說話影片」均加入聲音克隆說明文字。whyDifferent.ts 新增第11條聲音克隆差異化說明。
+✅ E02/E03 觸發條件修正（2026/05/25）：/api/chat/route.ts 新增 charSessionCount，查 chat_messages 表該角色在此 session 的 assistant 訊息數。E02 achievement 和 E03 unlockType 均改用 charSessionCount 判斷，取代原本的全站累計 newChatCount。查詢在 chat_messages.insert 之後執行，包含本次剛插入的訊息。只對 characterList[0] 觸發，群組聊天行為不變。newChatCount 保留供 remainingQuota 計算使用。
+✅ E05 生日/紀念日系統（2026/05/25）：
+- DB：profiles.birthday（TEXT，格式 MM-DD）已建立
+- 設定入口：每日簽到頁（/checkin），選填，儲存後永久保存
+- 觸發時機：進入聊天室時即時判斷（useEffect on mount），刻意不用 Vercel Cron（即時判斷更簡單且不需排程，用戶進入聊天室才有意義）
+- 防重複 localStorage key 格式（各聊天室各自觸發）：
+  - 單人自創：`birthday_msg_${email}_${characterId}_${today}`
+  - 群組自創：`birthday_msg_${email}_group_${today}`
+  - gallery：`birthday_msg_${email}_gallery_${galleryId}_${today}`
+  - 預設單人：`birthday_msg_${email}_default_${characterId}_${today}`
+  - 預設群組：`birthday_msg_${email}_default_group_${today}`
+  - 紀念日：`anniversary_msg_${email}_${characterId}_${today}`
+- 生日圖片：自創角色單人/群組才生圖，Flux Kontext Pro 鎖臉，免費不扣點，生成後上傳 Supabase Storage 換永久 URL
+- 群組自創生日：在「開始聊天」按鈕 onClick 觸發（不在 useEffect，因 useEffect 執行時 selectedIds 還是空陣列）。所有角色逐一送祝福（間隔1.5秒），聊最多的角色附圖（/api/chat/most-active 查詢），fallback 隨機
+- 紀念日：只在自創單人聊天室觸發，查 chat_sessions.created_at 最早一筆同月同日，純文字，生日和紀念日同天各自獨立觸發
+- gallery/default 聊天室：純文字生日訊息，不生圖，用 /api/chat/birthday-text
+- 新增 API：
+  - /api/user/birthday（GET 讀取/POST 更新 profiles.birthday，POST 有格式驗證 MM-DD）
+  - /api/chat/birthday（POST，查 saved_characters 生文字+Flux Kontext Pro 生圖，只適用自創角色）
+  - /api/chat/birthday-text（POST，純文字，不查 DB，適用 gallery/default 聊天室）
+  - /api/chat/anniversary（GET，查 chat_sessions 最早建立日回傳 firstChatMMDD）
+  - /api/chat/most-active（GET，查 chat_messages group by character_id 回傳最多的 characterId，只做 SELECT）
+✅ characters 頁面 UI 調整（2026/05/25）：角色卡片底色改全黑（bg-black）、卡片底部加「🔓 聊越多解鎖越多」小字、B2 選單底色改全黑（bg-black）、B2 選單拿掉互動聊天按鈕旁邊🔓標籤、B2 選單刪除角色按鈕下方加解鎖說明區塊（50/100/200/500則說明文字）。
+
+⚠️ 重要技術備忘（2026/05/25新增）：
+- /api/chat/birthday 只適用自創角色（查 saved_characters 表），gallery/default 聊天室必須用 /api/chat/birthday-text，否則找不到角色回 404
+- 群組自創生日在「開始聊天」按鈕 onClick 觸發，不能放在 useEffect，因為 useEffect 執行時 selectedIds 還是空陣列
+- /api/chat/most-active 只做 SELECT 不寫入，查詢快不影響體驗
+- profiles.birthday 格式嚴格為 MM-DD，API 有正則驗證（/^\d{2}-\d{2}$/），前端輸入時需補零
 
 ## 留存與付費轉換（E系列）
 → 規劃詳見 DNA_ROADMAP.md E 系列章節
