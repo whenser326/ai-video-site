@@ -63,7 +63,8 @@ export async function POST(req: Request) {
     await supabase
       .from("profiles")
       .update({ credits: profile.credits - 1 })
-      .eq("email", userEmail);
+      .eq("email", userEmail)
+      .gt("credits", 0);
 
     return NextResponse.json({ output: imageUrl });
 

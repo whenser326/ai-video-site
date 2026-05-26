@@ -479,13 +479,39 @@ const [writingStyle, setWritingStyle] = useState("直白");
               return [...prev, newMsg];
             });
           }
-          // 群組自拍：從有意圖的角色中隨機選一個
+          // 群組自拍：先觸發第一個，3-10秒後隨機讓部分剩餘角色跟拍
           if (selfieQueue.length > 0) {
-            const chosen = selfieQueue[Math.floor(Math.random() * selfieQueue.length)];
-            const delay = selfieDelay();
-setTimeout(() => {
-  triggerSelfie(chosen.intent, chosen.prompt, chosen.msgId, chosen.charImgUrl);
-}, delay);
+            // 隨機打亂順序
+            const shuffled = [...selfieQueue].sort(() => Math.random() - 0.5);
+            const first = shuffled[0];
+            const rest = shuffled.slice(1);
+
+            // 第一個立刻觸發
+            setMessages(prev => {
+              const alreadyGenerating = prev.some(m => m.selfieLoading === true);
+              if (!alreadyGenerating) {
+                triggerSelfie(first.intent, first.prompt, first.msgId, first.charImgUrl);
+              }
+              return prev;
+            });
+
+            // 剩餘角色：隨機決定幾個跟拍（1 到 rest.length，不強制全部）
+            if (rest.length > 0) {
+              const followCount = Math.floor(Math.random() * rest.length) + 1;
+              const followers = rest.slice(0, followCount);
+              followers.forEach((f, idx) => {
+                const delay = Math.floor(Math.random() * 7000) + 3000 + idx * 1000;
+                setTimeout(() => {
+                  setMessages(prev => {
+                    const alreadyGenerating = prev.some(m => m.selfieLoading === true);
+                    if (!alreadyGenerating) {
+                      triggerSelfie(f.intent, f.prompt, f.msgId, f.charImgUrl);
+                    }
+                    return prev;
+                  });
+                }, delay);
+              });
+            }
           }
           // E04：免費用戶升級提示
           if (plan === "free") {
@@ -645,13 +671,32 @@ setTimeout(() => {
                 });
                 const data = await res.json();
                 if (data.text) {
+                  const msgId = `msg-${Date.now()}-${Math.random().toString(36).slice(2)}`;
                   setMessages(prev => [...prev, {
-                    id: `msg-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+                    id: msgId,
                     role: "assistant",
                     content: data.text,
                     characterName: data.characterName,
-                    imageUrl: data.imageUrl || undefined,
+                    imageUrl: undefined,
                   }]);
+
+                  // 前端輪詢生日圖片
+                  if (data.predictionId) {
+                    const predId = data.predictionId;
+                    const charIdForPoll = selectedIds[i];
+                    const poll = async () => {
+                      const pollRes = await fetch(`/api/chat/birthday/poll?id=${predId}&characterId=${charIdForPoll}`);
+                      const pollData = await pollRes.json();
+                      if (pollData.status === "succeeded" && pollData.imageUrl) {
+                        setMessages(prev => prev.map(m =>
+                          m.id === msgId ? { ...m, imageUrl: pollData.imageUrl } : m
+                        ));
+                      } else if (pollData.status !== "failed") {
+                        setTimeout(poll, 3000);
+                      }
+                    };
+                    setTimeout(poll, 3000);
+                  }
                 }
                 if (i < selectedIds.length - 1) {
                   await new Promise(r => setTimeout(r, 1500));
@@ -820,8 +865,10 @@ setTimeout(() => {
                 </div>
 
                 {msg.selfieLoading && (
-                  <div className="px-4 py-2 rounded-2xl bg-black/20 border border-[#89f5a2]/15 text-[#89f5a2]/60 text-xs">
-                    {msg.selfieType === "photo" ? "📸 生成中，扣1點..." : "🎬 影片生成中，扣4-6點..\n請耐心等候，不要關閉視窗！"}
+                  <div className="px-4 py-2 rounded-2xl bg-black/20 border border-[#89f5a2]/15 text-[#89f5a2]/60 text-xs whitespace-pre-line">
+                    {msg.selfieType === "photo"
+                      ? "📸 圖片生成上傳中，扣1點\n⚠️ 請勿關閉視窗！"
+                      : "🎬 影片生成中，扣4-6點\n⚠️ 請耐心等候，請勿關閉視窗！"}
                   </div>
                 )}
 

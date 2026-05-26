@@ -153,41 +153,76 @@ async function maybeGenerateSummary(sessionId: string) {
   }
 }
 
-// 偵測自拍意圖 + 從對話組場景 prompt
+// 偵測自拍意圖（同步，純關鍵字）
 function detectSelfieIntent(
+  message: string,
+  aiReply: string,
+): "photo" | "video" | null {
+  const photoKeywords = ["拍照", "自拍", "拍張", "傳照片", "照片給我", "看看你", "看看妳", "拍一張", "傳圖", "傳個圖", "照片", "你要自拍", "給我看看", "讓我看看", "傳一張", "拍一下", "傳給我看", "給我看", "自拍給我"];
+  const videoKeywords = ["錄影", "錄一段", "拍影片", "傳影片", "影片給我", "錄個", "錄段"];
+  const combinedText = message + aiReply;
+  if (videoKeywords.some(k => combinedText.includes(k))) return "video";
+  if (photoKeywords.some(k => combinedText.includes(k))) return "photo";
+  return null;
+}
+
+// Claude 生成具體自拍 prompt（async）
+async function buildSelfiePrompt(
   message: string,
   aiReply: string,
   characterName: string,
   characterDesc: string,
-  characterImageUrl: string,
   history: any[]
-): { intent: "photo" | "video" | null; selfiePrompt: string | null; characterImageUrl: string } {
-  const photoKeywords = ["拍照", "自拍", "拍張", "傳照片", "照片給我", "看看你", "看看妳", "拍一張", "傳圖", "傳個圖", "照片", "你要自拍", "給我看看", "讓我看看", "傳一張", "拍一下", "傳給我看", "給我看", "自拍給我"];
-  const videoKeywords = ["錄影", "錄一段", "拍影片", "傳影片", "影片給我", "錄個", "錄段"];
+): Promise<string> {
+  const recentHistory = history.slice(-10)
+    .map((m: any) => `${m.role === "user" ? "用戶" : characterName}：${m.content}`)
+    .join("\n");
 
-  const combinedText = message + aiReply;
+  const contextBlock = recentHistory
+    ? `最近對話內容：\n${recentHistory}\n\n用戶這則：${message}\n角色回覆：${aiReply}`
+    : `用戶：${message}\n角色：${aiReply}`;
 
-  let intent: "photo" | "video" | null = null;
-  if (videoKeywords.some(k => combinedText.includes(k))) {
-    intent = "video";
-  } else if (photoKeywords.some(k => combinedText.includes(k))) {
-    intent = "photo";
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": process.env.ANTHROPIC_API_KEY!,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5",
+        max_tokens: 120,
+        system: `你是圖像生成 prompt 專家。根據對話內容推斷角色此刻的狀態，輸出一段英文 image prompt。
+
+格式必須嚴格按照：
+wearing [具體衣物描述], [具體行為/姿勢], [具體場景背景], [光線/時間氛圍], selfie photo, high quality, realistic
+
+規則：
+- wearing 後面必須是具體衣物，例如 white linen blouse and light blue jeans、red floral sundress、oversized grey hoodie
+- 行為/姿勢要具體，例如 leaning against wall、sitting cross-legged on bed、holding a coffee cup、stretching arms overhead
+- 場景要具體，例如 cozy bedroom with warm lamp light、sunlit cafe with wooden furniture、rooftop at golden hour
+- 光線要具體，例如 soft morning light、warm evening glow、cool blue daylight
+- 只輸出 prompt 本身，不要加任何說明或前言`,
+        messages: [
+          {
+            role: "user",
+            content: `角色名稱：${characterName}\n角色個性：${characterDesc || "普通人"}\n\n${contextBlock}\n\n請根據以上對話推斷角色拍自拍時的狀態，輸出 prompt。`,
+          },
+        ],
+      }),
+    });
+    const data = await res.json();
+    const prompt = data.content?.[0]?.text?.trim() || "";
+    if (prompt) return `${characterDesc || "attractive person"}, ${prompt}`;
+  } catch {
+    // fallback
   }
 
-  if (!intent) return { intent: null, selfiePrompt: null, characterImageUrl };
-
-  // 優先從當前訊息抓場景，找不到才從歷史抓
-  const currentScene = extractSceneFromMessage(combinedText);
-  const currentMood = extractMoodFromMessage(combinedText);
-  const historyContext = extractSceneFromHistory(history);
-
-  const scenePart = currentScene || (historyContext ? historyContext : "casual indoor setting, natural lighting");
-  const moodPart = currentMood || "natural expression, relaxed";
-  const desc = characterDesc || "attractive person";
-
-  const selfiePrompt = `${desc}, ${moodPart}, selfie photo, ${scenePart}, high quality, realistic`;
-
-  return { intent, selfiePrompt, characterImageUrl };
+  // Claude 失敗時的 fallback
+  const scene = extractSceneFromMessage(message + aiReply) || "casual indoor setting, natural lighting";
+  const mood = extractMoodFromMessage(message + aiReply) || "natural expression, relaxed";
+  return `${characterDesc || "attractive person"}, ${mood}, ${scene}, selfie photo, high quality, realistic`;
 }
 
 export async function POST(req: NextRequest) {
@@ -374,14 +409,11 @@ const charSystem = `${memoryPrefix}你扮演「${char.name}」。${personality} 
     const reply = claudeData.content?.[0]?.text || "⚠️ 目前系統有點忙，請再說一次";
 
     // 同時傳入 AI 回應內容，讓場景更準確
-    const { intent, selfiePrompt, characterImageUrl } = detectSelfieIntent(
-      message,
-      reply,
-      char.name,
-      char.description || "",
-      char.image_url || "",
-      history
-    );
+    const intent = detectSelfieIntent(message, reply);
+    const characterImageUrl = char.image_url || "";
+    const selfiePrompt = intent
+      ? await buildSelfiePrompt(message, reply, char.name, char.description || "", history)
+      : null;
 
     return {
       characterId: char.id,

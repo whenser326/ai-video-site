@@ -39,12 +39,15 @@ export async function POST(req: NextRequest) {
   const claudeData = await claudeRes.json();
   const text = claudeData.content?.[0]?.text || "";
 
-  // 生日才生圖（自創角色限定，此 API 只被自創角色聊天室呼叫）
-  let imageUrl: string | null = null;
+  // 生日才生圖（前端輪詢模式，立刻回傳 predictionId）
+  let predictionId: string | null = null;
   if (generateImage && char.image_url) {
-    const selfiePrompt = `${char.description || "attractive person"}, birthday celebration, holding flowers, warm candlelight, confetti, gentle smile, selfie photo, high quality, realistic`;
+    const birthdayVariants = [
+      `${char.description || "attractive person"}, birthday celebration, holding a small birthday cake with candles, confetti falling, joyful expression, selfie photo, high quality, realistic`,
+      `${char.description || "attractive person"}, birthday celebration, holding a birthday cake, colorful balloons, confetti falling, joyful expression, selfie photo, high quality, realistic`,
+    ];
+    const selfiePrompt = birthdayVariants[Math.floor(Math.random() * birthdayVariants.length)];
 
-    // 呼叫 Replicate flux-kontext-pro
     const repRes = await fetch("https://api.replicate.com/v1/models/black-forest-labs/flux-kontext-pro/predictions", {
       method: "POST",
       headers: {
@@ -61,39 +64,12 @@ export async function POST(req: NextRequest) {
       }),
     });
     const repData = await repRes.json();
-    const predId = repData.id;
-
-    // Polling（最多 30 次 × 3 秒）
-    if (predId) {
-      for (let i = 0; i < 30; i++) {
-        await new Promise(r => setTimeout(r, 3000));
-        const poll = await fetch(`https://api.replicate.com/v1/predictions/${predId}`, {
-          headers: { "Authorization": `Token ${process.env.REPLICATE_API_TOKEN}` },
-        });
-        const pollData = await poll.json();
-        if (pollData.status === "succeeded") {
-          const raw = Array.isArray(pollData.output) ? pollData.output[0] : pollData.output;
-          // 上傳到 Supabase Storage 換永久 URL
-          const imgRes = await fetch(raw);
-          const imgBuffer = await imgRes.arrayBuffer();
-          const fileName = `birthday_${char.id}_${Date.now()}.jpg`;
-          await supabase.storage
-            .from("character-images")
-            .upload(fileName, imgBuffer, { contentType: "image/jpeg", upsert: true });
-          const { data: urlData } = supabase.storage
-            .from("character-images")
-            .getPublicUrl(fileName);
-          imageUrl = urlData.publicUrl;
-          break;
-        }
-        if (pollData.status === "failed") break;
-      }
-    }
+    predictionId = repData.id || null;
   }
 
   return NextResponse.json({
     text,
     characterName: char.name,
-    imageUrl,
+    predictionId, // 前端拿這個去輪詢
   });
 }

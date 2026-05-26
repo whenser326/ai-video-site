@@ -38,6 +38,19 @@ const appearanceDesc = body.appearance ? `${body.appearance}, ` : "";
     "fair skin with warm undertone", "medium caramel skin",
     "peachy fair skin", "warm ivory skin",
   ];
+  const makeupStyles = [
+    "no makeup, natural bare face",
+    "light natural makeup",
+    "everyday casual makeup",
+    "bold glam makeup",
+  ];
+  const ethnicFeatures = [
+    "East Asian features",
+    "Southeast Asian features",
+    "South Asian features",
+    "Latina features",
+    "mixed heritage features",
+  ];
   const lightingStyles = [
     "soft natural window light", "golden hour sunlight", "studio rim lighting",
     "overcast outdoor light", "warm cafe lighting", "cool blue morning light",
@@ -46,7 +59,10 @@ const appearanceDesc = body.appearance ? `${body.appearance}, ` : "";
   const randomFeature = diversifiers[Math.floor(Math.random() * diversifiers.length)];
   const randomHair = hairStyles[Math.floor(Math.random() * hairStyles.length)];
   const randomFace = faceTypes[Math.floor(Math.random() * faceTypes.length)];
-  const randomSkin = skinTones[Math.floor(Math.random() * skinTones.length)];
+  const rawSkin = skinTones[Math.floor(Math.random() * skinTones.length)];
+  const randomSkin = Math.random() < 0.2 ? `${rawSkin}, light freckles across nose and cheeks` : rawSkin;
+  const randomMakeup = makeupStyles[Math.floor(Math.random() * makeupStyles.length)];
+  const randomEthnic = ethnicFeatures[Math.floor(Math.random() * ethnicFeatures.length)];
   const randomLighting = lightingStyles[Math.floor(Math.random() * lightingStyles.length)];
   const cameraAngles = [
     "front facing", "slight left turn", "slight right turn",
@@ -73,7 +89,7 @@ const appearanceDesc = body.appearance ? `${body.appearance}, ` : "";
   const prediction = await replicate.predictions.create({
     model: "black-forest-labs/flux-1.1-pro",
     input: {
-      prompt: `${ageHint}${appearanceDesc}${randomHair}, ${randomFace}, ${randomSkin}, ${randomFeature}, ${randomAngle}, ${body.prompt ? body.prompt + ", " : ""}${randomLighting}, photorealistic, real person, 8k, professional photography, highly distinctive unique facial features, unique individual appearance`,
+      prompt: `${ageHint}${appearanceDesc}${randomEthnic}, ${randomHair}, ${randomFace}, ${randomSkin}, ${randomMakeup}, ${randomFeature}, ${randomAngle}, ${body.prompt ? body.prompt + ", " : ""}${randomLighting}, photorealistic, real person, 8k, professional photography, highly distinctive unique facial features, unique individual appearance`,
       aspect_ratio: "2:3",
       output_format: "png",
       seed: seed,

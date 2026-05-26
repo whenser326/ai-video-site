@@ -655,6 +655,10 @@ ANTHROPIC_API_KEY=sk-ant-你的金鑰
   - /api/chat/birthday-text（POST，純文字，不查 DB，適用 gallery/default 聊天室）
   - /api/chat/anniversary（GET，查 chat_sessions 最早建立日回傳 firstChatMMDD）
   - /api/chat/most-active（GET，查 chat_messages group by character_id 回傳最多的 characterId，只做 SELECT）
+✅ 生日圖前端輪詢重構（本視窗）：/api/chat/birthday/route.ts 改為啟動生圖後立刻回傳 predictionId，不再後端等待（舊邏輯 30次×3秒=90秒超過 Vercel 60秒 timeout）。新增 /api/chat/birthday/poll/route.ts 供前端每3秒輪詢，succeeded 後上傳 Supabase Storage 換永久 URL 再回傳 imageUrl，前端用 msgId 定位訊息更新圖片。單人（/chat/[characterId]）和群組（/chat/group）均已更新。
+✅ 生日圖 prompt 隨機化（本視窗）：A款（holding a small birthday cake with candles + confetti）和 D款（holding a birthday cake + colorful balloons + confetti）各50%隨機，移除舊有 holding flowers / candlelight。
+✅ 後台產圖 prompt 多樣化（本視窗）：generate-image/route.ts 新增 makeupStyles（4種）、ethnicFeatures（5種）、雀斑20%機率，均已注入 prompt。
+✅ 自拍冷卻機制（本視窗）：單人（/chat/[characterId]）和群組（/chat/group）自拍觸發前檢查 messages 是否有 selfieLoading:true，有則跳過，防止並行重複觸發。
 ✅ characters 頁面 UI 調整（2026/05/25）：角色卡片底色改全黑（bg-black）、卡片底部加「🔓 聊越多解鎖越多」小字、B2 選單底色改全黑（bg-black）、B2 選單拿掉互動聊天按鈕旁邊🔓標籤、B2 選單刪除角色按鈕下方加解鎖說明區塊（50/100/200/500則說明文字）。
 
 ⚠️ 重要技術備忘（2026/05/25新增）：
@@ -662,6 +666,8 @@ ANTHROPIC_API_KEY=sk-ant-你的金鑰
 - 群組自創生日在「開始聊天」按鈕 onClick 觸發，不能放在 useEffect，因為 useEffect 執行時 selectedIds 還是空陣列
 - /api/chat/most-active 只做 SELECT 不寫入，查詢快不影響體驗
 - profiles.birthday 格式嚴格為 MM-DD，API 有正則驗證（/^\d{2}-\d{2}$/），前端輸入時需補零
+✅ 自拍照片/影片永久化修復（2026/05/25）：單人自建（/chat/[characterId]/page.tsx）和群組自建（/chat/group/page.tsx）的 triggerSelfie，照片生成後、存入歷史前，新增呼叫 /api/upload-image 上傳 Supabase Storage 換永久 URL（permanentImageUrl/permanentVideoUrl）。影片同樣在 polling succeeded 後上傳永久化。catch 有 fallback 用原始 URL，不影響主流程。修復前存入的是 Replicate/Kling 臨時 URL，約 24 小時後失效導致相簿圖片變問號。
+✅ characters 頁面群組聊天區塊改全黑（2026/05/25）：bg-black/20 改 bg-black。
 
 ## 留存與付費轉換（E系列）
 → 規劃詳見 DNA_ROADMAP.md E 系列章節

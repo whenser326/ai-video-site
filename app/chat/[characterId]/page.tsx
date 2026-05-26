@@ -190,8 +190,25 @@ const [showUpgradeModal, setShowUpgradeModal] = useState(false);
                 role: "assistant",
                 content: data.text,
                 characterName: data.characterName,
-                imageUrl: data.imageUrl || undefined,
+                imageUrl: undefined,
               }]);
+
+              // 前端輪詢生日圖片
+              if (data.predictionId) {
+                const predId = data.predictionId;
+                const poll = async () => {
+                  const pollRes = await fetch(`/api/chat/birthday/poll?id=${predId}&characterId=${characterId}`);
+                  const pollData = await pollRes.json();
+                  if (pollData.status === "succeeded" && pollData.imageUrl) {
+                    setMessages(prev => prev.map(m =>
+                      m.id === msgId ? { ...m, imageUrl: pollData.imageUrl } : m
+                    ));
+                  } else if (pollData.status !== "failed") {
+                    setTimeout(poll, 3000);
+                  }
+                };
+                setTimeout(poll, 3000);
+              }
             }
 
             // 標記已觸發
@@ -481,7 +498,10 @@ const [showUpgradeModal, setShowUpgradeModal] = useState(false);
           setMessages(prev => {
             const updated = [...prev, newMsg];
             if (r.selfieIntent && r.selfiePrompt) {
-  setTimeout(() => triggerSelfie(r.selfieIntent, r.selfiePrompt, msgId, r.characterImageUrl), selfieDelay());
+              const alreadyGenerating = updated.some(m => m.selfieLoading === true);
+              if (!alreadyGenerating) {
+                triggerSelfie(r.selfieIntent as "photo" | "video", r.selfiePrompt, msgId, r.characterImageUrl);
+              }
             }
             return updated;
           });
@@ -760,8 +780,10 @@ const [showUpgradeModal, setShowUpgradeModal] = useState(false);
                 </div>
 
                 {msg.selfieLoading && (
-                  <div className="px-4 py-2 rounded-2xl bg-black/20 border border-[#89f5a2]/15 text-[#89f5a2]/60 text-xs">
-                    {msg.selfieType === "photo" ? "📸 生成中，扣1點..." : "🎬 影片生成中，扣4-6點..\n請耐心等候，不要關閉視窗！"}
+                  <div className="px-4 py-2 rounded-2xl bg-black/20 border border-[#89f5a2]/15 text-[#89f5a2]/60 text-xs whitespace-pre-line">
+                    {msg.selfieType === "photo"
+                      ? "📸 圖片生成上傳中，扣1點\n⚠️ 請勿關閉視窗！"
+                      : "🎬 影片生成中，扣4-6點\n⚠️ 請耐心等候，請勿關閉視窗！"}
                   </div>
                 )}
 
