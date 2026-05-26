@@ -364,7 +364,7 @@ const [searchOpen, setSearchOpen] = useState(false);
       {/* 訊息區 */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-black overscroll-contain">
         {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full space-y-3 py-16">
+          <div className="flex flex-col items-center justify-center space-y-3 py-16">
             <div className="w-20 h-20 rounded-full flex items-center justify-center text-5xl bg-white/5 border border-white/10">
               {emoji}
             </div>

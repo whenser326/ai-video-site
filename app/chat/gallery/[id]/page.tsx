@@ -508,7 +508,7 @@ const [galleryWorksSaved, setGalleryWorksSaved] = useState<Set<string>>(new Set(
   );
 
   return (
-    <main className="flex h-screen flex-col bg-gradient-to-br from-[#0d2318] via-[#1a3a25] to-[#2d5a3d] overflow-hidden">
+    <main className="flex flex-col bg-gradient-to-br from-[#0d2318] via-[#1a3a25] to-[#2d5a3d] overflow-hidden" style={{ height: "100dvh" }}>
       {/* 頂部 */}
       <div className="relative flex-shrink-0 overflow-hidden border-b border-white/8" style={{ minHeight: 80 }}>
         {/* 角色圖：右側半透明背景 */}
@@ -610,7 +610,7 @@ const [galleryWorksSaved, setGalleryWorksSaved] = useState<Set<string>>(new Set(
       {/* 訊息區 */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-[#0a0a0a] overscroll-contain">
         {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full space-y-3 py-16">
+          <div className="flex flex-col items-center justify-center space-y-3 py-16">
             <div className="w-20 h-20 rounded-full overflow-hidden bg-white/5 border border-white/10 flex-shrink-0">
               {character.image_url
                 ? <img src={character.image_url} alt={character.name} className="w-full h-full object-cover" />
