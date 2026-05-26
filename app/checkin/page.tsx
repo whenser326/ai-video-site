@@ -259,54 +259,63 @@ export default function CheckinPage() {
           <div>
             <p className="text-white font-black text-sm">🎂 設定你的生日</p>
             <p className="text-white/30 text-xs mt-1">填寫後，生日當天角色會送你驚喜！（選填）</p>
+            {!birthday && (
+              <p className="text-yellow-400/80 text-xs mt-2 font-bold">⚠️ 注意！請勿隨意填寫！生日只能設定一次，設定後無法修改。</p>
+            )}
           </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 flex-1">
-              <input
-                type="number"
-                min={1}
-                max={12}
-                placeholder="月 MM"
-                value={birthdayMonth}
-                onChange={e => setBirthdayMonth(e.target.value.padStart(2, "0").slice(-2))}
-                className="w-full px-3 py-2 bg-black/30 border border-white/10 rounded-xl text-white text-sm text-center focus:outline-none focus:border-[#89f5a2]/40 placeholder-white/20"
-              />
-              <span className="text-white/30 text-sm">月</span>
+          {birthday ? (
+            <div className="space-y-2">
+              <p className="text-white/50 text-sm">🎂 已設定：{birthday.replace("-", " 月 ")} 日</p>
+              <p className="text-white/25 text-xs">生日設定後無法修改，如有問題請聯絡客服。</p>
             </div>
-            <div className="flex items-center gap-1.5 flex-1">
-              <input
-                type="number"
-                min={1}
-                max={31}
-                placeholder="日 DD"
-                value={birthdayDay}
-                onChange={e => setBirthdayDay(e.target.value.padStart(2, "0").slice(-2))}
-                className="w-full px-3 py-2 bg-black/30 border border-white/10 rounded-xl text-white text-sm text-center focus:outline-none focus:border-[#89f5a2]/40 placeholder-white/20"
-              />
-              <span className="text-white/30 text-sm">日</span>
+          ) : (
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 flex-1">
+                <input
+                  type="number"
+                  min={1}
+                  max={12}
+                  placeholder="月 MM"
+                  value={birthdayMonth}
+                  onChange={e => setBirthdayMonth(e.target.value.padStart(2, "0").slice(-2))}
+                  className="w-full px-3 py-2 bg-black/30 border border-white/10 rounded-xl text-white text-sm text-center focus:outline-none focus:border-[#89f5a2]/40 placeholder-white/20"
+                />
+                <span className="text-white/30 text-sm">月</span>
+              </div>
+              <div className="flex items-center gap-1.5 flex-1">
+                <input
+                  type="number"
+                  min={1}
+                  max={31}
+                  placeholder="日 DD"
+                  value={birthdayDay}
+                  onChange={e => setBirthdayDay(e.target.value.padStart(2, "0").slice(-2))}
+                  className="w-full px-3 py-2 bg-black/30 border border-white/10 rounded-xl text-white text-sm text-center focus:outline-none focus:border-[#89f5a2]/40 placeholder-white/20"
+                />
+                <span className="text-white/30 text-sm">日</span>
+              </div>
+              <button
+                onClick={async () => {
+                  if (!session?.user?.email) return;
+                  if (birthday) return; // 已設定則拒絕
+                  const mm = birthdayMonth.padStart(2, "0");
+                  const dd = birthdayDay.padStart(2, "0");
+                  if (!mm || !dd) return;
+                  const val = `${mm}-${dd}`;
+                  await fetch("/api/user/birthday", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email: session.user.email, birthday: val }),
+                  });
+                  setBirthday(val);
+                  setBirthdaySaved(true);
+                  setTimeout(() => setBirthdaySaved(false), 2000);
+                }}
+                className="px-4 py-2 bg-[#89f5a2]/15 border border-[#89f5a2]/30 text-[#89f5a2] rounded-xl text-xs font-black hover:bg-[#89f5a2]/25 transition-all whitespace-nowrap"
+              >
+                {birthdaySaved ? "✅ 已儲存" : "儲存"}
+              </button>
             </div>
-            <button
-              onClick={async () => {
-                if (!session?.user?.email) return;
-                const mm = birthdayMonth.padStart(2, "0");
-                const dd = birthdayDay.padStart(2, "0");
-                const val = (mm && dd) ? `${mm}-${dd}` : "";
-                await fetch("/api/user/birthday", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ email: session.user.email, birthday: val }),
-                });
-                setBirthday(val);
-                setBirthdaySaved(true);
-                setTimeout(() => setBirthdaySaved(false), 2000);
-              }}
-              className="px-4 py-2 bg-[#89f5a2]/15 border border-[#89f5a2]/30 text-[#89f5a2] rounded-xl text-xs font-black hover:bg-[#89f5a2]/25 transition-all whitespace-nowrap"
-            >
-              {birthdaySaved ? "✅ 已儲存" : "儲存"}
-            </button>
-          </div>
-          {birthday && (
-            <p className="text-white/25 text-[10px]">目前設定：{birthday.replace("-", " 月 ")} 日</p>
           )}
         </div>
 
