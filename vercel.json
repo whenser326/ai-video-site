@@ -3,5 +3,11 @@
     "app/api/character/route.ts": {
       "maxDuration": 60
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/cleanup-gallery-works",
+      "schedule": "0 19 * * *"
+    }
+  ]
 }

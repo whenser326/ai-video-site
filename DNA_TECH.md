@@ -400,7 +400,7 @@ wav2lip/route.ts 仍在使用中（TtsModal.tsx 依賴），不可刪除，待�
 TtsModal 新增 mediaUrl prop，優先用 mediaUrl，沒有才用 prediction?.output
 聊天室 triggerSelfie 呼叫 /api/generate-image 必須帶 userEmail 參數，否則 output 回傳空物件 {}
 聊天室 triggerSelfie 的 selfieIntent 型別必須用 `r.selfieIntent === "photo" || r.selfieIntent === "video"` 做判斷，再 as "photo" | "video" 轉型，才能正確呼叫 triggerSelfie
-/api/chat/route.ts 的自拍偵測改為關鍵字比對（detectSelfieIntent 為同步函式），不再呼叫 Claude API，避免 timeout
+✅ 自拍偵測 detectSelfieIntent 已升級為 Claude 推斷（見本視窗記錄），舊關鍵字純比對邏輯已棄用
 群組聊天多角色 Claude 呼叫改為 Promise.all 並行，大幅降低 timeout 風險
 Vercel 已升級為 Pro 方案（$20 USD/月，timeout 60 秒）（2026/05/05）
 ANTHROPIC_API_KEY 必須在 Vercel Environment Variables 設定，否則聊天 API 回傳「（無回應）」
@@ -655,9 +655,18 @@ ANTHROPIC_API_KEY=sk-ant-你的金鑰
   - /api/chat/birthday-text（POST，純文字，不查 DB，適用 gallery/default 聊天室）
   - /api/chat/anniversary（GET，查 chat_sessions 最早建立日回傳 firstChatMMDD）
   - /api/chat/most-active（GET，查 chat_messages group by character_id 回傳最多的 characterId，只做 SELECT）
-✅ 生日圖前端輪詢重構（本視窗）：/api/chat/birthday/route.ts 改為啟動生圖後立刻回傳 predictionId，不再後端等待（舊邏輯 30次×3秒=90秒超過 Vercel 60秒 timeout）。新增 /api/chat/birthday/poll/route.ts 供前端每3秒輪詢，succeeded 後上傳 Supabase Storage 換永久 URL 再回傳 imageUrl，前端用 msgId 定位訊息更新圖片。單人（/chat/[characterId]）和群組（/chat/group）均已更新。
+✅ 自拍 prompt 升級為 Claude 推斷（本視窗）：detectSelfieIntent 改為純關鍵字同步函式只回傳 intent，新增 async buildSelfiePrompt 函式呼叫 Claude Haiku 從最近10筆對話推斷具體 prompt，格式：wearing [衣物], [行為/姿勢], [場景], [光線], selfie photo, high quality, realistic，加 no phone in hand 防雙手持機。Claude 失敗時 fallback 用舊關鍵字邏輯。單人和群組均已套用（群組透過後端共用）。
+✅ 自拍移除隨機延遲（本視窗）：單人（/chat/[characterId]）和群組（/chat/group）自拍觸發改為立刻執行，不再有 3-10 秒隨機延遲。提示文字統一為「📸 圖片生成上傳中，扣1點\n⚠️ 請勿關閉視窗！」和「🎬 影片生成中，扣4-6點\n⚠️ 請耐心等候，請勿關閉視窗！」。
+✅ 群組自拍接力邏輯（本視窗）：selfieQueue 第一個立刻觸發，剩餘角色隨機選 1 到 N-1 個跟拍，每個間隔 3-10秒 + idx*1000ms 錯開，每次觸發前檢查 selfieLoading 冷卻。
+✅ charSystem 禁止角色名標記（本視窗）：所有聊天室 charSystem 加入「⚠️ 絕對禁止在回覆開頭或任何位置使用【角色名】方括號標記」，解決單人/群組回覆重複出現【角色名】問題。群組另有「只能以自己身份說話，不能代替其他角色發言」禁令。
+✅ replyTo 卡片位置修正（本視窗）：單人和群組聊天室 replyTo 預覽卡片從 flex 橫排內移到輸入區最外層 div 上方獨立顯示，防止擠壓 textarea。
+✅ iOS 捲動衝突修正（本視窗）：五個聊天室訊息區 div 均加入 overscroll-contain，防止手指滑動時捲動事件傳播到外層頁面。
+✅ 生日一次性鎖定（本視窗）：前端 checkin/page.tsx 已有生日時隱藏輸入欄改為純顯示；後端 /api/user/birthday POST 先查是否已有生日，有則回傳 403 拒絕。警告文字「⚠️ 注意！請勿隨意填寫！生日只能設定一次，設定後無法修改。」
+✅ 後台管理員修改生日（本視窗）：新增 /api/admin/set-birthday/route.ts（POST，驗證 adminEmail），/api/admin/members/route.ts select 和 map 補 birthday 欄位，members/page.tsx 加 birthdayModal/birthdayValue/birthdayMsg state、🎂改生日按鈕、Modal。
+✅ 生日圖前端輪詢重構（本視窗）：/api/chat/birthday/route.ts 改為啟動生圖後立刻回傳 predictionId，新增 /api/chat/birthday/poll/route.ts 前端每3秒輪詢，succeeded 後上傳 Supabase Storage 換永久 URL。單人和群組均已更新。
+✅ 生日圖 prompt 隨機化（本視窗）：A款（holding a small birthday cake with candles）和 D款（holding a birthday cake + colorful balloons）各50%隨機。
+✅ 後台產圖 prompt 多樣化（本視窗）：generate-image/route.ts 新增 makeupStyles 4種、ethnicFeatures 5種、雀斑20%機率，注入 prompt。
 ✅ 生日圖 prompt 隨機化（本視窗）：A款（holding a small birthday cake with candles + confetti）和 D款（holding a birthday cake + colorful balloons + confetti）各50%隨機，移除舊有 holding flowers / candlelight。
-✅ 後台產圖 prompt 多樣化（本視窗）：generate-image/route.ts 新增 makeupStyles（4種）、ethnicFeatures（5種）、雀斑20%機率，均已注入 prompt。
 ✅ 自拍冷卻機制（本視窗）：單人（/chat/[characterId]）和群組（/chat/group）自拍觸發前檢查 messages 是否有 selfieLoading:true，有則跳過，防止並行重複觸發。
 ✅ characters 頁面 UI 調整（2026/05/25）：角色卡片底色改全黑（bg-black）、卡片底部加「🔓 聊越多解鎖越多」小字、B2 選單底色改全黑（bg-black）、B2 選單拿掉互動聊天按鈕旁邊🔓標籤、B2 選單刪除角色按鈕下方加解鎖說明區塊（50/100/200/500則說明文字）。
 

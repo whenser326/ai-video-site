@@ -427,10 +427,18 @@ const [showUpgradeModal, setShowUpgradeModal] = useState(false);
         }).catch(() => {});
       }
 
-    } catch {
+    } catch (err: any) {
+      const isBlocked = err?.message?.includes("E005") || err?.message?.includes("content") || err?.message?.includes("policy") || err?.message?.includes("failed");
       setMessages(prev => prev.map(m =>
         m.id === msgId ? { ...m, selfieLoading: false } : m
       ));
+      setMessages(prev => [...prev, {
+        role: "assistant",
+        content: isBlocked
+          ? "⚠️ 此圖片因內容涉及違規或過於露骨，已被系統拒絕，無法生成。"
+          : `⚠️ 自拍生成失敗：${err?.message || "請稍後再試"}`,
+        characterName: character?.name,
+      }]);
     } finally {
       clearInterval(waitTimer);
     }
@@ -797,6 +805,7 @@ const [showUpgradeModal, setShowUpgradeModal] = useState(false);
                     >
                       ⭐ 存入角色相簿
                     </button>
+                    
                     <a href={msg.imageUrl} download className="px-3 py-1.5 rounded-full text-[10px] font-bold bg-white/5 border border-white/15 text-white/50 hover:bg-white/10 transition-all">
                       ⬇ 儲存
                     </a>
@@ -814,6 +823,7 @@ const [showUpgradeModal, setShowUpgradeModal] = useState(false);
                     >
                       ⭐ 存入角色相簿
                     </button>
+                    
                     <a href={msg.videoUrl} download className="px-3 py-1.5 rounded-full text-[10px] font-bold bg-white/5 border border-white/15 text-white/50 hover:bg-white/10 transition-all">
                       ⬇ 儲存
                     </a>

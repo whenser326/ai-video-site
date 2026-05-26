@@ -70,7 +70,27 @@ export default function GallerySection({ userEmail, plan, isLoggedIn, onLoginReq
   const [submitMsg, setSubmitMsg] = useState("");
   const displayCountsRef = useRef<Map<string, { like: number; chat: number }>>(new Map());
   const panelRef = useRef<HTMLDivElement>(null);
-
+  const [galleryWorksMap, setGalleryWorksMap] = useState<Map<string, GalleryWork[]>>(new Map());
+// 批次讀取各角色的公開作品（最新4筆）
+  useEffect(() => {
+    if (items.length === 0) return;
+    const fetchWorks = async () => {
+      const map = new Map<string, GalleryWork[]>();
+      await Promise.all(
+        items.slice(0, 20).map(async item => {
+          try {
+            const res = await fetch(`/api/gallery-works?galleryId=${item.id}`);
+            const data = await res.json();
+            if (Array.isArray(data.works) && data.works.length > 0) {
+              map.set(item.id, data.works.slice(0, 4));
+            }
+          } catch { }
+        })
+      );
+      setGalleryWorksMap(map);
+    };
+    fetchWorks();
+  }, [items]);
   function getDisplayCount(item: GalleryItem): { like: number; chat: number } {
     const map = displayCountsRef.current;
     if (!map.has(item.id)) {
@@ -204,7 +224,7 @@ export default function GallerySection({ userEmail, plan, isLoggedIn, onLoginReq
                 <p className="text-white/30 text-[10px] font-black tracking-widest uppercase mb-3">⭐ 官方精選</p>
                 <div className="columns-2 sm:columns-3 gap-3">
                   {featured.map((item, idx) => (
-                    <GalleryCard key={item.id} item={item} index={idx} isFree={isFree} freeLimit={FREE_LIMIT} onClick={handleCardClick} getCount={getDisplayCount} featured />
+                    <GalleryCard key={item.id} item={item} index={idx} isFree={isFree} freeLimit={FREE_LIMIT} onClick={handleCardClick} getCount={getDisplayCount} featured works={galleryWorksMap.get(item.id) || []} />
                   ))}
                 </div>
               </div>
@@ -215,7 +235,7 @@ export default function GallerySection({ userEmail, plan, isLoggedIn, onLoginReq
                 {featured.length > 0 && <p className="text-white/30 text-[10px] font-black tracking-widest uppercase mb-3">全部角色</p>}
                 <div className="columns-2 sm:columns-3 gap-3">
                   {regular.map((item, idx) => (
-                    <GalleryCard key={item.id} item={item} index={idx + featured.length} isFree={isFree} freeLimit={FREE_LIMIT} onClick={handleCardClick} getCount={getDisplayCount} />
+                    <GalleryCard key={item.id} item={item} index={idx + featured.length} isFree={isFree} freeLimit={FREE_LIMIT} onClick={handleCardClick} getCount={getDisplayCount} works={galleryWorksMap.get(item.id) || []} />
                   ))}
                 </div>
               </div>
@@ -633,7 +653,12 @@ export default function GallerySection({ userEmail, plan, isLoggedIn, onLoginReq
     </div>
   );
 }
-
+interface GalleryWork {
+  id: string;
+  image_url: string | null;
+  video_url: string | null;
+  work_type: "photo" | "video";
+}
 interface GalleryCardProps {
   item: GalleryItem;
   index: number;
@@ -642,9 +667,10 @@ interface GalleryCardProps {
   onClick: (item: GalleryItem, index: number) => void;
   getCount: (item: GalleryItem) => { like: number; chat: number };
   featured?: boolean;
+  works?: GalleryWork[];
 }
 
-function GalleryCard({ item, index, isFree, freeLimit, onClick, getCount, featured = false }: GalleryCardProps) {
+function GalleryCard({ item, index, isFree, freeLimit, onClick, getCount, featured = false, works = [] }: GalleryCardProps) {
   const locked = isFree && index >= freeLimit;
   const counts = getCount(item);
 
@@ -694,6 +720,21 @@ function GalleryCard({ item, index, isFree, freeLimit, onClick, getCount, featur
         <div className="pt-0.5">
           <span className="text-[9px] text-[#89f5a2]/50 border border-[#89f5a2]/20 rounded-full px-1.5 py-0.5">🔓 聊越多解鎖越多</span>
         </div>
+        {works.length > 0 && (
+          <div className="flex gap-1 pt-1 overflow-x-auto">
+            {works.slice(0, 4).map(w => (
+              <div key={w.id} className="flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden border border-white/8 bg-[#1a1a1a] relative">
+                {w.work_type === "video" ? (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <span className="text-white/40 text-sm">▶</span>
+                  </div>
+                ) : w.image_url ? (
+                  <img src={w.image_url} alt="" className="w-full h-full object-cover" />
+                ) : null}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -19,7 +19,15 @@ interface GalleryCharacter {
   is_featured: boolean;
   actual_chat_count: number;
 }
-
+interface GalleryWork {
+  id: string;
+  user_email: string;
+  image_url: string | null;
+  video_url: string | null;
+  work_type: "photo" | "video";
+  expires_at: string | null;
+  created_at: string;
+}
 interface Comment {
   id: string;
   user_email: string;
@@ -58,6 +66,10 @@ export default function GalleryDetailPage() {
   const [commentLoading, setCommentLoading] = useState(false);
   const [commentError, setCommentError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [works, setWorks] = useState<GalleryWork[]>([]);
+  const [worksLoading, setWorksLoading] = useState(true);
+  const [activeWorkIdx, setActiveWorkIdx] = useState(0);
+  const [viewerPlan, setViewerPlan] = useState("free");
 
   // 讀取角色資料
   useEffect(() => {
@@ -74,7 +86,18 @@ export default function GalleryDetailPage() {
       })
       .finally(() => setLoading(false));
   }, [galleryId]);
-
+// 讀取公開作品
+  useEffect(() => {
+    if (!galleryId) return;
+    const email = session?.user?.email ? `&email=${session.user.email}` : "";
+    fetch(`/api/gallery-works?galleryId=${galleryId}${email}`)
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data.works)) setWorks(data.works);
+        if (data.viewerPlan) setViewerPlan(data.viewerPlan);
+      })
+      .finally(() => setWorksLoading(false));
+  }, [galleryId, session]);
   // 讀取留言
   useEffect(() => {
     if (!galleryId) return;
@@ -82,7 +105,34 @@ export default function GalleryDetailPage() {
       .then(r => r.json())
       .then(data => { if (Array.isArray(data.comments)) setComments(data.comments); });
   }, [galleryId]);
+const handleDeleteWork = async (workId: string) => {
+    if (!session?.user?.email) return;
+    if (!confirm("確定要刪除這個作品嗎？")) return;
+    const res = await fetch(`/api/gallery-works?id=${workId}&email=${encodeURIComponent(session.user.email)}`, {
+      method: "DELETE",
+    });
+    if (res.ok) {
+      setWorks(prev => prev.filter(w => w.id !== workId));
+      if (activeWorkIdx >= works.length - 1) setActiveWorkIdx(Math.max(0, works.length - 2));
+    } else {
+      alert("刪除失敗");
+    }
+  };
 
+  const getDaysLeft = (expiresAt: string | null) => {
+    if (!expiresAt) return null;
+    const diff = new Date(expiresAt).getTime() - Date.now();
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
+  };
+
+  const canDelete = (work: GalleryWork) => {
+    const email = session?.user?.email;
+    if (!email) return false;
+    if (email === "whenser@gmail.com") return true;
+    if (viewerPlan === "pro") return true;
+    if ((viewerPlan === "starter" || viewerPlan === "standard") && work.user_email === email) return true;
+    return false;
+  };
   const handleComment = async () => {
     if (!session?.user?.email) { setCommentError("請先登入才能留言"); return; }
     if (!commentInput.trim()) return;
@@ -198,6 +248,108 @@ export default function GalleryDetailPage() {
             🎨 生成同款
           </button>
         </div>
+{/* 公開作品相簿 */}
+        {(worksLoading || works.length > 0) && (
+          <div className="mb-8">
+            <p className="text-white/40 text-xs font-black tracking-widest uppercase mb-3">📸 聊天作品相簿</p>
+            {worksLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="w-5 h-5 rounded-full border-2 border-[#89f5a2]/30 border-t-[#89f5a2] animate-spin" />
+              </div>
+            ) : (
+              <>
+                {/* 主展示區 */}
+                <div className="relative w-full rounded-2xl overflow-hidden mb-3 bg-[#111]" style={{ aspectRatio: "1/1" }}>
+                  {(() => {
+                    const isFree = viewerPlan === "free";
+                    const isLocked = isFree && activeWorkIdx >= 3;
+                    const work = works[activeWorkIdx];
+                    if (!work) return null;
+                    return (
+                      <>
+                        {work.work_type === "video" && work.video_url ? (
+                          <video
+                            key={work.id}
+                            src={work.video_url}
+                            controls
+                            autoPlay
+                            loop
+                            className={`absolute inset-0 w-full h-full object-cover ${isLocked ? "blur-xl" : ""}`}
+                          />
+                        ) : work.image_url ? (
+                          <img
+                            key={work.id}
+                            src={work.image_url}
+                            alt="作品"
+                            className={`absolute inset-0 w-full h-full object-cover ${isLocked ? "blur-xl" : ""}`}
+                          />
+                        ) : null}
+                        {isLocked && (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/60">
+                            <span className="text-3xl">🔒</span>
+                            <p className="text-white/70 text-sm font-black">升級解鎖更多作品</p>
+                            <button
+                              onClick={() => router.push("/pricing")}
+                              className="px-5 py-2 bg-[#89f5a2] text-[#0d2318] rounded-full text-xs font-black hover:opacity-90 transition-all"
+                            >
+                              🚀 立即升級
+                            </button>
+                          </div>
+                        )}
+                        {!isLocked && (
+                          <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
+                            {getDaysLeft(work.expires_at) !== null && (
+                              <span className="text-[10px] bg-orange-500/80 text-white rounded-full px-2 py-0.5 backdrop-blur-sm">
+                                🕐 剩 {getDaysLeft(work.expires_at)} 天
+                              </span>
+                            )}
+                            {canDelete(work) && (
+                              <button
+                                onClick={() => handleDeleteWork(work.id)}
+                                className="text-[10px] bg-red-500/70 text-white rounded-full px-2 py-0.5 backdrop-blur-sm hover:bg-red-500 transition-all"
+                              >
+                                🗑 刪除
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+
+                {/* 縮圖列 */}
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {works.map((work, idx) => {
+                    const isFree = viewerPlan === "free";
+                    const isLocked = isFree && idx >= 3;
+                    return (
+                      <button
+                        key={work.id}
+                        onClick={() => !isLocked && setActiveWorkIdx(idx)}
+                        className={`flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition-all relative ${activeWorkIdx === idx ? "border-[#89f5a2]" : "border-white/10 hover:border-white/30"}`}
+                      >
+                        {work.work_type === "video" ? (
+                          <div className="w-full h-full bg-[#1a1a1a] flex items-center justify-center">
+                            <span className="text-white/50 text-lg">▶</span>
+                          </div>
+                        ) : work.image_url ? (
+                          <img src={work.image_url} alt="" className={`w-full h-full object-cover ${isLocked ? "blur-sm" : ""}`} />
+                        ) : null}
+                        {isLocked && (
+                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                            <span className="text-white/60 text-sm">🔒</span>
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-white/20 text-[10px] mt-2 text-center">聊天中生成的作品・點「💾 存至公開相簿」即可上傳</p>
+              </>
+            )}
+          </div>
+        )}
 {/* 解鎖提示 */}
         <div className="mb-8 px-4 py-3 bg-[#89f5a2]/5 border border-[#89f5a2]/15 rounded-2xl flex items-center gap-3">
           <span className="text-xl flex-shrink-0">🔓</span>

@@ -4,10 +4,15 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 
 interface Message {
+  id?: string;
   role: "user" | "assistant";
   content: string;
   characterName?: string;
   mediaUrl?: string;
+  imageUrl?: string;
+  videoUrl?: string;
+  selfieLoading?: boolean;
+  selfieType?: "photo" | "video";
   isUnlock?: boolean;
   unlockLevel?: string;
 }
@@ -51,6 +56,7 @@ export default function GalleryChatPage() {
   const [isTyping, setIsTyping] = useState(false);
   const [plan, setPlan] = useState("free");
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [credits, setCredits] = useState<number | null>(null);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const autoMessageTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -58,6 +64,187 @@ export default function GalleryChatPage() {
   const messageRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const randomDelay = () => Math.floor(Math.random() * 3000) + 2000;
+const [galleryWorksSaved, setGalleryWorksSaved] = useState<Set<string>>(new Set());
+
+  const saveToGalleryWorks = async (url: string, workType: "photo" | "video") => {
+    if (!session?.user?.email || !galleryId) return;
+    if (galleryWorksSaved.has(url)) return;
+    try {
+      const res = await fetch("/api/gallery-works", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          galleryId,
+          userEmail: session.user.email,
+          imageUrl: workType === "photo" ? url : null,
+          videoUrl: workType === "video" ? url : null,
+          workType,
+        }),
+      });
+      if (res.ok) {
+        setGalleryWorksSaved(prev => new Set(prev).add(url));
+      } else {
+        alert("❌ 儲存失敗，請稍後再試");
+      }
+    } catch {
+      alert("❌ 儲存失敗，請稍後再試");
+    }
+  };
+  const triggerSelfie = async (intent: "photo" | "video", selfiePrompt: string, msgId: string) => {
+    const waitingMessages = [
+      "（還在拍喔，等我一下～）",
+      "（稍等一下，幫你調整一下角度...）",
+      "（快好了，再等我一點點～）",
+      "（哎呀快好了，你先等等！）",
+    ];
+    let waitCount = 0;
+    const waitTimer = setInterval(() => {
+      if (waitCount >= 3) { clearInterval(waitTimer); return; }
+      setMessages(prev => [...prev, {
+        role: "assistant",
+        content: waitingMessages[Math.floor(Math.random() * waitingMessages.length)],
+        characterName: character?.name,
+      }]);
+      waitCount++;
+    }, 60000);
+
+    setMessages(prev => prev.map(m =>
+      m.id === msgId ? { ...m, selfieLoading: true, selfieType: intent } : m
+    ));
+
+    try {
+      const charRes = await fetch("/api/character", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: selfiePrompt,
+          selfieCharacterImage: character?.image_url || null,
+          userEmail: session?.user?.email,
+          imageRatio: "1:1",
+        }),
+      });
+      const charData = await charRes.json();
+      if (!charData.id) throw new Error("照片生成啟動失敗");
+
+      let imageUrl: string | null = null;
+      for (let i = 0; i < 30; i++) {
+        await new Promise(r => setTimeout(r, 3000));
+        const poll = await fetch(`/api/character?id=${charData.id}`);
+        const pollData = await poll.json();
+        if (pollData.status === "succeeded") {
+          imageUrl = Array.isArray(pollData.output) ? pollData.output[0] : pollData.output;
+          break;
+        }
+        if (pollData.status === "failed") throw new Error("照片生成失敗");
+      }
+      if (!imageUrl) throw new Error("照片生成逾時");
+
+      if (intent === "photo") {
+        let permanentImageUrl = imageUrl;
+        try {
+          const upRes = await fetch("/api/upload-image", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ imageUrl, email: session?.user?.email }),
+          });
+          const upData = await upRes.json();
+          if (upData.url) permanentImageUrl = upData.url;
+        } catch { }
+        setMessages(prev => prev.map(m =>
+          m.id === msgId ? { ...m, selfieLoading: false, imageUrl: permanentImageUrl } : m
+        ));
+        fetch(`/api/user/credits?email=${session?.user?.email}`).then(r => r.json()).then(d => { if (d.credits !== undefined) setCredits(d.credits); });
+        if (session?.user?.email && permanentImageUrl) {
+          fetch("/api/history", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_email: session.user.email, image_url: permanentImageUrl, video_url: null, prompt: "AI 自拍", character_id: null }),
+          }).catch(() => {});
+        }
+        return;
+      }
+
+      setMessages(prev => prev.map(m =>
+        m.id === msgId ? { ...m, selfieType: "video" } : m
+      ));
+      const uploadRes = await fetch("/api/upload-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl, email: session?.user?.email }),
+      });
+      const uploadData = await uploadRes.json();
+      const storedUrl = uploadData.url;
+      if (!storedUrl) throw new Error("上傳失敗");
+
+      const videoRes = await fetch("/api/character", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "video",
+          image: storedUrl,
+          videoPrompt: selfiePrompt,
+          aspectRatio: "1:1",
+          duration: 5,
+          videoModel: "kling",
+          userEmail: session?.user?.email,
+        }),
+      });
+      const videoPred = await videoRes.json();
+      if (!videoPred.id) throw new Error("影片啟動失敗");
+
+      let videoUrl: string | null = null;
+      for (let i = 0; i < 60; i++) {
+        await new Promise(r => setTimeout(r, 3000));
+        const poll = await fetch(`/api/character?id=${videoPred.id}`);
+        const pollData = await poll.json();
+        if (pollData.status === "succeeded") {
+          videoUrl = Array.isArray(pollData.output) ? pollData.output[0] : pollData.output;
+          break;
+        }
+        if (pollData.status === "failed") throw new Error("影片生成失敗");
+      }
+
+      let permanentVideoUrl = videoUrl;
+      if (videoUrl) {
+        try {
+          const upRes = await fetch("/api/upload-image", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ imageUrl: videoUrl, email: session?.user?.email }),
+          });
+          const upData = await upRes.json();
+          if (upData.url) permanentVideoUrl = upData.url;
+        } catch { }
+      }
+
+      setMessages(prev => prev.map(m =>
+        m.id === msgId ? { ...m, selfieLoading: false, videoUrl: permanentVideoUrl || undefined } : m
+      ));
+      fetch(`/api/user/credits?email=${session?.user?.email}`).then(r => r.json()).then(d => { if (d.credits !== undefined) setCredits(d.credits); });
+      if (session?.user?.email && permanentVideoUrl) {
+        fetch("/api/history", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_email: session.user.email, image_url: null, video_url: permanentVideoUrl, prompt: "AI 自拍影片", character_id: null }),
+        }).catch(() => {});
+      }
+
+    } catch (err: any) {
+      const isBlocked = err?.message?.includes("E005") || err?.message?.includes("content") || err?.message?.includes("policy") || err?.message?.includes("failed");
+      setMessages(prev => prev.map(m =>
+        m.id === msgId ? { ...m, selfieLoading: false } : m
+      ));
+      setMessages(prev => [...prev, {
+        role: "assistant",
+        content: isBlocked
+          ? "⚠️ 此圖片因內容涉及違規或過於露骨，已被系統拒絕，無法生成。"
+          : `⚠️ 自拍生成失敗：${err?.message || "請稍後再試"}`,
+        characterName: character?.name,
+      }]);
+    } finally {
+      clearInterval(waitTimer);
+    }
+  };
 
   // 讀取角色資料 + actual_chat_count +1
   useEffect(() => {
@@ -220,30 +407,6 @@ export default function GalleryChatPage() {
     loadingRef.current = true;
     setIsTyping(true);
 
-    // 自拍關鍵字 → 提示付費
-    const photoKeywords = ["拍照", "自拍", "拍張", "傳照片", "照片給我", "看看你", "看看妳", "拍一張", "傳圖"];
-    const videoKeywords = ["錄影", "錄一段", "拍影片", "拍個影片", "拍段影片"];
-    if (videoKeywords.some(k => userMsg.includes(k))) {
-      await new Promise(r => setTimeout(r, randomDelay()));
-      setMessages(prev => [...prev, {
-        role: "assistant",
-        content: `（${character.name} 想錄影片給你，但這個功能需要自創角色後才能使用 🎬 去「我的角色」建立專屬角色就可以囉！）`,
-        characterName: character.name,
-      }]);
-      setLoading(false);
-      return;
-    }
-    if (photoKeywords.some(k => userMsg.includes(k))) {
-      await new Promise(r => setTimeout(r, randomDelay()));
-      setMessages(prev => [...prev, {
-        role: "assistant",
-        content: `（${character.name} 想傳照片給你，但這個功能需要自創角色後才能使用 📸 去「我的角色」建立專屬角色就可以囉！）`,
-        characterName: character.name,
-      }]);
-      setLoading(false);
-      return;
-    }
-
     try {
       const fakeChar = { id: galleryId, name: character.name, description: character.story, image_url: character.image_url };
       const res = await fetch("/api/chat", {
@@ -275,7 +438,25 @@ export default function GalleryChatPage() {
           setIsTyping(true);
           await new Promise(resolve => setTimeout(resolve, randomDelay()));
           setIsTyping(false);
-          setMessages(prev => [...prev, { role: "assistant", content: r.content, characterName: r.characterName, isUnlock: r.isUnlock, unlockLevel: r.unlockLevel }]);
+          const msgId = `msg-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+          const newMsg: Message = {
+            id: msgId,
+            role: "assistant",
+            content: r.content,
+            characterName: r.characterName,
+            isUnlock: r.isUnlock,
+            unlockLevel: r.unlockLevel,
+          };
+          setMessages(prev => {
+            const updated = [...prev, newMsg];
+            if (r.selfieIntent && r.selfiePrompt) {
+              const alreadyGenerating = updated.some(m => m.selfieLoading === true);
+              if (!alreadyGenerating) {
+                triggerSelfie(r.selfieIntent as "photo" | "video", r.selfiePrompt, msgId);
+              }
+            }
+            return updated;
+          });
         }
         // E04：免費用戶升級提示
         if (plan === "free") {
@@ -493,6 +674,47 @@ export default function GalleryChatPage() {
                 {msg.content}
               </div>
             </div>
+            {msg.selfieLoading && (
+                  <div className="px-4 py-2 rounded-2xl bg-black/20 border border-[#89f5a2]/15 text-[#89f5a2]/60 text-xs whitespace-pre-line mt-1">
+                    {msg.selfieType === "photo"
+                      ? "📸 圖片生成上傳中，扣1點\n⚠️ 請勿關閉視窗！"
+                      : "🎬 影片生成中，扣4-6點\n⚠️ 請耐心等候，請勿關閉視窗！"}
+                  </div>
+                )}
+                {msg.imageUrl && (
+                  <div className="space-y-2 mt-1">
+                    <img src={msg.imageUrl} alt="AI自拍" className="rounded-2xl max-w-[220px] border border-white/15" />
+                    <div className="flex gap-2 flex-wrap">
+                      <button
+                        onClick={() => saveToGalleryWorks(msg.imageUrl!, "photo")}
+                        disabled={galleryWorksSaved.has(msg.imageUrl!)}
+                        className="px-3 py-1.5 rounded-full text-[10px] font-bold bg-blue-500/10 border border-blue-500/30 text-blue-300 hover:bg-blue-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                      >
+                        {galleryWorksSaved.has(msg.imageUrl!) ? "✅ 已儲存" : "💾 存至公開相簿"}
+                      </button>
+                      <a href={msg.imageUrl} download className="px-3 py-1.5 rounded-full text-[10px] font-bold bg-white/5 border border-white/15 text-white/50 hover:bg-white/10 transition-all">
+                        ⬇ 儲存
+                      </a>
+                    </div>
+                  </div>
+                )}
+                {msg.videoUrl && (
+                  <div className="space-y-2 mt-1">
+                    <video src={msg.videoUrl} controls autoPlay loop className="rounded-2xl max-w-[220px] border border-white/15" />
+                    <div className="flex gap-2 flex-wrap">
+                      <button
+                        onClick={() => saveToGalleryWorks(msg.videoUrl!, "video")}
+                        disabled={galleryWorksSaved.has(msg.videoUrl!)}
+                        className="px-3 py-1.5 rounded-full text-[10px] font-bold bg-blue-500/10 border border-blue-500/30 text-blue-300 hover:bg-blue-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                      >
+                        {galleryWorksSaved.has(msg.videoUrl!) ? "✅ 已儲存" : "💾 存至公開相簿"}
+                      </button>
+                      <a href={msg.videoUrl} download className="px-3 py-1.5 rounded-full text-[10px] font-bold bg-white/5 border border-white/15 text-white/50 hover:bg-white/10 transition-all">
+                        ⬇ 儲存
+                      </a>
+                    </div>
+                  </div>
+                )}
             {msg.role === "assistant" && (
               <button
                 onClick={() => setReplyTo({ characterName: msg.characterName || character.name, content: msg.content })}

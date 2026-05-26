@@ -214,7 +214,13 @@ wearing [具體衣物描述], [具體行為/姿勢], [具體場景背景], [光�
     });
     const data = await res.json();
     const prompt = data.content?.[0]?.text?.trim() || "";
-    if (prompt) return `${characterDesc || "attractive person"}, ${prompt}, no phone in hand, no device visible`;
+    if (prompt) {
+      const usesTripod = Math.random() < 0.4;
+      const selfieStyle = usesTripod
+        ? "on a tripod, timer selfie, no phone visible, no phone in hand"
+        : "no phone in hand, no device visible";
+      return `${characterDesc || "attractive person"}, ${prompt}, ${selfieStyle}`;
+    }
   } catch {
     // fallback
   }
@@ -222,7 +228,11 @@ wearing [具體衣物描述], [具體行為/姿勢], [具體場景背景], [光�
   // Claude 失敗時的 fallback
   const scene = extractSceneFromMessage(message + aiReply) || "casual indoor setting, natural lighting";
   const mood = extractMoodFromMessage(message + aiReply) || "natural expression, relaxed";
-  return `${characterDesc || "attractive person"}, ${mood}, ${scene}, selfie photo, no phone in hand, high quality, realistic`;
+  const usesTripodFallback = Math.random() < 0.4;
+  const selfieStyleFallback = usesTripodFallback
+    ? "on a tripod, timer selfie, no phone visible"
+    : "selfie photo, no phone in hand";
+  return `${characterDesc || "attractive person"}, ${mood}, ${scene}, ${selfieStyleFallback}, high quality, realistic`;
 }
 
 export async function POST(req: NextRequest) {

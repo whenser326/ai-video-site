@@ -361,10 +361,19 @@ const [writingStyle, setWritingStyle] = useState("直白");
         }).catch(() => {});
       }
 
-    } catch {
+    } catch (err: any) {
+      const isBlocked = err?.message?.includes("E005") || err?.message?.includes("content") || err?.message?.includes("policy") || err?.message?.includes("failed");
       setMessages(prev => prev.map(m =>
         m.id === msgId ? { ...m, selfieLoading: false } : m
       ));
+      setMessages(prev => [...prev, {
+        role: "assistant",
+        content: isBlocked
+          ? "⚠️ 此圖片因內容涉及違規或過於露骨，已被系統拒絕，無法生成。"
+          : `⚠️ 自拍生成失敗：${err?.message || "請稍後再試"}`,
+        characterName: charForMsg?.name,
+        characterImage: charForMsg?.image_url,
+      }]);
     } finally {
       clearInterval(waitTimer);
     }
