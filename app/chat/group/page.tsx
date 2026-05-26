@@ -959,6 +959,15 @@ const [writingStyle, setWritingStyle] = useState("直白");
 
         {/* 輸入列 */}
         <div className="flex-shrink-0 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-[#0d2318]/90 backdrop-blur-md border-t border-white/10">
+          {replyTo && (
+            <div className="mb-2 flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/10 rounded-xl">
+              <div className="flex-1 min-w-0">
+                <p className="text-[#89f5a2]/60 text-[10px] font-bold mb-0.5">↩ 回覆 {replyTo.characterName}</p>
+                <p className="text-white/30 text-[10px] truncate">{replyTo.content.slice(0, 40)}{replyTo.content.length > 40 ? "..." : ""}</p>
+              </div>
+              <button onClick={() => setReplyTo(null)} className="text-white/20 hover:text-white/50 text-xs flex-shrink-0">✕</button>
+            </div>
+          )}
           <div className="flex gap-2 items-end">
             <label className="flex-shrink-0 w-11 h-11 rounded-2xl bg-white/5 border border-white/15 flex items-center justify-center cursor-pointer hover:bg-white/10 transition-all">
               <span className="text-base">📎</span>
@@ -993,15 +1002,6 @@ const [writingStyle, setWritingStyle] = useState("直白");
   🎨
 </button>
 
-            {replyTo && (
-              <div className="mb-2 flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/10 rounded-xl">
-                <div className="flex-1 min-w-0">
-                  <p className="text-[#89f5a2]/60 text-[10px] font-bold mb-0.5">↩ 回覆 {replyTo.characterName}</p>
-                  <p className="text-white/30 text-[10px] truncate">{replyTo.content.slice(0, 40)}{replyTo.content.length > 40 ? "..." : ""}</p>
-                </div>
-                <button onClick={() => setReplyTo(null)} className="text-white/20 hover:text-white/50 text-xs flex-shrink-0">✕</button>
-              </div>
-            )}
             {tagMenu && (
               <div className="mb-2 bg-[#0a1e12] border border-[#89f5a2]/20 rounded-xl p-2 flex gap-2 flex-wrap">
                 <p className="w-full text-[#89f5a2]/50 text-[10px] mb-1">Tag 誰來回覆？</p>
