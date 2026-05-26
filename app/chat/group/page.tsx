@@ -794,7 +794,7 @@ const [writingStyle, setWritingStyle] = useState("直白");
         )}
 
         {/* 訊息區 */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 bg-black">
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 bg-black overscroll-contain">
           {messages.length === 0 && (
             <div className="text-center py-8 space-y-3">
               <div className="flex justify-center gap-2">

@@ -26,6 +26,17 @@ export async function POST(req: NextRequest) {
   if (birthday && !/^\d{2}-\d{2}$/.test(birthday)) {
     return NextResponse.json({ error: "格式錯誤，請用 MM-DD" }, { status: 400 });
   }
+  // 先查是否已有生日
+  const { data: existing } = await supabase
+    .from("profiles")
+    .select("birthday")
+    .eq("email", email)
+    .single();
+
+  if (existing?.birthday) {
+    return NextResponse.json({ error: "生日已設定，無法修改" }, { status: 403 });
+  }
+
   await supabase
     .from("profiles")
     .update({ birthday: birthday || null })

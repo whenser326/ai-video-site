@@ -17,7 +17,7 @@ export async function GET() {
 
   const { data: profiles, error } = await supabase
     .from('profiles')
-    .select('id, email, plan, credits, created_at, total_generations')
+    .select('id, email, plan, credits, created_at, total_generations, birthday')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
@@ -53,6 +53,7 @@ export async function GET() {
       credits: p.credits,
       generations: p.total_generations || 0,
       created_at: p.created_at,
+      birthday: p.birthday || '',
     })),
     adjustments: adjustments || [],
   })

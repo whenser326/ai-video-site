@@ -10,6 +10,7 @@ interface MemberProfile {
   credits: number
   generations: number
   created_at: string
+  birthday?: string
 }
 
 interface MemberStats {
@@ -40,6 +41,9 @@ export default function AdminMembersPage() {
   const [adjustReason, setAdjustReason] = useState('')
   const [adjusting, setAdjusting] = useState(false)
   const [adjustMsg, setAdjustMsg] = useState('')
+  const [birthdayModal, setBirthdayModal] = useState<{ email: string; current: string } | null>(null)
+  const [birthdayValue, setBirthdayValue] = useState('')
+  const [birthdayMsg, setBirthdayMsg] = useState('')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   // [DNA_PATCH_START] 排序功能
   const [sortField, setSortField] = useState<'generations' | 'created_at' | null>(null)
@@ -267,9 +271,12 @@ export default function AdminMembersPage() {
                   <td className="px-4 py-3 text-center text-yellow-300">{p.credits}</td>
                   <td className="px-4 py-3 text-center text-purple-300">{p.generations}</td>
                   <td className="px-4 py-3 text-center text-gray-400">{new Date(p.created_at).toLocaleDateString('zh-TW')}</td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-4 py-3 text-center flex gap-2 justify-center">
                     <button onClick={() => { setAdjustModal({ email: p.email }); setAdjustAmount(''); setAdjustReason(''); setAdjustMsg('') }} className="px-3 py-1 bg-yellow-500/20 border border-yellow-500/30 rounded-lg text-yellow-300 text-xs font-bold hover:bg-yellow-500/30 transition">
                       💰 補點
+                    </button>
+                    <button onClick={() => { setBirthdayModal({ email: p.email, current: p.birthday || '' }); setBirthdayValue(p.birthday || ''); setBirthdayMsg('') }} className="px-3 py-1 bg-pink-500/20 border border-pink-500/30 rounded-lg text-pink-300 text-xs font-bold hover:bg-pink-500/30 transition">
+                      🎂 改生日
                     </button>
                   </td>
                 </tr>
@@ -299,6 +306,50 @@ export default function AdminMembersPage() {
                 <button onClick={() => setAdjustModal(null)} className="flex-1 py-2 rounded-xl border border-white/20 text-white/50 text-sm hover:bg-white/5 transition">取消</button>
                 <button onClick={handleAdjustCredits} disabled={adjusting || !adjustAmount} className="flex-1 py-2 rounded-xl bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 font-bold text-sm hover:bg-yellow-500/30 transition disabled:opacity-40">
                   {adjusting ? '處理中...' : '確認補點'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {birthdayModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+            <div className="bg-[#1a3a28] border border-[#2d5a3d] rounded-2xl p-6 w-full max-w-sm mx-4">
+              <p className="text-[#89f5a2] font-bold text-lg mb-1">🎂 修改生日</p>
+              <p className="text-white/50 text-xs mb-1">{birthdayModal.email}</p>
+              {birthdayModal.current && <p className="text-white/30 text-xs mb-4">目前生日：{birthdayModal.current}</p>}
+              <div className="mb-4">
+                <label className="text-white/60 text-xs mb-1 block">新生日（格式 MM-DD，例如 05-26）</label>
+                <input
+                  type="text"
+                  value={birthdayValue}
+                  onChange={e => setBirthdayValue(e.target.value)}
+                  placeholder="MM-DD"
+                  className="w-full bg-[#0d2318] border border-[#2d5a3d] rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-[#89f5a2]"
+                />
+              </div>
+              {birthdayMsg && <p className="text-sm mb-3">{birthdayMsg}</p>}
+              <div className="flex gap-3">
+                <button onClick={() => setBirthdayModal(null)} className="flex-1 py-2 rounded-xl border border-white/20 text-white/50 text-sm hover:bg-white/5 transition">取消</button>
+                <button
+                  onClick={async () => {
+                    if (!birthdayModal) return;
+                    const res = await fetch('/api/admin/set-birthday', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ adminEmail: session?.user?.email, userEmail: birthdayModal.email, birthday: birthdayValue }),
+                    });
+                    const data = await res.json();
+                    if (data.ok) {
+                      setBirthdayMsg('✅ 已更新');
+                      setTimeout(() => setBirthdayModal(null), 1500);
+                    } else {
+                      setBirthdayMsg(`❌ ${data.error || '失敗'}`);
+                    }
+                  }}
+                  className="flex-1 py-2 rounded-xl bg-pink-500/20 border border-pink-500/40 text-pink-300 font-bold text-sm hover:bg-pink-500/30 transition"
+                >
+                  確認修改
                 </button>
               </div>
             </div>

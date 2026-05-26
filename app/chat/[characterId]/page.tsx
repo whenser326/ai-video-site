@@ -712,7 +712,7 @@ const [showUpgradeModal, setShowUpgradeModal] = useState(false);
         )}
 
         {/* 訊息區 */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 bg-black">
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 bg-black overscroll-contain">
           {messages.length === 0 && character && (
             <div className="text-center py-8 space-y-3">
               <img src={character.image_url} alt={character.name} className="w-20 h-20 rounded-full object-cover border-2 border-[#89f5a2]/30 mx-auto" />
