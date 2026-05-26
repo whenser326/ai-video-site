@@ -427,7 +427,7 @@ export default function GalleryChatPage() {
       </div>
 
       {/* 訊息區 */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-[#0a0a0a]">
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-[#0a0a0a] overscroll-contain">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full space-y-3 py-16">
             <div className="w-20 h-20 rounded-full overflow-hidden bg-white/5 border border-white/10 flex-shrink-0">
