@@ -71,6 +71,7 @@ export default function GallerySection({ userEmail, plan, isLoggedIn, onLoginReq
   const displayCountsRef = useRef<Map<string, { like: number; chat: number }>>(new Map());
   const panelRef = useRef<HTMLDivElement>(null);
   const [galleryWorksMap, setGalleryWorksMap] = useState<Map<string, GalleryWork[]>>(new Map());
+  const [modalWorkIdx, setModalWorkIdx] = useState(0);
   
 // 批次讀取各角色的公開作品（最新4筆）
   useEffect(() => {
@@ -117,7 +118,9 @@ export default function GallerySection({ userEmail, plan, isLoggedIn, onLoginReq
       })
       .finally(() => setLoading(false));
   }, [tab, activeTag]);
-
+useEffect(() => {
+    setModalWorkIdx(0);
+  }, [selected?.id]);
   useEffect(() => {
     if (!selected) return;
     const handler = (e: MouseEvent) => {
@@ -350,7 +353,41 @@ export default function GallerySection({ userEmail, plan, isLoggedIn, onLoginReq
                 </div>
               </div>
             </div>
-
+{/* 作品相簿 */}
+            {(() => {
+              const works = galleryWorksMap.get(selected.id) || [];
+              if (works.length === 0) return null;
+              const work = works[modalWorkIdx];
+              return (
+                <div className="px-4 pt-3 pb-1">
+                  <p className="text-white/25 text-[10px] mb-2">📸 聊天作品</p>
+                  <div className="relative w-full rounded-2xl overflow-hidden bg-[#1a1a1a]" style={{ aspectRatio: "1/1" }}>
+                    {work.work_type === "video" && work.video_url ? (
+                      <video src={work.video_url} controls autoPlay loop className="absolute inset-0 w-full h-full object-cover" />
+                    ) : work.image_url ? (
+                      <img src={work.image_url} alt="作品" className="absolute inset-0 w-full h-full object-cover" />
+                    ) : null}
+                    {modalWorkIdx > 0 && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setModalWorkIdx(i => i - 1); }}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/60 border border-white/20 text-white/70 hover:text-white flex items-center justify-center text-base transition-all">
+                        ‹
+                      </button>
+                    )}
+                    {modalWorkIdx < works.length - 1 && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setModalWorkIdx(i => i + 1); }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/60 border border-white/20 text-white/70 hover:text-white flex items-center justify-center text-base transition-all">
+                        ›
+                      </button>
+                    )}
+                    <div className="absolute bottom-2 right-2 text-[10px] text-white/40 bg-black/40 px-2 py-0.5 rounded-full">
+                      {modalWorkIdx + 1} / {works.length}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
             {/* CTA 按鈕：圖片外面，卡片底部 */}
             <div className="flex gap-3 px-4 pt-4 pb-2">
               <button onClick={() => handleChat(selected)}
