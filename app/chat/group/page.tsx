@@ -76,6 +76,8 @@ const VOICE_OPTIONS = [
   const bottomRef = useRef<HTMLDivElement>(null);
   const autoMessageTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastUserMessageTime = useRef<number>(Date.now());
+  const selfieAutoMsgCountRef = useRef(0);
+  const selfieActiveRef = useRef(false);
   // [DNA_PATCH_START] 搜尋功能 state
   const [showStylePanel, setShowStylePanel] = useState(false);
 const [chatStyle, setChatStyle] = useState("療癒");
@@ -180,7 +182,9 @@ const [writingStyle, setWritingStyle] = useState("直白");
             }
           }
         } catch (err) { console.error('auto message failed:', err); }
-        startTimer();
+        if (!selfieActiveRef.current || selfieAutoMsgCountRef.current < 3) {
+          startTimer();
+        }
       }, 60000);
     };
     startTimer();
@@ -198,6 +202,8 @@ const [writingStyle, setWritingStyle] = useState("直白");
   const selectedChars = characters.filter(c => selectedIds.includes(c.id));
 
   const triggerSelfie = async (intent: "photo" | "video", selfiePrompt: string, msgId: string, charImageUrl?: string) => {
+    selfieActiveRef.current = true;
+    selfieAutoMsgCountRef.current = 0;
     const photoCost = 1;
     const videoCost = plan === 'pro' ? 4 : plan === 'standard' ? 5 : 6;
 
@@ -212,6 +218,7 @@ const [writingStyle, setWritingStyle] = useState("直白");
     const charForMsg = selectedChars.find(c => c.image_url === charImageUrl) || selectedChars[0];
     const waitTimer = setInterval(() => {
       if (waitCount >= 3) { clearInterval(waitTimer); return; }
+      selfieAutoMsgCountRef.current += 1;
       const msg = waitingMessages[Math.floor(Math.random() * waitingMessages.length)];
       setMessages(prev => [...prev, {
         role: "assistant",
@@ -376,6 +383,8 @@ const [writingStyle, setWritingStyle] = useState("直白");
       }]);
     } finally {
       clearInterval(waitTimer);
+      selfieActiveRef.current = false;
+      selfieAutoMsgCountRef.current = 0;
     }
   };
 

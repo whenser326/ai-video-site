@@ -47,6 +47,8 @@ export default function ChatPage() {
   const [avatarVoiceId, setAvatarVoiceId] = useState("female-2");
   const bottomRef = useRef<HTMLDivElement>(null);
   const autoMessageTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const selfieAutoMsgCountRef = useRef(0);
+  const selfieActiveRef = useRef(false);
   // [DNA_PATCH_START] 搜尋功能 state
   const [showNotice, setShowNotice] = useState(false);
   const [showSuggest, setShowSuggest] = useState(false);
@@ -254,13 +256,17 @@ const [showUpgradeModal, setShowUpgradeModal] = useState(false);
             }
           }
         } catch { /* 靜默失敗 */ }
-        startTimer();
+        if (!selfieActiveRef.current || selfieAutoMsgCountRef.current < 3) {
+          startTimer();
+        }
       }, 60000);
     };
     startTimer();
     return () => { if (autoMessageTimerRef.current) clearTimeout(autoMessageTimerRef.current); };
   }, [character, session, characterId, sessionId, loading]);
   const triggerSelfie = async (intent: "photo" | "video", selfiePrompt: string, msgId: string, charImageUrl?: string) => {
+    selfieActiveRef.current = true;
+    selfieAutoMsgCountRef.current = 0;
     const photoCost = 1;
     const videoCost = plan === 'pro' ? 4 : plan === 'standard' ? 5 : 6;
 
@@ -274,6 +280,7 @@ const [showUpgradeModal, setShowUpgradeModal] = useState(false);
     let waitCount = 0;
     const waitTimer = setInterval(() => {
       if (waitCount >= 3) { clearInterval(waitTimer); return; }
+      selfieAutoMsgCountRef.current += 1;
       const msg = waitingMessages[Math.floor(Math.random() * waitingMessages.length)];
       setMessages(prev => [...prev, {
         role: "assistant",
@@ -441,6 +448,8 @@ const [showUpgradeModal, setShowUpgradeModal] = useState(false);
       }]);
     } finally {
       clearInterval(waitTimer);
+      selfieActiveRef.current = false;
+      selfieAutoMsgCountRef.current = 0;
     }
   };
 

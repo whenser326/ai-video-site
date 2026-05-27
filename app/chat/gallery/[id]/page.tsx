@@ -60,6 +60,8 @@ export default function GalleryChatPage() {
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const autoMessageTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const selfieAutoMsgCountRef = useRef(0);
+  const selfieActiveRef = useRef(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const messageRefs = useRef<(HTMLDivElement | null)[]>([]);
 
@@ -92,6 +94,8 @@ const [galleryWorksSaved, setGalleryWorksSaved] = useState<Set<string>>(new Set(
     }
   };
   const triggerSelfie = async (intent: "photo" | "video", selfiePrompt: string, msgId: string) => {
+    selfieActiveRef.current = true;
+    selfieAutoMsgCountRef.current = 0;
     const waitingMessages = [
       "（還在拍喔，等我一下～）",
       "（稍等一下，幫你調整一下角度...）",
@@ -101,6 +105,7 @@ const [galleryWorksSaved, setGalleryWorksSaved] = useState<Set<string>>(new Set(
     let waitCount = 0;
     const waitTimer = setInterval(() => {
       if (waitCount >= 3) { clearInterval(waitTimer); return; }
+      selfieAutoMsgCountRef.current += 1;
       setMessages(prev => [...prev, {
         role: "assistant",
         content: waitingMessages[Math.floor(Math.random() * waitingMessages.length)],
@@ -244,6 +249,8 @@ const [galleryWorksSaved, setGalleryWorksSaved] = useState<Set<string>>(new Set(
       }]);
     } finally {
       clearInterval(waitTimer);
+      selfieActiveRef.current = false;
+      selfieAutoMsgCountRef.current = 0;
     }
   };
 
@@ -353,7 +360,9 @@ const [galleryWorksSaved, setGalleryWorksSaved] = useState<Set<string>>(new Set(
             }
           }
         } catch { }
-        startTimer();
+        if (!selfieActiveRef.current || selfieAutoMsgCountRef.current < 3) {
+          startTimer();
+        }
       }, 60000);
     };
     startTimer();
