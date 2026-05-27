@@ -67,6 +67,7 @@ export default function GalleryDetailPage() {
   const [commentError, setCommentError] = useState("");
   const [copied, setCopied] = useState(false);
   const [liked, setLiked] = useState(false);
+  const [activeSlide, setActiveSlide] = useState<{ type: "original" } | { type: "work"; work: GalleryWork }>({ type: "original" });
   const [works, setWorks] = useState<GalleryWork[]>([]);
   const [worksLoading, setWorksLoading] = useState(true);
   const [activeWorkIdx, setActiveWorkIdx] = useState(0);
@@ -187,60 +188,37 @@ const handleDeleteWork = async (workId: string) => {
 
       <div className="max-w-lg mx-auto px-4 pb-20">
 
-        {/* 角色主圖（含作品輪播） */}
-        {(() => {
-          const allSlides = [
-            { type: "original" as const },
-            ...works.map(w => ({ type: "work" as const, work: w })),
-          ];
-          const total = allSlides.length;
-          const slide = allSlides[activeWorkIdx] || allSlides[0];
-          return (
-            <div className="relative w-full rounded-3xl overflow-hidden mb-5" style={{ aspectRatio: "3/4" }}>
-              {slide.type === "original" ? (
-                character.video_url ? (
-                  <video src={character.video_url} autoPlay loop muted playsInline
-                    className="absolute inset-0 w-full h-full object-cover" />
-                ) : character.image_url ? (
-                  <img src={character.image_url} alt={character.name}
-                    className="absolute inset-0 w-full h-full object-cover" />
-                ) : (
-                  <div className="absolute inset-0 bg-[#1a1a1a]" />
-                )
-              ) : (
-                slide.work.work_type === "video" && slide.work.video_url ? (
-                  <video src={slide.work.video_url} autoPlay loop controls playsInline
-                    className="absolute inset-0 w-full h-full object-cover" />
-                ) : slide.work.image_url ? (
-                  <img src={slide.work.image_url} alt="作品"
-                    className="absolute inset-0 w-full h-full object-cover" />
-                ) : null
-              )}
-              {character.is_featured && activeWorkIdx === 0 && (
-                <span className="absolute top-3 left-3 text-[10px] bg-amber-500/80 text-white rounded-full px-2.5 py-1 font-bold backdrop-blur-sm">⭐ 精選</span>
-              )}
-              {activeWorkIdx > 0 && (
-                <button
-                  onClick={() => setActiveWorkIdx(i => i - 1)}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 border border-white/20 text-white flex items-center justify-center text-lg transition-all hover:bg-black/70">
-                  ‹
-                </button>
-              )}
-              {activeWorkIdx < total - 1 && (
-                <button
-                  onClick={() => setActiveWorkIdx(i => i + 1)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 border border-white/20 text-white flex items-center justify-center text-lg transition-all hover:bg-black/70">
-                  ›
-                </button>
-              )}
-              {total > 1 && (
-                <div className="absolute bottom-3 right-3 text-[10px] text-white/60 bg-black/40 px-2 py-0.5 rounded-full">
-                  {activeWorkIdx + 1} / {total}
-                </div>
-              )}
-            </div>
-          );
-        })()}
+        {/* 角色主圖 */}
+        <div className="relative w-full rounded-3xl overflow-hidden mb-5" style={{ aspectRatio: "3/4" }}>
+          {activeSlide.type === "original" ? (
+            character.video_url ? (
+              <video src={character.video_url} autoPlay loop muted playsInline
+                className="absolute inset-0 w-full h-full object-cover" />
+            ) : character.image_url ? (
+              <img src={character.image_url} alt={character.name}
+                className="absolute inset-0 w-full h-full object-cover" />
+            ) : (
+              <div className="absolute inset-0 bg-[#1a1a1a]" />
+            )
+          ) : (
+            activeSlide.work.work_type === "video" && activeSlide.work.video_url ? (
+              <video src={activeSlide.work.video_url} autoPlay loop controls playsInline
+                className="absolute inset-0 w-full h-full object-cover" />
+            ) : activeSlide.work.image_url ? (
+              <img src={activeSlide.work.image_url} alt="作品"
+                className="absolute inset-0 w-full h-full object-cover" />
+            ) : null
+          )}
+          {character.is_featured && activeSlide.type === "original" && (
+            <span className="absolute top-3 left-3 text-[10px] bg-amber-500/80 text-white rounded-full px-2.5 py-1 font-bold backdrop-blur-sm">⭐ 精選</span>
+          )}
+          {activeSlide.type === "work" && (
+            <button onClick={() => setActiveSlide({ type: "original" })}
+              className="absolute top-3 left-3 text-[10px] bg-black/60 border border-white/20 text-white/70 rounded-full px-2.5 py-1 hover:text-white transition-all">
+              ← 角色原圖
+            </button>
+          )}
+        </div>
 
         {/* 角色基本資訊 */}
         <div className="mb-5">
@@ -293,7 +271,43 @@ const handleDeleteWork = async (workId: string) => {
             🎨 生成同款
           </button>
         </div>
-
+{/* 作品相簿 */}
+        {works.length > 0 && (
+          <div className="mb-8">
+            <p className="text-white/30 text-[10px] font-black tracking-widest uppercase mb-3">📸 聊天作品</p>
+            <div className="grid grid-cols-3 gap-2">
+              {works.map((w, idx) => {
+                const email = session?.user?.email;
+                const canDel = email === "whenser@gmail.com" || viewerPlan === "pro";
+                const daysLeft = w.expires_at ? Math.ceil((new Date(w.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null;
+                return (
+                  <div key={w.id} className="relative rounded-xl overflow-hidden bg-[#1a1a1a] aspect-square cursor-pointer" onClick={() => setActiveSlide({ type: "work", work: w })}>
+                    {w.work_type === "video" ? (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <span className="text-white/40 text-xl">▶</span>
+                      </div>
+                    ) : w.image_url ? (
+                      <img src={w.image_url} alt="作品" className="w-full h-full object-cover" />
+                    ) : null}
+                    {daysLeft !== null && (
+                      <div className="absolute bottom-0 left-0 right-0 px-2 py-1.5 text-center" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.85), transparent)" }}>
+                        <p className="text-[9px] text-amber-400 font-bold">{daysLeft}天後過期</p>
+                        <p className="text-[8px] text-white/40">升級可永久保留</p>
+                      </div>
+                    )}
+                    {canDel && (
+                      <button
+                        onClick={() => handleDeleteWork(w.id)}
+                        className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/70 text-white/60 hover:text-red-400 flex items-center justify-center text-xs transition-all">
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
         <div className="mb-8 px-4 py-3 bg-[#89f5a2]/5 border border-[#89f5a2]/15 rounded-2xl flex items-center gap-3">
           <span className="text-xl flex-shrink-0">🔓</span>
           <p className="text-white/40 text-xs leading-relaxed">聊越多解鎖越多！每聊 <span className="text-[#89f5a2]/70 font-bold">50／100／200／500</span> 則，角色會說出只有你能看的隱藏內容</p>
