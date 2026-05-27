@@ -66,6 +66,7 @@ export default function GalleryDetailPage() {
   const [commentLoading, setCommentLoading] = useState(false);
   const [commentError, setCommentError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [liked, setLiked] = useState(false);
   const [works, setWorks] = useState<GalleryWork[]>([]);
   const [worksLoading, setWorksLoading] = useState(true);
   const [activeWorkIdx, setActiveWorkIdx] = useState(0);
@@ -213,9 +214,14 @@ const handleDeleteWork = async (workId: string) => {
               <span key={t} className="text-[11px] bg-[#89f5a2]/10 border border-[#89f5a2]/25 text-[#89f5a2]/70 rounded-full px-2.5 py-1">{t}</span>
             ))}
           </div>
-          <div className="flex gap-4 text-xs text-white/25 mb-4">
-            <span>❤️ 喜歡次數 {likeCount.toLocaleString()}</span>
-            <span>💬 聊天次數 {chatCount.toLocaleString()}</span>
+          <div className="flex gap-4 text-xs mb-4">
+            <button
+              onClick={() => setLiked(prev => !prev)}
+              className={`flex items-center gap-1.5 transition-all ${liked ? "text-red-400" : "text-white/25 hover:text-red-300"}`}
+            >
+              {liked ? "❤️" : "🤍"} {(likeCount + (liked ? 1 : 0)).toLocaleString()}
+            </button>
+            <span className="text-white/25 flex items-center gap-1.5">💬 {chatCount.toLocaleString()}</span>
           </div>
           <p className="text-white/55 text-sm leading-relaxed">{character.story}</p>
         </div>
