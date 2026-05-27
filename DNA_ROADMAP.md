@@ -105,5 +105,5 @@
 | 後台預設角色管理頁面 | ⬜ | 中期優先 |
 | 公開角色市場匿名選項完整實作 | ⬜ | public_characters visibility 欄位已有，前端待完善 |
 | AI語音通話模式 | ⬜ | 對標 Chatto，ElevenLabs streaming API 待評估 |
-| 自由動態（Free Feed）免費限制 | ⬜ | 非付費用戶限制瀑布流瀏覽數量 |
+| 自由動態（Free Feed）免費限制 | ✅ | /explore 頁面已實作 FREE_LIMIT=12，免費用戶第12張後鎖定並顯示升級提示 |
 | ADV01 Reel 廣告素材 | ⬜ | 說話影片素材待補，文案已改情感導向 |

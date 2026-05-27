@@ -48,7 +48,7 @@ git push
 - 新視窗開始時必須貼入 DNA_CORE.md + DNA_TECH.md + DNA_BIZ.md（三份全貼，缺一不可），否則 Claude 禁止開始開發
 - 修改任何涉及 middleware.ts、auth route、防濫用機制、API 路由、資料庫、AI 模型的程式碼前，Claude 必須先確認已讀取 DNA_TECH.md，未讀取則拒絕動手並要求使用者補貼
 - 修改 GlobalHeader.tsx 前，必須先確認已讀取 DNA_TECH.md 的「GlobalHeader 規範」章節
-- 修改任何聊天相關檔案（/chat/[characterId]/page.tsx、/chat/group/page.tsx、/chat/default/[characterId]/page.tsx、/chat/default-group/page.tsx、/api/chat/route.ts）前，必須先確認已讀取 DNA_BIZ.md 的「AI 聊天功能規格」章節
+- 修改任何聊天相關檔案（/chat/[characterId]/page.tsx、/chat/group/page.tsx、/chat/default/[characterId]/page.tsx、/chat/default-group/page.tsx、/chat/gallery/[id]/page.tsx、/api/chat/route.ts）前，必須先確認已讀取 DNA_BIZ.md 的「AI 聊天功能規格」章節
 - 修改 app/guide/page.tsx 或 app/pricing/page.tsx 的「為什麼我們不一樣」區塊前，必須先確認 app/data/whyDifferent.ts，兩個頁面共用同一份資料，只改 whyDifferent.ts 即可
 - Onboarding Modal（page.tsx）不自動跳出，只由「使用指南」按鈕手動觸發（GlobalHeader 的 open-onboarding 事件）。付費用戶登入時自動寫入 localStorage 標記跳過。localStorage key 格式：`onboarding_done_${email}_${today}`，today 用 `toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' })`，凌晨 12 點自動重置
 - 修改 /api/chat/route.ts 的 charSystem prompt 前，必須先確認「角色旁白動作描述」格式規範（見 DNA_TECH.md「角色旁白動作描述」），禁止改變括號格式
@@ -124,7 +124,7 @@ page.tsx 已知 TypeScript 舊錯誤（4個）：
 - 已登入手機版：Logo + 點數徽章 + 漢堡按鈕 → Drawer 展開
 - pricing 頁面：顯示完整 Header（與其他頁面相同）
 - 漢堡 Drawer menuItems 順序：📖 使用指南 / 🎨 角色生成 / 🌐 探索角色 / 🎭 我的角色 / 📅 每日簽到 / 💳 儲值點數 / 🎁 推薦賺點 / 💬 意見回饋 / 🚪 登出
-- 「使用指南」onClick：首頁時 dispatchEvent('open-onboarding') 觸發 Onboarding 彈窗，其他頁面 router.push('/guide')
+- 「使用指南」onClick：所有頁面一律 router.push('/guide')，不再觸發 open-onboarding 事件（open-onboarding 只有首頁 page.tsx 有監聽，已廢棄此行為）
 - FeedbackModal + unreadCount 60秒輪詢
 
 ### page.tsx 未登入 Landing Page
@@ -137,7 +137,7 @@ page.tsx 已知 TypeScript 舊錯誤（4個）：
 ### page.tsx Onboarding 引導框
 - 只對 `plan === 'free'` 的新用戶顯示（付費帳號直接寫入 localStorage 標記）
 - 條件：`credits` 載入完才判斷（避免 race condition）
-- localStorage key：`onboarding_done_${session.user.email}`
+- localStorage key：`onboarding_done_${session.user.email}_${today}`，today 用 `toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' })`，凌晨 12 點自動重置（每日重新顯示）
 - 監聽 CustomEvent('open-onboarding') 重新觸發：`setShowOnboarding(true); setOnboardingDismissed(false)`
 - 優惠框（PromoCard）等 `showOnboarding` 為 false 後才啟動 2.5 秒計時器
 
@@ -146,7 +146,7 @@ page.tsx 已知 TypeScript 舊錯誤（4個）：
 - 現在只做 pass-through：`return NextResponse.next()`
 - 防重複帳號改由 auth/[...nextauth]/route.ts 的 signIn callback 處理（Gmail normalize 檢查）
 
-/chat/[characterId] 聊天頁：h-screen + overflow-hidden，底部輸入列有「離開聊天室」紅色按鈕，📎上傳圖片按鈕，打字延遲2-5秒，AI自拍觸發（單人延遲3~10秒），🎬轉成影片Modal，sessionId 存 localStorage 重開延續對話
-/chat/group 群組聊天頁：免費用戶封鎖，入門/標準最多3角色，專業最多5角色，群組回覆隨機順序+逐一顯示間隔2-5秒，AI自拍延遲30秒~3分鐘，sessionId 存 localStorage 重開延續對話
-/guide 使用指南頁：三條主線可展開，點數對照表，底部「開始創作」按鈕
+/chat/[characterId] 聊天頁：h-screen + overflow-hidden，底部輸入列有「離開聊天室」紅色按鈕，📎上傳圖片按鈕，打字延遲2-5秒，AI自拍立即觸發（無延遲），🎬轉成影片Modal，sessionId 存 localStorage 重開延續對話
+/chat/group 群組聊天頁：免費用戶封鎖，入門/標準最多3角色，專業最多5角色，群組回覆隨機順序+逐一顯示間隔2-5秒，AI自拍立即觸發（無延遲，接力自拍間隔3-10秒），sessionId 存 localStorage 重開延續對話
+/guide 使用指南頁：頂部「🌐 社群功能」可折疊區塊（探索角色/角色詳細頁/投稿角色）、四條主線可展開、點數對照表、「為什麼我們不一樣？」差異化區塊（10條，共用 app/data/whyDifferent.ts）、底部「開始創作」按鈕
 Onboarding 四選項（2026/05/22 更新）：生成AI角色→/create、🌐探索角色→/explore、和AI角色聊天或製作說話影片→/characters、上傳自己的照片轉影片→/create?upload=1（自動開啟 Upload Modal）

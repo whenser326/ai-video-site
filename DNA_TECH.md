@@ -98,7 +98,7 @@ localStorage (key: last_prediction_${userEmail}) 保持最後一次生成狀態�
 - generationMode state 控制四種模式（image/video/upload/text2video）
 - prompt 組合順序：`[selectedStyle, selectedPersona || customPersona, selectedScene || customScene, selectedShot, prompt].filter(Boolean).join(", ")`
 - Step 5 鏡頭選擇改為永遠顯示，圖片模式灰暗不可點，顯示「🔒 選影片模式才開放」
-- selectedPersonality + selectedJob + customPersonality 只存入角色資料（description 欄位），不拼入 prompt
+- selectedPersonality + selectedJob + customPersonality 只存入角色資料（description 欄位），不拼入 prompt（刻意設計：Flux 對中文個性詞理解有限，個性標籤的作用是存入 description 供聊天室 system prompt 使用，不影響生圖表情；FACS 表情對照只用於後台產圖和聊天室自拍，禁止在六步驟生圖 prompt 加入表情描述）
 - 收藏角色時必須帶入 `description: [selectedPersonality, selectedJob, customPersonality].filter(Boolean).join("・")`
 - Steps 2/3/4 自訂輸入框與標籤互斥：有選標籤則隱藏輸入框，有輸入則清空對應標籤
 - 自訂輸入框偵測中文自動顯示翻譯按鈕，採用翻譯後取代原文
@@ -143,6 +143,23 @@ key 清單（共40個，後台沒設定時 route.ts 有 fallback 預設值）：
 
 ---
 
+## AI 表情描述對照表（FACS → Flux/Kling 自然語言）
+以下為情緒對應的 Flux 1.1 Pro / Kling 3.0 可理解描述，用於後台產圖 prompt 和 selfie prompt 撰寫：
+- 開心/微笑：`subtle warm smile, slightly raised cheeks, soft eyes`
+- 驚訝/震驚：`wide eyes, raised eyebrows, mouth slightly open, surprised expression`
+- 生氣/憤怒：`furrowed brows, intense gaze, lips pressed tight, fierce expression`
+- 悲傷/難過：`downcast eyes, slightly raised inner brows, corners of mouth pulled down, melancholy expression`
+- 害羞/靦腆：`shy half-smile, slightly flushed, eyes glancing away, bashful expression`
+- 冷漠/距離感：`neutral expression, slightly narrowed eyes, cool detached gaze`
+- 妖嬈/魅惑：`half-lidded eyes, subtle smirk, alluring expression, soft focus gaze`
+
+## FACS 表情整合範圍（2026/05/27）
+- ✅ 後台產圖（/api/admin/gallery/generate-image）：根據 personality_tags 自動對應表情，找不到符合標籤 fallback 用 natural relaxed expression
+- ✅ 聊天室自拍 fallback（extractMoodFromMessage）：11種關鍵字對應 FACS 自然語言描述，取代舊版薄弱的7個對應
+- ✅ 聊天室自拍姿勢池（buildSelfiePrompt）：七種攝影姿勢隨機選取，Claude 主路徑作為參考建議，fallback 直接帶入
+- ✅ 六步驟創作 Step 4 動態環境標籤：新增5個動態場景（強風動態/暴雨電影感/沙漠風暴/櫻花飄落/雷雨夜）
+- ❌ 六步驟創角色（selectedPersonality）：刻意不加，原因見上方設計決策說明
+
 ## 自拍生成規範
 - 使用 flux-kontext-pro，帶入 char.image_url 鎖定臉孔
 - 走 /api/character，參數用 selfieCharacterImage（不是 lockedCharacter）
@@ -185,6 +202,7 @@ key 清單（共40個，後台沒設定時 route.ts 有 fallback 預設值）：
 - 函式名稱：maybeGenerateSummary(sessionId)，非同步觸發不阻塞回應
 - 注意：修改此區塊前確認 backgroundStory / memoryPrefix / maybeGenerateSummary 三者都存在，缺一報 ts(2304)
 - 注意：讀取 backgroundStory 時必須過濾 [LOCK] 前綴：`rawStory?.startsWith("[LOCK]") ? rawStory.slice(6) : rawStory`
+- Supabase DELETE 為原子操作：摘要進行中（LOCK 期間）若有並發讀取 chat_messages，不會讀到正在被刪除的訊息，race condition 風險低，無需額外防護。
 
 ### ✅ 聊天推薦台詞功能（2026/05/07 已完成）
 - 位置：聊天輸入欄旁「💬」按鈕
@@ -203,14 +221,6 @@ key 清單（共40個，後台沒設定時 route.ts 有 fallback 預設值）：
 - 在 charSystem 加入：「在回覆中可以自然穿插括號旁白描述你的動作、表情或心情（例如：（他微微一笑，視線落在遠方）），讓對話更有畫面感和沉浸感。旁白用括號包覆，與對話內容自然融合，不要太頻繁，約每2-3則穿插一次。」
 - 注意：旁白格式用（全形括號），避免與程式邏輯衝突
 - 禁止移除或修改括號旁白 prompt，格式必須用（全形括號）
-### ✅ 聊天室風格面板（2026/05/10 已完成）
-- 位置：輸入列旁 🎨 按鈕，點擊展開/收合
-- 面板上半：顯示角色底層設定（名稱/個性/聲線，群組版顯示所有參與角色）
-- 面板下半：口吻（療癒/毒舌/刺激）+ 文風（直白/文藝/輕小說）同一排，中間豎線區隔
-- state：showStylePanel / chatStyle / writingStyle
-- 傳遞：handleSend body 帶入 chatStyle / writingStyle → /api/chat/route.ts 注入 system prompt 末尾
-- 涵蓋：單人聊天室、群組聊天室、預設角色聊天室
-- route.ts：styleMap / writingMap / styleHint / writingHint 四個變數，禁止移除
 ### ✅ 聊天室對話搜尋（已完成）
 - 位置：四個聊天室頂部右側 🔍 按鈕（單人/群組/預設角色單人/預設角色群組）
 - 功能：輸入關鍵字，在 messages state 中純前端篩選，高亮匹配訊息（目前匹配亮綠框 ring-2、其他匹配淡綠框 ring-1）並自動捲動
@@ -229,13 +239,13 @@ key 清單（共40個，後台沒設定時 route.ts 有 fallback 預設值）：
 - 預設角色區塊預設收合，點標題列展開/收起（defaultExpanded state）
 - 預設角色聊天室 header 顯示「無記憶・無自拍」小字提示（2026/05/20）
 
-### ✅ 聊天室風格面板（2026/05/10 已完成）
-- 位置：輸入列旁 🎨 按鈕，點擊展開/收合
+### ✅ 聊天室風格面板（2026/05/10 已完成，2026/05/20 位置統一）
+- 位置：輸入列旁 🎨 按鈕，點擊展開/收合；面板統一放在輸入列下方（showSuggest 之後）
 - 面板上半：顯示角色底層設定（名稱/個性/聲線，群組版顯示所有參與角色）
 - 面板下半：口吻（療癒/毒舌/刺激）+ 文風（直白/文藝/輕小說）同一排，中間豎線區隔
 - state：showStylePanel / chatStyle / writingStyle
 - 傳遞：handleSend body 帶入 chatStyle / writingStyle → /api/chat/route.ts 注入 system prompt 末尾
-- 涵蓋：單人聊天室、群組聊天室、預設角色單人聊天室、預設角色群組聊天室
+- 涵蓋：單人自建、群組自建、預設角色單人、預設角色群組、gallery 五個聊天室
 - route.ts：styleMap / writingMap / styleHint / writingHint 四個變數，禁止移除
 
 ### ✅ 訊息回覆 + 群組 @Tag（2026/05/11 已完成）
@@ -524,13 +534,15 @@ NEXT_PUBLIC_TURNSTILE_SITE_KEY=0x4AAAAAC-_FUGtx2UlyaYF
 TURNSTILE_SECRET_KEY=（已設定於 Vercel Sensitive）
 ```
 ANTHROPIC_API_KEY=sk-ant-你的金鑰
+CRON_SECRET=（自訂隨機字串，Vercel Cron cleanup-gallery-works 驗證用）
+✅ mediaUrl 圖片渲染修復完成（已確認 2026/05/27）：app/chat/gallery/[id]/page.tsx、app/chat/default/[characterId]/page.tsx、app/chat/default-group/page.tsx 三個聊天室均已補齊 mediaUrl 欄位定義和氣泡渲染邏輯，上傳圖片可正常顯示。
 ✅ 所有聊天室訊息區背景色統一（2026/05/19）：bg-black（純黑），涵蓋單人/群組/預設單人/預設群組/gallery 五個聊天室
 ✅ 所有聊天室 textarea 輸入框內部背景色統一（2026/05/19）：bg-black，涵蓋五個聊天室
 ✅ 聊天室 isTyping 統一（2026/05/20）：五個聊天室均已加入 isTyping state，打字動畫改用 loading || isTyping 控制，API回來後立刻解鎖輸入，角色逐則顯示前才顯示打字動畫
 ✅ 聊天室風格面板位置統一（2026/05/20）：五個聊天室風格面板統一移至輸入列下方（showSuggest 之後）
 ✅ 聊天室上傳圖片補角色回應（2026/05/20）：五個聊天室 📎上傳圖片後均會呼叫 /api/chat 讓角色看圖回應
 ✅ 聊天室上傳圖片預覽（2026/05/20）：五個聊天室均已補上 mediaUrl 顯示，含 Message interface 補欄位、氣泡補渲染、setMessages 補 mediaUrl、replyTo 移到輸入列上方
-✅ chat_count 精算修正（2026/05/25）：/api/chat/route.ts chat_count 改為 responses.length（實際回覆數），不再用 characterList.length（全部角色數）。超量 creditCost 改為預扣1點保守值，responses 完成後用 actualCount 精算實際扣點。newChatCount、remainingQuota、回傳 creditCost 均同步修正。
+✅ chat_count 精算修正（2026/05/25）：/api/chat/route.ts chat_count 改為 responses.length（實際回覆數），不再用 characterList.length（全部角色數）。超量 creditCost 採方案A：預扣1點保守值，responses 完成後用 actualCount 精算，若 actualCount > 1 則補扣差額（actualCount - 1）。補扣邏輯在 API responses 完成後執行；若 API timeout 或用戶斷線導致精算未執行，下次進入聊天室時點數以 /api/user/credits 最新值為準，不做額外對帳。newChatCount、remainingQuota、回傳 creditCost 均同步修正。
 ✅ 自拍等待追問功能（2026/05/25）：單人自建（/chat/[characterId]）和群組自建（/chat/group）的 triggerSelfie 加入 waitTimer，生成期間每60秒發一則等待訊息，最多3次，finally clearInterval 確保清除。
 ✅ 說話影片扣點修正（2026/05/25）：單人自建和群組自建聊天室說話影片 polling 成功後改為 fetch /api/user/credits 取得真實點數，移除假扣點 setCredits(prev => prev - avatarData.creditCost)。自拍照片/影片完成後同樣改為 fetch 真實點數。
 ✅ gallery 聊天室自拍提示文字修正（2026/05/25）：「需收藏角色才能用」改為「需自創角色才能用，去我的角色建立專屬角色」。
@@ -562,7 +574,7 @@ ANTHROPIC_API_KEY=sk-ant-你的金鑰
 ✅ 角色詳細頁分享按鈕（2026/05/21 完成）：gallery/[id]/page.tsx 加入「🔗 分享角色」按鈕，點擊複製當前頁面 URL，顯示「✅ 已複製連結」2秒後還原。新增 copied state。
 ✅ Supabase 新表 gallery_comments（2026/05/21）：欄位 id uuid PK, gallery_id uuid, user_email text, content text, created_at timestamptz。RLS停用。建立 gallery_comments_gallery_id_idx 索引。新建 app/api/gallery/comments/route.ts（GET讀取留言/POST新增留言，200字上限，email遮罩顯示）。
 ✅ M01 探索角色頁（2026/05/22 完成）：新建 app/explore/page.tsx，含搜尋框（前端即時篩選）、排序Tab（熱門/最新）、性別篩選（全部/女性/男性，對應 public_gallery.gender 中文值）、標籤橫向滑動、精選橫向捲動、瀑布流2欄/3欄、IntersectionObserver 無限捲動（每次20筆）、免費第12張鎖定、置中Modal（同首頁邏輯含「查看詳細頁面→」）。GlobalHeader 新增「🌐 探索角色」入口（menuItems 第三位），路由 /explore。
-✅ M04 公開角色投稿系統（2026/05/22 完成）：新建 public_characters 表（欄位：id uuid PK, original_character_id integer, user_email, name, image_url, description, voice_id, tags text[], visibility(private/anonymous/public), status(pending/approved/rejected), reject_reason, is_active bool, like_count int, created_at, source_public_character_id uuid）。RLS停用。投稿三步驟Modal（選角色→多選圖片→確認送出）在 GallerySection.tsx 虛線框觸發。投稿API：/api/public-characters/route.ts（POST投稿/PATCH審核，驗證方式用body/query string傳email而非getServerSession）。後台查詢API：/api/public-characters/admin/route.ts。核准時自動insert到public_gallery（source_public_character_id記錄來源）。退件時用admin_reply機制通知用戶。後台/admin/gallery新增「待審核」Tab，頁面載入即自動撈待審核數量。刪除public_gallery時若有source_public_character_id同步刪public_characters。
+✅ M04 公開角色投稿系統（2026/05/22 完成）：新建 public_characters 表（欄位：id uuid PK, original_character_id integer, user_email, name, image_url, description, voice_id, tags text[], visibility(private/anonymous/public), status(pending/approved/rejected), reject_reason, is_active bool, like_count int, created_at, source_public_character_id uuid）。RLS停用。投稿三步驟Modal（選角色→多選圖片→確認送出）在 GallerySection.tsx 虛線框觸發。投稿API：/api/public-characters/route.ts（POST投稿/PATCH審核，驗證方式用body/query string傳email而非getServerSession）。後台查詢API：/api/public-characters/admin/route.ts。核准時自動insert到public_gallery（source_public_character_id記錄來源）。退件時用admin_reply機制通知用戶。後台/admin/gallery新增「待審核」Tab，頁面載入即自動撈待審核數量。刪除public_gallery時若有source_public_character_id同步刪public_characters（在 /api/admin/gallery DELETE API 層手動執行，非 DB CASCADE，修改此 API 時需確保不漏掉此步驟）。
 ✅ public_characters表補gender欄位（2026/05/22）：ALTER TABLE public_characters ADD COLUMN IF NOT EXISTS gender text DEFAULT ''。GallerySection.tsx投稿Modal confirm步驟新增性別選擇（女性/男性/不設定），送出帶gender，route.ts核准insert到public_gallery時帶入item.gender。
 ✅ Claude API overload自動重試（2026/05/22）：/api/chat/route.ts偵測overloaded_error最多重試2次（第一次等2秒/第二次等3秒），全部失敗顯示「⚠️ 目前系統有點忙，請再說一次」，所有聊天室共用此修復。
 ✅ gallery聊天室loadingRef修復（2026/05/22）：app/chat/gallery/[id]/page.tsx新增loadingRef追蹤loading狀態，autoMessage timer改用loadingRef.current檢查，避免closure抓到舊值導致autoMessage和handleSend同時發送。
@@ -633,7 +645,7 @@ ANTHROPIC_API_KEY=sk-ant-你的金鑰
 
 ✅ 聊天解鎖成就能見度提升（2026/05/25）：GallerySection.tsx 瀑布流卡片底部加「🔓 聊越多解鎖越多」標籤。gallery/[id]/page.tsx 詳細頁 CTA 按鈕下方加解鎖提示區塊。characters/page.tsx B2 選單「互動聊天」按鈕加🔓標籤。/chat/[characterId] 每日提示框加解鎖說明。guide/page.tsx 線B「開始聊天」加解鎖說明。
 ✅ 使用指南聲音克隆說明（2026/05/25）：guide/page.tsx 線A「加語音/說話影片」、線B「讓角色說話」、線C「說話影片」均加入聲音克隆說明文字。whyDifferent.ts 新增第11條聲音克隆差異化說明。
-✅ E02/E03 觸發條件修正（2026/05/25）：/api/chat/route.ts 新增 charSessionCount，查 chat_messages 表該角色在此 session 的 assistant 訊息數。E02 achievement 和 E03 unlockType 均改用 charSessionCount 判斷，取代原本的全站累計 newChatCount。查詢在 chat_messages.insert 之後執行，包含本次剛插入的訊息。只對 characterList[0] 觸發，群組聊天行為不變。newChatCount 保留供 remainingQuota 計算使用。
+✅ E02/E03 觸發條件修正（2026/05/25）：/api/chat/route.ts 新增 charSessionCount，查 chat_messages 表該角色在此 session 的 assistant 訊息數。E02 achievement 和 E03 unlockType 均改用 charSessionCount 判斷，取代原本的全站累計 newChatCount（newChatCount 保留供 remainingQuota 計算，不再用於觸發判斷）。查詢在 chat_messages.insert 之後執行，包含本次剛插入的訊息。只對 characterList[0] 觸發，群組聊天行為不變。E02 成就和 E03 解鎖是兩個獨立機制，同一 charSessionCount 可能同時觸發（如 50 則同時是 unlock_secret 和 achievement），確認不衝突。
 ✅ E05 生日/紀念日系統（2026/05/25）：
 - DB：profiles.birthday（TEXT，格式 MM-DD）已建立
 - 設定入口：每日簽到頁（/checkin），選填，儲存後永久保存
@@ -646,7 +658,7 @@ ANTHROPIC_API_KEY=sk-ant-你的金鑰
   - 預設群組：`birthday_msg_${email}_default_group_${today}`
   - 紀念日：`anniversary_msg_${email}_${characterId}_${today}`
 - 生日圖片：自創角色單人/群組才生圖，Flux Kontext Pro 鎖臉，免費不扣點，生成後上傳 Supabase Storage 換永久 URL
-- 群組自創生日：在「開始聊天」按鈕 onClick 觸發（不在 useEffect，因 useEffect 執行時 selectedIds 還是空陣列）。所有角色逐一送祝福（間隔1.5秒），聊最多的角色附圖（/api/chat/most-active 查詢），fallback 隨機
+- 群組自創生日：在「開始聊天」按鈕 onClick 觸發（不在 useEffect，因為 useEffect 執行時 selectedIds 還是空陣列）。生日圖片 URL 由後端 /api/chat/birthday 從 saved_characters DB 查取，不依賴前端 characters state，時序安全。所有角色逐一送祝福（間隔1.5秒），聊最多的角色附圖（/api/chat/most-active 查詢），fallback 隨機
 - 紀念日：只在自創單人聊天室觸發，查 chat_sessions.created_at 最早一筆同月同日，純文字，生日和紀念日同天各自獨立觸發
 - gallery/default 聊天室：純文字生日訊息，不生圖，用 /api/chat/birthday-text
 - 新增 API：
@@ -668,6 +680,14 @@ ANTHROPIC_API_KEY=sk-ant-你的金鑰
 ✅ 後台產圖 prompt 多樣化（本視窗）：generate-image/route.ts 新增 makeupStyles 4種、ethnicFeatures 5種、雀斑20%機率，注入 prompt。
 ✅ 生日圖 prompt 隨機化（本視窗）：A款（holding a small birthday cake with candles + confetti）和 D款（holding a birthday cake + colorful balloons + confetti）各50%隨機，移除舊有 holding flowers / candlelight。
 ✅ 自拍冷卻機制（本視窗）：單人（/chat/[characterId]）和群組（/chat/group）自拍觸發前檢查 messages 是否有 selfieLoading:true，有則跳過，防止並行重複觸發。
+✅ F系列公開作品相簿系統規則（2026/05/27）：
+- 瀑布流卡片縮圖：最新3張
+- 首頁Modal主圖輪播：原圖(index 0)+作品(index 1~N)，最多5張，galleryWorksMap.slice(0,5)
+- 角色詳細頁(/gallery/[id])：主圖單張，下方作品相簿無限張，點縮圖換主圖，左上角「← 角色原圖」按鈕切回
+- 刪除權限：只有管理員(whenser@gmail.com)和pro可刪，入門/標準不能刪
+- 免費用戶作品expires_at=建立後+3天，詳細頁顯示「X天後過期／升級可永久保留」琥珀色提示
+- 付費用戶expires_at=null，不顯示到期提示
+- Vercel Cron cleanup-gallery-works每日台灣凌晨3點自動清理過期作品
 ✅ 自拍後追問限制（2026/05/27）：三個聊天室（單人自創/群組/gallery）加入 selfieActiveRef 和 selfieAutoMsgCountRef，自拍觸發後 autoMessage timer 最多追問3次後停止，自拍完成後 finally 重置兩個 ref，未觸發自拍時可無限追問。
 ✅ gallery 聊天室自拍功能完整上線（2026/05/27）：F1 完成，條件邏輯同自創單人，含 triggerSelfie/selfieLoading/imageUrl/videoUrl 渲染/存至公開相簿按鈕/F3 錯誤提示。
 ✅ 公開作品相簿系統（2026/05/27）：新表 gallery_works（欄位：id/gallery_id/user_email/image_url/video_url/work_type/expires_at/created_at），免費用戶 expires_at=建立後+3天，付費永久null，Vercel Cron 每日台灣凌晨3點清理過期作品。API：/api/gallery-works（GET/POST/DELETE），刪除權限：免費不能刪、入門/標準只能刪自己、pro和管理員可刪任何人。

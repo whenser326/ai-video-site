@@ -119,9 +119,9 @@ AI 自拍媒體類型與扣點：
 
 後台需新增 admin_settings key：
 新增 API：
-- /api/upload-chat-image：接收 FormData（file+email），上傳到 character-images bucket，回傳永久 URL
-- /api/user/save-generation：存作品到 user_generations 表（image_url、character_id、status:'done'）
-- chat_cost_per_extra（次數用完後每次扣點，預設1）
+- /api/upload-chat-image：接收 FormData（file+email），上傳到 character-images bucket，回傳永久 URL（✅ 已完成）
+- /api/user/save-generation：存作品到 user_generations 表（image_url、character_id、status:'done'）（✅ 已完成）
+- chat_cost_per_extra（次數用完後每次扣點，預設1）→ ⚠️ 尚未實作，admin_settings 未建立此 key，前端/後端均無此邏輯
 
 ✅ 角色個性：saved_characters 表已有 description 欄位（角色個性描述），建角色時填寫，聊天時帶入 system prompt（已完成）
 
@@ -147,7 +147,7 @@ AI 自拍媒體類型與扣點：
 - ✅ **記憶摘要系統**（所有競品共同致命傷）：當對話超過50則時，自動呼叫 Claude 生成對話摘要存入 chat_sessions 的 background_story 欄位，下次對話帶入 system prompt，解決長對話記憶崩壞問題。這是目前所有競品最大的用戶痛點，率先解決可成為最強差異點。
 - ✅ 預設角色系統（2026/05/07 完成）：20位男女各10位，寫死在前端，單人+群組聊天，不支援自拍，次數累計同一計數器
 - ✅ 聊天內容揭露（2026/05/07 完成）：頂部固定小字 + 一次性提示框（localStorage: chat_notice_seen）
-- ✅ 動作參考影片上傳（對標 Viggle AI）：已完成。/api/upload-video 上傳到 Supabase Storage、/api/motion-control 呼叫 kwaivgi/kling-v3-motion-control，免費用戶不開放，付費用戶沿用 Kling 5秒點數（入門6/標準5/專業4）。Upload Modal 已重構為「先選功能、自動選模型」漢堡下拉選單設計（B+ 方案），三個功能：🎬 隨意動作（Kling）、💃 套用動作參考影片（Kling Motion Control）、🎨 多重參考圖（Seedance + omniRefs）。
+- ✅ 動作參考影片上傳（對標 Viggle AI）：已完成。/api/upload-video 上傳到 Supabase Storage、/api/motion-control 呼叫 kwaivgi/kling-v3-motion-control，免費用戶不開放，付費用戶沿用 Kling 5秒點數（入門6/標準5/專業4）。Upload Modal 已重構為五條線路（詳細規格見 DNA_TECH.md「Upload Modal 五條線路」章節）：線路一說話影片（TTS+Kling Avatar）、線路二AI自由發揮（Kling）、線路三文字指定動作（Kling+prompt）、線路四套用動作參考影片（Kling Motion Control，付費限定）、線路五高精度角色影片（Seedance+omniRefs，付費限定）。所有線路不鎖臉，無 Flux Kontext Step 1。
 ✅ 上傳照片轉影片 base64 修正（2026/05/11）：Upload Modal 三個功能（隨意動作/套用動作參考影片/多重參考圖）的主圖和 omniRef 在送出前先上傳 Supabase 換成 https URL，再傳給 Replicate；motion_video 的文字輸入框 placeholder 依選擇功能動態顯示提示
 
 ### 從競品提煉的待實作功能（中期）
@@ -187,7 +187,7 @@ AI 自拍媒體類型與扣點：
 ✅ N02 後台角色上架系統（2026/05/18 完成）：/admin/gallery、public_gallery 資料表、AI 隨機產角色、後台產圖、上架管理。故事長度規格：短20字/中200字/長400字（2026/05/20 調整）
 靈感畫廊卡片背景色：#111（黑色），不可用深綠
 靈感畫廊互動：卡片點擊→底部滑出預覽面板（不跳頁），CTA主要「💬 開始聊天」/次要「🎨 生成同款」帶prompt跳/create，故事mid/long顯示2行加「⋯ 更多」，篩選標籤橫向滑動，底部投稿入口虛線框佔位（M04前顯示「即將開放」）
-✅ N05 聊天室角色大頭照常駐（2026/05/20 完成）：gallery 聊天室和單人自建聊天室 header 加入角色圖半透明背景（opacity 0.18 + blur），左側漸層遮罩確保名字清晰，圓形大頭貼加綠色邊框，顯示個性標籤。gallery 補齊 isOverQuota UI、連續送出解鎖、打字動畫（isTyping state）
+✅ N05 聊天室角色大頭照常駐（2026/05/20 完成）：gallery 聊天室和單人自建聊天室 header 加入角色圖半透明背景（opacity 0.18 + blur），左側漸層遮罩確保名字清晰，圓形大頭貼加綠色邊框，顯示個性標籤。gallery 補齊 isOverQuota UI、連續送出解鎖、打字動畫（isTyping state）。同批完成：五個聊天室 isTyping 統一（打字動畫改用 loading || isTyping 控制）、風格面板統一移至輸入列下方、📎上傳圖片後觸發角色看圖回應、GlobalHeader 新增「角色生成」按鈕導向 /create。
 ✅ N01 首頁大改版完整規格（2026/05/19 完成）：
 - app/page.tsx 已登入區塊：Hero 影片（Supabase CDN hero.mp4）+ 瀑布流畫廊（GallerySection.tsx）
 - GallerySection.tsx：熱門/最新 Tab、篩選標籤橫向滑動、2欄手機/3欄桌面瀑布流、卡片背景#111

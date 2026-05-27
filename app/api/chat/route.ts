@@ -43,12 +43,17 @@ function extractSceneFromMessage(message: string): string {
 
 // 從訊息抽取表情/動作關鍵字
 function extractMoodFromMessage(message: string): string {
-  if (message.includes("開心") || message.includes("笑")) return "smiling happily";
-  if (message.includes("生氣") || message.includes("兇")) return "serious expression";
-  if (message.includes("害羞")) return "shy expression, blushing";
-  if (message.includes("性感") || message.includes("撩")) return "confident sexy pose";
-  if (message.includes("可愛")) return "cute expression";
-  if (message.includes("運動") || message.includes("跑步")) return "athletic pose, sporty";
+  if (message.includes("開心") || message.includes("笑")) return "subtle warm smile, slightly raised cheeks, soft eyes";
+  if (message.includes("生氣") || message.includes("兇")) return "furrowed brows, intense gaze, lips pressed tight, fierce expression";
+  if (message.includes("害羞")) return "shy half-smile, slightly flushed, eyes glancing away, bashful expression";
+  if (message.includes("性感") || message.includes("撩") || message.includes("妖嬈")) return "half-lidded eyes, subtle smirk, alluring expression, soft focus gaze";
+  if (message.includes("可愛")) return "cute smile, wide innocent eyes, cheerful expression";
+  if (message.includes("運動") || message.includes("跑步")) return "athletic pose, sporty, energetic expression";
+  if (message.includes("驚訝") || message.includes("嚇")) return "wide eyes, raised eyebrows, mouth slightly open, surprised expression";
+  if (message.includes("難過") || message.includes("傷心") || message.includes("哭")) return "downcast eyes, melancholy expression, distant gaze";
+  if (message.includes("冷漠") || message.includes("隨便")) return "neutral expression, slightly narrowed eyes, cool detached gaze";
+  if (message.includes("溫柔") || message.includes("溫暖")) return "soft warm smile, gentle eyes, calm serene expression";
+  if (message.includes("驕傲") || message.includes("得意")) return "confident slight smirk, chin slightly lifted, proud expression";
   return "";
 }
 
@@ -174,6 +179,17 @@ async function buildSelfiePrompt(
   characterDesc: string,
   history: any[]
 ): Promise<string> {
+  // 七種攝影姿勢池（FACS 研究 + 模特兒擺拍邏輯）
+  const posePool = [
+    "S-curve standing pose, weight on one leg, natural body line",
+    "looking back over shoulder, body angled 45 degrees to camera",
+    "sitting cross-legged, hugging knees, cozy relaxed pose",
+    "lying on side, chin resting on hand, casual relaxed",
+    "candid walking pose, mid-stride, hair moving naturally",
+    "hand near face, fingers lightly touching chin, face slightly smaller",
+    "leaning against wall, one hand in pocket, casual confident",
+  ];
+  const randomPose = posePool[Math.floor(Math.random() * posePool.length)];
   const recentHistory = history.slice(-10)
     .map((m: any) => `${m.role === "user" ? "用戶" : characterName}：${m.content}`)
     .join("\n");
@@ -197,6 +213,8 @@ async function buildSelfiePrompt(
 
 格式必須嚴格按照：
 wearing [具體衣物描述], [具體行為/姿勢], [具體場景背景], [光線/時間氛圍], selfie photo, high quality, realistic
+
+姿勢參考（可使用或調整為更符合情境的版本）：${randomPose}
 
 規則：
 - wearing 後面必須是具體衣物，例如 white linen blouse and light blue jeans、red floral sundress、oversized grey hoodie
@@ -232,7 +250,7 @@ wearing [具體衣物描述], [具體行為/姿勢], [具體場景背景], [光�
   const selfieStyleFallback = usesTripodFallback
     ? "on a tripod, timer selfie, no phone visible"
     : "selfie photo, no phone in hand";
-  return `${characterDesc || "attractive person"}, ${mood}, ${scene}, ${selfieStyleFallback}, high quality, realistic`;
+  return `${characterDesc || "attractive person"}, ${randomPose}, ${mood}, ${scene}, ${selfieStyleFallback}, high quality, realistic`;
 }
 
 export async function POST(req: NextRequest) {

@@ -2035,6 +2035,11 @@ localStorage.setItem(key, '1');
                 "ancient temple, mystical atmosphere, fog": "神殿",
                 "beach, ocean, golden hour sunlight": "海邊",
                 "cyberpunk city, rain, holographic signs": "賽博城市",
+                "strong wind blowing, dynamic environment, debris in air, dramatic atmosphere": "強風動態",
+                "heavy rain, stormy weather, puddles reflecting light, cinematic": "暴雨電影感",
+                "golden desert, dust storm approaching, dramatic lighting, riders on horseback in distance": "沙漠風暴",
+                "cherry blossoms falling, soft wind, petals in air, dreamy spring": "櫻花飄落",
+                "thunderstorm, lightning in background, dark dramatic sky, high contrast": "雷雨夜",
               };
               return (
                 <div className="border border-white/8 rounded-2xl overflow-hidden">

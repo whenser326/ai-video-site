@@ -70,7 +70,35 @@ const appearanceDesc = body.appearance ? `${body.appearance}, ` : "";
     "looking over shoulder", "chin down looking up", "profile view"
   ];
   const randomAngle = cameraAngles[Math.floor(Math.random() * cameraAngles.length)];
-
+// FACS 表情對照：根據 personality_tags 推斷表情描述
+  const personalityTags: string[] = body.personality_tags || [];
+  const faceExpressionMap: Record<string, string> = {
+    "活潑": "subtle warm smile, slightly raised cheeks, bright eyes",
+    "開朗": "genuine warm smile, soft eyes, approachable expression",
+    "甜美": "shy half-smile, slightly flushed, soft gentle eyes",
+    "可愛": "cute smile, wide innocent eyes, cheerful expression",
+    "冷漠": "neutral expression, slightly narrowed eyes, cool detached gaze",
+    "高冷": "cool composed expression, minimal smile, steady gaze",
+    "神秘": "subtle smirk, half-lidded eyes, mysterious alluring look",
+    "性感": "half-lidded eyes, subtle smirk, alluring expression, soft focus gaze",
+    "妖嬈": "half-lidded eyes, subtle smirk, alluring expression, confident pose",
+    "溫柔": "soft warm smile, gentle eyes, calm serene expression",
+    "溫暖": "gentle smile, warm soft eyes, approachable expression",
+    "知性": "calm composed expression, intelligent gaze, slight confident smile",
+    "成熟": "composed mature expression, confident steady gaze",
+    "霸氣": "confident strong expression, intense gaze, commanding presence",
+    "害羞": "shy half-smile, eyes glancing away, slightly flushed",
+    "憂鬱": "downcast eyes, melancholy expression, distant gaze",
+    "生氣": "furrowed brows, intense gaze, serious expression",
+    "驕傲": "confident slight smirk, chin slightly lifted, proud expression",
+  };
+  let randomExpression = "natural relaxed expression, soft eyes";
+  for (const tag of personalityTags) {
+    if (faceExpressionMap[tag]) {
+      randomExpression = faceExpressionMap[tag];
+      break;
+    }
+  }
   // 從 body.prompt 萃取年齡，組成強年齡提示
   const ageMatch = body.prompt ? body.prompt.match(/(\d+)\s*years?\s*old/i) : null;
   const ageNum = ageMatch ? parseInt(ageMatch[1]) : null;
@@ -89,7 +117,7 @@ const appearanceDesc = body.appearance ? `${body.appearance}, ` : "";
   const prediction = await replicate.predictions.create({
     model: "black-forest-labs/flux-1.1-pro",
     input: {
-      prompt: `${ageHint}${appearanceDesc}${randomEthnic}, ${randomHair}, ${randomFace}, ${randomSkin}, ${randomMakeup}, ${randomFeature}, ${randomAngle}, ${body.prompt ? body.prompt + ", " : ""}${randomLighting}, photorealistic, real person, 8k, professional photography, highly distinctive unique facial features, unique individual appearance`,
+      prompt: `${ageHint}${appearanceDesc}${randomEthnic}, ${randomHair}, ${randomFace}, ${randomSkin}, ${randomMakeup}, ${randomFeature}, ${randomAngle}, ${randomExpression}, ${body.prompt ? body.prompt + ", " : ""}${randomLighting}, photorealistic, real person, 8k, professional photography, highly distinctive unique facial features, unique individual appearance`,
       aspect_ratio: "2:3",
       output_format: "png",
       seed: seed,
