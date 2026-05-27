@@ -495,10 +495,11 @@ const [showUpgradeModal, setShowUpgradeModal] = useState(false);
         for (const r of data.responses) {
           await new Promise(resolve => setTimeout(resolve, randomDelay()));
           const msgId = `msg-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+          const cleanContent = r.content.replace(/【[^】]*】/g, "").trim();
           const newMsg: Message = {
             id: msgId,
             role: "assistant",
-            content: r.content,
+            content: cleanContent,
             characterName: r.characterName,
             isUnlock: r.isUnlock,
             unlockLevel: r.unlockLevel,

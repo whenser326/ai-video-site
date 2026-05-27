@@ -474,11 +474,12 @@ const [writingStyle, setWritingStyle] = useState("直白");
                 charImgUrl: r.characterImageUrl as string | undefined,
               });
             }
+            const cleanContent = r.content.replace(/【[^】]*】/g, "").trim();
             setMessages(prev => {
               const newMsg: Message = {
                 id: msgId,
                 role: "assistant",
-                content: r.content,
+                content: cleanContent,
                 characterName: r.characterName,
                 characterImage: char?.image_url,
                 characterId: r.characterId,

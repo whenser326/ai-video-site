@@ -439,10 +439,11 @@ const [galleryWorksSaved, setGalleryWorksSaved] = useState<Set<string>>(new Set(
           await new Promise(resolve => setTimeout(resolve, randomDelay()));
           setIsTyping(false);
           const msgId = `msg-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+          const cleanContent = r.content.replace(/【[^】]*】/g, "").trim();
           const newMsg: Message = {
             id: msgId,
             role: "assistant",
-            content: r.content,
+            content: cleanContent,
             characterName: r.characterName,
             isUnlock: r.isUnlock,
             unlockLevel: r.unlockLevel,
@@ -672,49 +673,49 @@ const [galleryWorksSaved, setGalleryWorksSaved] = useState<Set<string>>(new Set(
                   <img src={msg.mediaUrl} alt="uploaded" className="w-48 rounded-xl mb-2 object-cover" />
                 )}
                 {msg.content}
-              </div>
+              {msg.selfieLoading && (
+                <div className="px-4 py-2 rounded-2xl bg-black/20 border border-[#89f5a2]/15 text-[#89f5a2]/60 text-xs whitespace-pre-line mt-1">
+                  {msg.selfieType === "photo"
+                    ? "📸 圖片生成上傳中，扣1點\n⚠️ 請勿關閉視窗！"
+                    : "🎬 影片生成中，扣4-6點\n⚠️ 請耐心等候，請勿關閉視窗！"}
+                </div>
+              )}
+              {msg.imageUrl && (
+                <div className="space-y-2 mt-1">
+                  <img src={msg.imageUrl} alt="AI自拍" className="rounded-2xl max-w-[220px] border border-white/15" />
+                  <div className="flex gap-2 flex-wrap">
+                    <button
+                      onClick={() => saveToGalleryWorks(msg.imageUrl!, "photo")}
+                      disabled={galleryWorksSaved.has(msg.imageUrl!)}
+                      className="px-3 py-1.5 rounded-full text-[10px] font-bold bg-blue-500/10 border border-blue-500/30 text-blue-300 hover:bg-blue-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                    >
+                      {galleryWorksSaved.has(msg.imageUrl!) ? "✅ 已儲存" : "💾 存至公開相簿"}
+                    </button>
+                    <a href={msg.imageUrl} download className="px-3 py-1.5 rounded-full text-[10px] font-bold bg-white/5 border border-white/15 text-white/50 hover:bg-white/10 transition-all">
+                      ⬇ 儲存
+                    </a>
+                  </div>
+                </div>
+              )}
+              {msg.videoUrl && (
+                <div className="space-y-2 mt-1">
+                  <video src={msg.videoUrl} controls autoPlay loop className="rounded-2xl max-w-[220px] border border-white/15" />
+                  <div className="flex gap-2 flex-wrap">
+                    <button
+                      onClick={() => saveToGalleryWorks(msg.videoUrl!, "video")}
+                      disabled={galleryWorksSaved.has(msg.videoUrl!)}
+                      className="px-3 py-1.5 rounded-full text-[10px] font-bold bg-blue-500/10 border border-blue-500/30 text-blue-300 hover:bg-blue-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                    >
+                      {galleryWorksSaved.has(msg.videoUrl!) ? "✅ 已儲存" : "💾 存至公開相簿"}
+                    </button>
+                    <a href={msg.videoUrl} download className="px-3 py-1.5 rounded-full text-[10px] font-bold bg-white/5 border border-white/15 text-white/50 hover:bg-white/10 transition-all">
+                      ⬇ 儲存
+                    </a>
+                  </div>
+                </div>
+              )}
             </div>
-            {msg.selfieLoading && (
-                  <div className="px-4 py-2 rounded-2xl bg-black/20 border border-[#89f5a2]/15 text-[#89f5a2]/60 text-xs whitespace-pre-line mt-1">
-                    {msg.selfieType === "photo"
-                      ? "📸 圖片生成上傳中，扣1點\n⚠️ 請勿關閉視窗！"
-                      : "🎬 影片生成中，扣4-6點\n⚠️ 請耐心等候，請勿關閉視窗！"}
-                  </div>
-                )}
-                {msg.imageUrl && (
-                  <div className="space-y-2 mt-1">
-                    <img src={msg.imageUrl} alt="AI自拍" className="rounded-2xl max-w-[220px] border border-white/15" />
-                    <div className="flex gap-2 flex-wrap">
-                      <button
-                        onClick={() => saveToGalleryWorks(msg.imageUrl!, "photo")}
-                        disabled={galleryWorksSaved.has(msg.imageUrl!)}
-                        className="px-3 py-1.5 rounded-full text-[10px] font-bold bg-blue-500/10 border border-blue-500/30 text-blue-300 hover:bg-blue-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                      >
-                        {galleryWorksSaved.has(msg.imageUrl!) ? "✅ 已儲存" : "💾 存至公開相簿"}
-                      </button>
-                      <a href={msg.imageUrl} download className="px-3 py-1.5 rounded-full text-[10px] font-bold bg-white/5 border border-white/15 text-white/50 hover:bg-white/10 transition-all">
-                        ⬇ 儲存
-                      </a>
-                    </div>
-                  </div>
-                )}
-                {msg.videoUrl && (
-                  <div className="space-y-2 mt-1">
-                    <video src={msg.videoUrl} controls autoPlay loop className="rounded-2xl max-w-[220px] border border-white/15" />
-                    <div className="flex gap-2 flex-wrap">
-                      <button
-                        onClick={() => saveToGalleryWorks(msg.videoUrl!, "video")}
-                        disabled={galleryWorksSaved.has(msg.videoUrl!)}
-                        className="px-3 py-1.5 rounded-full text-[10px] font-bold bg-blue-500/10 border border-blue-500/30 text-blue-300 hover:bg-blue-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                      >
-                        {galleryWorksSaved.has(msg.videoUrl!) ? "✅ 已儲存" : "💾 存至公開相簿"}
-                      </button>
-                      <a href={msg.videoUrl} download className="px-3 py-1.5 rounded-full text-[10px] font-bold bg-white/5 border border-white/15 text-white/50 hover:bg-white/10 transition-all">
-                        ⬇ 儲存
-                      </a>
-                    </div>
-                  </div>
-                )}
+            </div>
             {msg.role === "assistant" && (
               <button
                 onClick={() => setReplyTo({ characterName: msg.characterName || character.name, content: msg.content })}
