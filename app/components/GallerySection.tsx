@@ -71,6 +71,7 @@ export default function GallerySection({ userEmail, plan, isLoggedIn, onLoginReq
   const displayCountsRef = useRef<Map<string, { like: number; chat: number }>>(new Map());
   const panelRef = useRef<HTMLDivElement>(null);
   const [galleryWorksMap, setGalleryWorksMap] = useState<Map<string, GalleryWork[]>>(new Map());
+  const selectedIndex = selected ? items.findIndex(i => i.id === selected.id) : -1;
 // 批次讀取各角色的公開作品（最新4筆）
   useEffect(() => {
     if (items.length === 0) return;
@@ -314,6 +315,24 @@ export default function GallerySection({ userEmail, plan, isLoggedIn, onLoginReq
                 className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-black/60 border border-white/20 text-white/70 hover:text-white flex items-center justify-center text-sm transition-all">
                 ✕
               </button>
+
+              {/* 左箭頭 */}
+              {selectedIndex > 0 && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setSelected(items[selectedIndex - 1]); setExpandedStory(false); }}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-black/60 border border-white/20 text-white/70 hover:text-white flex items-center justify-center text-base transition-all">
+                  ‹
+                </button>
+              )}
+
+              {/* 右箭頭 */}
+              {selectedIndex < items.length - 1 && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setSelected(items[selectedIndex + 1]); setExpandedStory(false); }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-black/60 border border-white/20 text-white/70 hover:text-white flex items-center justify-center text-base transition-all">
+                  ›
+                </button>
+              )}
 
               {/* 漸層遮罩 + 文字資訊覆蓋在圖片下方 */}
               <div className="absolute bottom-0 left-0 right-0 px-4 pb-5 pt-20"
