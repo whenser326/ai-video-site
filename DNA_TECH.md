@@ -668,6 +668,17 @@ ANTHROPIC_API_KEY=sk-ant-你的金鑰
 ✅ 後台產圖 prompt 多樣化（本視窗）：generate-image/route.ts 新增 makeupStyles 4種、ethnicFeatures 5種、雀斑20%機率，注入 prompt。
 ✅ 生日圖 prompt 隨機化（本視窗）：A款（holding a small birthday cake with candles + confetti）和 D款（holding a birthday cake + colorful balloons + confetti）各50%隨機，移除舊有 holding flowers / candlelight。
 ✅ 自拍冷卻機制（本視窗）：單人（/chat/[characterId]）和群組（/chat/group）自拍觸發前檢查 messages 是否有 selfieLoading:true，有則跳過，防止並行重複觸發。
+✅ 自拍後追問限制（2026/05/27）：三個聊天室（單人自創/群組/gallery）加入 selfieActiveRef 和 selfieAutoMsgCountRef，自拍觸發後 autoMessage timer 最多追問3次後停止，自拍完成後 finally 重置兩個 ref，未觸發自拍時可無限追問。
+✅ gallery 聊天室自拍功能完整上線（2026/05/27）：F1 完成，條件邏輯同自創單人，含 triggerSelfie/selfieLoading/imageUrl/videoUrl 渲染/存至公開相簿按鈕/F3 錯誤提示。
+✅ 公開作品相簿系統（2026/05/27）：新表 gallery_works（欄位：id/gallery_id/user_email/image_url/video_url/work_type/expires_at/created_at），免費用戶 expires_at=建立後+3天，付費永久null，Vercel Cron 每日台灣凌晨3點清理過期作品。API：/api/gallery-works（GET/POST/DELETE），刪除權限：免費不能刪、入門/標準只能刪自己、pro和管理員可刪任何人。
+✅ 首頁 GallerySection 卡片縮圖（2026/05/27）：卡片底部顯示該角色最新作品縮圖一排（最多4格），影片顯示▶圖示，批次讀取全部角色不限筆數。
+✅ 首頁 Modal 作品相簿翻頁（2026/05/27）：Modal 內加作品相簿區，左右箭頭翻頁，顯示 X/Y 頁碼，modalWorkIdx state 切換角色時重置為0。
+✅ 角色詳細頁作品相簿（2026/05/27）：gallery/[id]/page.tsx 底部加聊天作品相簿，主圖+縮圖列，免費用戶前3張可看第4張起模糊鎖定，付費永久角色不顯示剩餘天數，pro/管理員可刪除任何作品，入門/標準只能刪自己的。
+✅ 角色詳細頁點讚按鈕（2026/05/27）：gallery/[id]/page.tsx 喜歡次數改為可點擊按鈕，點擊切換❤️/🤍，純前端+1，重整後還原。
+✅ 腳架自拍模式（2026/05/27）：buildSelfiePrompt 40%機率產生腳架計時自拍（on a tripod, timer selfie, no phone visible），60%維持手持自拍，套用到所有聊天室。
+✅ 自拍被拒絕錯誤提示（2026/05/27）：三個聊天室 triggerSelfie catch 區塊改為顯示明確錯誤訊息，涉及違規/露骨顯示「⚠️ 此圖片因內容涉及違規或過於露骨，已被系統拒絕，無法生成。」。
+✅ 角色名過濾（2026/05/27）：三個聊天室（單人自創/群組/gallery）setMessages 加入 cleanContent = r.content.replace(/【[^】]*】/g, "").trim()，自動過濾 AI 回覆中的【角色名】標記。
+✅ Vercel Cron cleanup-gallery-works（2026/05/27）：app/api/cron/cleanup-gallery-works/route.ts，vercel.json 加 crons schedule "0 19 * * *"（UTC，等於台灣凌晨3點），需 CRON_SECRET 環境變數。
 ✅ characters 頁面 UI 調整（2026/05/25）：角色卡片底色改全黑（bg-black）、卡片底部加「🔓 聊越多解鎖越多」小字、B2 選單底色改全黑（bg-black）、B2 選單拿掉互動聊天按鈕旁邊🔓標籤、B2 選單刪除角色按鈕下方加解鎖說明區塊（50/100/200/500則說明文字）。
 
 ⚠️ 重要技術備忘（2026/05/25新增）：
