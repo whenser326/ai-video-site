@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
     .eq("email", userEmail)
     .single();
 
+  console.log("[gallery-works POST] userEmail:", userEmail, "profile:", JSON.stringify(profile));
   const plan = profile?.plan || "free";
   const expiryDays = PLAN_EXPIRY_DAYS[plan] ?? 3;
 
