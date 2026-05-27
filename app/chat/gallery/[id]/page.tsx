@@ -67,6 +67,7 @@ export default function GalleryChatPage() {
 const [galleryWorksSaved, setGalleryWorksSaved] = useState<Set<string>>(new Set());
 
   const saveToGalleryWorks = async (url: string, workType: "photo" | "video") => {
+    console.log("[saveToGalleryWorks] url:", url, "galleryId:", galleryId, "email:", session?.user?.email);
     if (!session?.user?.email || !galleryId) return;
     if (galleryWorksSaved.has(url)) return;
     try {
