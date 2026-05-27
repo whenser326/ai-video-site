@@ -760,7 +760,7 @@ function GalleryCard({ item, index, isFree, freeLimit, onClick, getCount, featur
         </div>
         {works.length > 0 && (
           <div className="flex gap-1 pt-1 overflow-x-auto">
-            {works.slice(0, 4).map(w => (
+            {works.slice(0, 3).map(w => (
               <div key={w.id} className="flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden border border-white/8 bg-[#1a1a1a] relative">
                 {w.work_type === "video" ? (
                   <div className="w-full h-full flex items-center justify-center">
