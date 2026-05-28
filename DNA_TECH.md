@@ -535,6 +535,7 @@ TURNSTILE_SECRET_KEY=（已設定於 Vercel Sensitive）
 ```
 ANTHROPIC_API_KEY=sk-ant-你的金鑰
 CRON_SECRET=（自訂隨機字串，Vercel Cron cleanup-gallery-works 驗證用）
+✅ 自拍每日限制與內容違規錯誤訊息分開（2026/05/28）：三個聊天室（/chat/[characterId]、/chat/group、/chat/gallery/[id]）triggerSelfie 呼叫 /api/character 前先查 /api/user/credits 確認免費用戶每日額度，額度用完 throw new Error("DAILY_LIMIT")，catch 區塊新增 isDailyLimit 判斷，顯示「📅 今日自拍次數已達上限」；內容違規顯示「⚠️ 此圖片因內容涉及違規」；其他錯誤顯示原始訊息。
 ✅ mediaUrl 圖片渲染修復完成（已確認 2026/05/27）：app/chat/gallery/[id]/page.tsx、app/chat/default/[characterId]/page.tsx、app/chat/default-group/page.tsx 三個聊天室均已補齊 mediaUrl 欄位定義和氣泡渲染邏輯，上傳圖片可正常顯示。
 ✅ 所有聊天室訊息區背景色統一（2026/05/19）：bg-black（純黑），涵蓋單人/群組/預設單人/預設群組/gallery 五個聊天室
 ✅ 所有聊天室 textarea 輸入框內部背景色統一（2026/05/19）：bg-black，涵蓋五個聊天室
@@ -694,7 +695,7 @@ CRON_SECRET=（自訂隨機字串，Vercel Cron cleanup-gallery-works 驗證用�
 ✅ 首頁 GallerySection 卡片縮圖（2026/05/27）：卡片底部顯示該角色最新作品縮圖一排（最多4格），影片顯示▶圖示，批次讀取全部角色不限筆數。
 ✅ 首頁 Modal 作品相簿翻頁（2026/05/27）：Modal 內加作品相簿區，左右箭頭翻頁，顯示 X/Y 頁碼，modalWorkIdx state 切換角色時重置為0。
 ✅ 角色詳細頁作品相簿（2026/05/27）：gallery/[id]/page.tsx 底部加聊天作品相簿，主圖+縮圖列，免費用戶前3張可看第4張起模糊鎖定，付費永久角色不顯示剩餘天數，pro/管理員可刪除任何作品，入門/標準只能刪自己的。
-✅ 角色詳細頁點讚按鈕（2026/05/27）：gallery/[id]/page.tsx 喜歡次數改為可點擊按鈕，點擊切換❤️/🤍，純前端+1，重整後還原。
+✅ 角色詳細頁點讚持久化（2026/05/28）：gallery/[id]/page.tsx 點讚改為真實 DB 寫入。新增 gallery_likes 表（gallery_id/user_email UNIQUE），新增 add_gallery_like / remove_gallery_like 兩個 RPC function。新增 /api/gallery/like/route.ts（POST：like/unlike，GET：查詢該用戶是否已點讚）。進頁面時自動查詢點讚狀態，點讚/取消讚同步更新 public_gallery.like_count_min，失敗時前端自動還原。likeLoading 防止重複點擊。
 ✅ 腳架自拍模式（2026/05/27）：buildSelfiePrompt 40%機率產生腳架計時自拍（on a tripod, timer selfie, no phone visible），60%維持手持自拍，套用到所有聊天室。
 ✅ 自拍被拒絕錯誤提示（2026/05/27）：三個聊天室 triggerSelfie catch 區塊改為顯示明確錯誤訊息，涉及違規/露骨顯示「⚠️ 此圖片因內容涉及違規或過於露骨，已被系統拒絕，無法生成。」。
 ✅ 角色名過濾（2026/05/27）：三個聊天室（單人自創/群組/gallery）setMessages 加入 cleanContent = r.content.replace(/【[^】]*】/g, "").trim()，自動過濾 AI 回覆中的【角色名】標記。
@@ -706,6 +707,7 @@ CRON_SECRET=（自訂隨機字串，Vercel Cron cleanup-gallery-works 驗證用�
 - 群組自創生日在「開始聊天」按鈕 onClick 觸發，不能放在 useEffect，因為 useEffect 執行時 selectedIds 還是空陣列
 - /api/chat/most-active 只做 SELECT 不寫入，查詢快不影響體驗
 - profiles.birthday 格式嚴格為 MM-DD，API 有正則驗證（/^\d{2}-\d{2}$/），前端輸入時需補零
+✅ 自拍 polling 補 email（2026/05/28）：/chat/[characterId]/page.tsx 和 /chat/group/page.tsx 的 triggerSelfie polling 原本沒有帶 email 參數，導致 character/route.ts GET 的 total_generations +1 邏輯永遠不執行，後台生成次數顯示為0。兩個檔案各兩處 polling 均已補上 &email=${session?.user?.email}。create/page.tsx 原本就有帶，不受影響。
 ✅ 自拍照片/影片永久化修復（2026/05/25）：單人自建（/chat/[characterId]/page.tsx）和群組自建（/chat/group/page.tsx）的 triggerSelfie，照片生成後、存入歷史前，新增呼叫 /api/upload-image 上傳 Supabase Storage 換永久 URL（permanentImageUrl/permanentVideoUrl）。影片同樣在 polling succeeded 後上傳永久化。catch 有 fallback 用原始 URL，不影響主流程。修復前存入的是 Replicate/Kling 臨時 URL，約 24 小時後失效導致相簿圖片變問號。
 ✅ characters 頁面群組聊天區塊改全黑（2026/05/25）：bg-black/20 改 bg-black。
 
