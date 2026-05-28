@@ -332,7 +332,9 @@ const handleDeleteWork = async (workId: string) => {
           <div className="mb-4 p-4 bg-[#1a1a1a] border border-white/10 rounded-2xl">
             <p className="text-white/40 text-[10px] font-black tracking-widest uppercase mb-2">🔒 隱藏故事</p>
             {hasUnlocked ? (
-              <p className="text-white/70 text-sm leading-relaxed">{hiddenStory || character.hidden_story}</p>
+              <p className="text-white/70 text-sm leading-relaxed whitespace-pre-wrap">
+                {(hiddenStory || character.hidden_story || '').replace(/^#\s*隱藏故事\s*\n?/, '').trim()}
+              </p>
             ) : (
               <div className="text-center py-2">
                 <p className="text-white/30 text-xs mb-3">解鎖閱讀角色的隱藏背景故事，花費 <span className="text-[#89f5a2]">{unlockCost} 點</span></p>
