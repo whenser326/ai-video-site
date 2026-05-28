@@ -14,7 +14,7 @@ export async function GET(req: Request) {
   if (id) {
     const { data, error } = await supabase
       .from("public_gallery")
-      .select("id, name, age, personality_tags, story, story_type, image_url, video_url, actual_chat_count, like_count_min, like_count_max, chat_count_min, chat_count_max")
+      .select("id, name, age, personality_tags, story, story_type, image_url, video_url, actual_chat_count, like_count_min, like_count_max, chat_count_min, chat_count_max, hidden_story, is_featured")
       .eq("id", id)
       .eq("is_active", true)
       .single();
