@@ -715,3 +715,4 @@ CRON_SECRET=（自訂隨機字串，Vercel Cron cleanup-gallery-works 驗證用�
 ## 留存與付費轉換（E系列）
 → 規劃詳見 DNA_ROADMAP.md E 系列章節
 ✅ E06 隱藏故事解鎖系統（2026/05/28 完成）：public_gallery 新增 hidden_story 欄位（text）、新建 gallery_unlocks 表（id/gallery_id/user_email/created_at，UNIQUE on gallery_id+user_email，RLS停用）、admin_settings unlock_story_credits=3。/api/gallery/unlock/route.ts（GET查詢是否已解鎖/POST扣點+寫入，免費用戶回403，點數不足回402，解鎖後回傳hiddenStory+newCredits）。後台/admin/gallery編輯Modal新增hidden_story欄位+「✨ AI產生」按鈕（呼叫/api/admin/gallery/generate mode:hidden_story，Claude Haiku產800-1000字私密故事，可手動微調後儲存，顯示字數）。/api/admin/gallery/generate新增mode:hidden_story分支（不影響現有產角色邏輯）。前端/gallery/[id]/page.tsx：有hidden_story才顯示解鎖區塊，已解鎖顯示全文，未解鎖顯示扣點按鈕，解鎖狀態從/api/gallery/unlock GET查詢，費用從/api/referral/settings-public讀取unlock_story_credits。分等級隱藏故事列入長期觀察，待日後評估。
+chat API 整合：gallery 聊天室判斷 gallery_unlocks，未解鎖加迴避指令，已解鎖注入 hidden_story 至 charSystem。前端需在 /api/chat body 傳入 galleryId 參數。

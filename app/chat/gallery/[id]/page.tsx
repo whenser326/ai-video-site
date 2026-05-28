@@ -434,6 +434,7 @@ const [galleryWorksSaved, setGalleryWorksSaved] = useState<Set<string>>(new Set(
         body: JSON.stringify({
           userEmail: session.user.email,
           characterId: galleryId,
+          galleryId,
           sessionId,
           message: replyTo ? `（回覆 ${replyTo.characterName}：「${replyTo.content.slice(0, 30)}...」）\n${userMsg}` : userMsg,
           defaultCharacter: fakeChar,
@@ -808,6 +809,7 @@ const [galleryWorksSaved, setGalleryWorksSaved] = useState<Set<string>>(new Set(
                       body: JSON.stringify({
                         userEmail: session.user.email,
                         characterId: galleryId,
+                        galleryId,
                         sessionId,
                         message: "（用戶傳了一張圖片）",
                         imageUrl: data.url,
