@@ -48,10 +48,11 @@ export async function POST(req: NextRequest) {
     // [DNA_PATCH_END]
     // AES 解密
     const decrypted = aesDecrypt(tradeInfo);
-    const params = new URLSearchParams(decrypted);
-    const merchantOrderNo = params.get("MerchantOrderNo") || "";
-    console.log("notify decrypted:", decrypted.substring(0, 200));
-    console.log("notify merchantOrderNo:", merchantOrderNo);
+    const parsed = JSON.parse(decrypted);
+    const result = parsed.Result || parsed;
+    const merchantOrderNo = result.MerchantOrderNo || "";
+    console.log("[notify] decrypted:", decrypted.substring(0, 300));
+    console.log("[notify] merchantOrderNo:", JSON.stringify(merchantOrderNo));
 
     // 從 pending_orders 查訂單資訊
     const { data: order } = await supabase
