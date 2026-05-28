@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
         },
         body: JSON.stringify({
           model: 'claude-haiku-4-5-20251001',
-          max_tokens: 1200,
+          max_tokens: 800,
           messages: [{
             role: 'user',
             content: `你是一位擅長寫角色背景故事的創作者。根據以下角色資料，寫一段「隱藏故事」，這是用戶花點數才能解鎖的私密內容。
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
 - 外觀：${appearance || ''}
 
 寫作要求：
-- 繁體中文，800到1000字
+- 繁體中文，400到500字
 - 這是角色不為人知的深層背景，比公開故事更私密、更有衝突感、更具情感張力
 - 可以包含：不為外人知的傷痛、過去的秘密、改變人生的事件、內心深處的渴望或恐懼
 - 語氣像是角色的內心獨白或私密日記，讓讀者覺得「被信任了」
