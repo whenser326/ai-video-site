@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
         },
         body: JSON.stringify({
           model: 'claude-haiku-4-5-20251001',
-          max_tokens: 1500,
+          max_tokens: 1200,
           messages: [{
             role: 'user',
             content: `你是一位擅長寫角色背景故事的創作者。根據以下角色資料，寫一段「隱藏故事」，這是用戶花點數才能解鎖的私密內容。
