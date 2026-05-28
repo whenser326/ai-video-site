@@ -18,6 +18,7 @@ interface GalleryCharacter {
   chat_count_max: number;
   is_featured: boolean;
   actual_chat_count: number;
+  hidden_story?: string;
 }
 interface GalleryWork {
   id: string;
@@ -73,6 +74,11 @@ export default function GalleryDetailPage() {
   const [worksLoading, setWorksLoading] = useState(true);
   const [activeWorkIdx, setActiveWorkIdx] = useState(0);
   const [viewerPlan, setViewerPlan] = useState("free");
+  const [hasUnlocked, setHasUnlocked] = useState(false);
+  const [unlocking, setUnlocking] = useState(false);
+  const [unlockError, setUnlockError] = useState("");
+  const [hiddenStory, setHiddenStory] = useState("");
+  const [unlockCost, setUnlockCost] = useState(3);
 
   // 讀取角色資料
   useEffect(() => {
@@ -96,6 +102,18 @@ export default function GalleryDetailPage() {
       })
       .finally(() => setLoading(false));
   }, [galleryId]);
+  // 查詢解鎖狀態 + 讀取 unlock_story_credits
+  useEffect(() => {
+    if (!galleryId || !session?.user?.email) return;
+    fetch(`/api/gallery/unlock?galleryId=${galleryId}&userEmail=${encodeURIComponent(session.user.email)}`)
+      .then(r => r.json())
+      .then(d => { if (d.hasUnlocked) setHasUnlocked(true); })
+      .catch(() => {});
+    fetch("/api/referral/settings-public")
+      .then(r => r.json())
+      .then(d => { if (d.unlock_story_credits) setUnlockCost(parseInt(d.unlock_story_credits)); })
+      .catch(() => {});
+  }, [galleryId, session]);
 // 讀取公開作品
   useEffect(() => {
     if (!galleryId) return;
@@ -143,6 +161,30 @@ const handleDeleteWork = async (workId: string) => {
     if ((viewerPlan === "starter" || viewerPlan === "standard") && work.user_email === email) return true;
     return false;
   };
+  const handleUnlock = async () => {
+    if (!session?.user?.email) { setUnlockError("請先登入"); return; }
+    setUnlocking(true);
+    setUnlockError("");
+    try {
+      const res = await fetch("/api/gallery/unlock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ galleryId }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setHasUnlocked(true);
+        setHiddenStory(data.hiddenStory);
+      } else {
+        setUnlockError(data.error || "解鎖失敗");
+      }
+    } catch {
+      setUnlockError("解鎖失敗，請重試");
+    } finally {
+      setUnlocking(false);
+    }
+  };
+
   const handleComment = async () => {
     if (!session?.user?.email) { setCommentError("請先登入才能留言"); return; }
     if (!commentInput.trim()) return;
@@ -285,6 +327,26 @@ const handleDeleteWork = async (workId: string) => {
             {copied ? "✅ 已複製連結" : "🔗 分享角色"}
           </button>
         </div>
+        {/* 隱藏故事解鎖區塊 */}
+        {character.hidden_story || hiddenStory ? (
+          <div className="mb-4 p-4 bg-[#1a1a1a] border border-white/10 rounded-2xl">
+            <p className="text-white/40 text-[10px] font-black tracking-widest uppercase mb-2">🔒 隱藏故事</p>
+            {hasUnlocked ? (
+              <p className="text-white/70 text-sm leading-relaxed">{hiddenStory || character.hidden_story}</p>
+            ) : (
+              <div className="text-center py-2">
+                <p className="text-white/30 text-xs mb-3">解鎖閱讀角色的隱藏背景故事，花費 <span className="text-[#89f5a2]">{unlockCost} 點</span></p>
+                {unlockError && <p className="text-red-400 text-xs mb-2">{unlockError}</p>}
+                <button onClick={handleUnlock} disabled={unlocking || !session}
+                  className="px-5 py-2 bg-[#89f5a2]/20 border border-[#89f5a2]/40 text-[#89f5a2] rounded-full text-sm font-bold hover:bg-[#89f5a2]/30 transition disabled:opacity-40">
+                  {unlocking ? "解鎖中..." : `🔓 解鎖（${unlockCost} 點）`}
+                </button>
+                {!session && <p className="text-white/20 text-xs mt-2">請先登入</p>}
+              </div>
+            )}
+          </div>
+        ) : null}
+
         {/* CTA 按鈕 */}
         <div className="flex gap-3 mb-4">
           <button onClick={() => router.push(`/chat/gallery/${character.id}`)}

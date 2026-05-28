@@ -31,6 +31,49 @@ export async function POST(req: NextRequest) {
     ? `- 以下職業最近已使用過，本次絕對禁止使用：${usedOccupations}\n`
     : '';
 
+  // 隱藏故事模式
+  if (body.mode === 'hidden_story') {
+    const { name, age, personality_tags, story, appearance } = body;
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.ANTHROPIC_API_KEY!,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 1500,
+          messages: [{
+            role: 'user',
+            content: `你是一位擅長寫角色背景故事的創作者。根據以下角色資料，寫一段「隱藏故事」，這是用戶花點數才能解鎖的私密內容。
+
+角色資料：
+- 姓名：${name}
+- 年齡：${age}歲
+- 職業與個性：${(personality_tags || []).join('、')}
+- 公開故事：${story}
+- 外觀：${appearance || ''}
+
+寫作要求：
+- 繁體中文，800到1000字
+- 這是角色不為人知的深層背景，比公開故事更私密、更有衝突感、更具情感張力
+- 可以包含：不為外人知的傷痛、過去的秘密、改變人生的事件、內心深處的渴望或恐懼
+- 語氣像是角色的內心獨白或私密日記，讓讀者覺得「被信任了」
+- 禁止重複公開故事的情節，必須是全新且更深層的內容
+- 直接輸出故事內容，不要任何標題或說明文字`
+          }]
+        })
+      });
+      const data = await res.json();
+      const hiddenStory = data.content?.[0]?.text || '';
+      return NextResponse.json({ hiddenStory });
+    } catch (e: any) {
+      return NextResponse.json({ error: e.message }, { status: 500 });
+    }
+  }
+
   const storyLength = body.storyLength || 'mid';
   const lengthHint = storyLength === 'short' ? '20字以內' : storyLength === 'mid' ? '200字以內' : '400字以內';
   const gender = Math.random() > 0.5 ? '女性' : '男性';

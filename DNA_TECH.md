@@ -536,6 +536,7 @@ TURNSTILE_SECRET_KEY=（已設定於 Vercel Sensitive）
 ANTHROPIC_API_KEY=sk-ant-你的金鑰
 CRON_SECRET=（自訂隨機字串，Vercel Cron cleanup-gallery-works 驗證用）
 ✅ 自拍每日限制與內容違規錯誤訊息分開（2026/05/28）：三個聊天室（/chat/[characterId]、/chat/group、/chat/gallery/[id]）triggerSelfie 呼叫 /api/character 前先查 /api/user/credits 確認免費用戶每日額度，額度用完 throw new Error("DAILY_LIMIT")，catch 區塊新增 isDailyLimit 判斷，顯示「📅 今日自拍次數已達上限」；內容違規顯示「⚠️ 此圖片因內容涉及違規」；其他錯誤顯示原始訊息。
+✅ 藍新 notify 解析修復（2026/05/28）：notify/route.ts 的 TradeInfo 解密後格式為 JSON（非 URLSearchParams），已改用 JSON.parse 解析，取 parsed.Result.MerchantOrderNo。修復前所有 notify 均回傳 404（order not found），點數無法自動入帳。yaomay1981@gmail.com 已手動補35點（入門包30+加贈5）。待下次真實付款確認自動入帳正常。
 ✅ mediaUrl 圖片渲染修復完成（已確認 2026/05/27）：app/chat/gallery/[id]/page.tsx、app/chat/default/[characterId]/page.tsx、app/chat/default-group/page.tsx 三個聊天室均已補齊 mediaUrl 欄位定義和氣泡渲染邏輯，上傳圖片可正常顯示。
 ✅ 所有聊天室訊息區背景色統一（2026/05/19）：bg-black（純黑），涵蓋單人/群組/預設單人/預設群組/gallery 五個聊天室
 ✅ 所有聊天室 textarea 輸入框內部背景色統一（2026/05/19）：bg-black，涵蓋五個聊天室
@@ -713,3 +714,4 @@ CRON_SECRET=（自訂隨機字串，Vercel Cron cleanup-gallery-works 驗證用�
 
 ## 留存與付費轉換（E系列）
 → 規劃詳見 DNA_ROADMAP.md E 系列章節
+✅ E06 隱藏故事解鎖系統（2026/05/28 完成）：public_gallery 新增 hidden_story 欄位（text）、新建 gallery_unlocks 表（id/gallery_id/user_email/created_at，UNIQUE on gallery_id+user_email，RLS停用）、admin_settings unlock_story_credits=3。/api/gallery/unlock/route.ts（GET查詢是否已解鎖/POST扣點+寫入，免費用戶回403，點數不足回402，解鎖後回傳hiddenStory+newCredits）。後台/admin/gallery編輯Modal新增hidden_story欄位+「✨ AI產生」按鈕（呼叫/api/admin/gallery/generate mode:hidden_story，Claude Haiku產800-1000字私密故事，可手動微調後儲存，顯示字數）。/api/admin/gallery/generate新增mode:hidden_story分支（不影響現有產角色邏輯）。前端/gallery/[id]/page.tsx：有hidden_story才顯示解鎖區塊，已解鎖顯示全文，未解鎖顯示扣點按鈕，解鎖狀態從/api/gallery/unlock GET查詢，費用從/api/referral/settings-public讀取unlock_story_credits。分等級隱藏故事列入長期觀察，待日後評估。

@@ -21,6 +21,7 @@ interface GalleryItem {
   appearance?: string
   sort_order: number
   model_label: string
+  hidden_story?: string
   created_at: string
 }
 
@@ -30,7 +31,7 @@ const EMPTY_ITEM: Omit<GalleryItem, 'id' | 'created_at'> = {
   like_count_min: 100, like_count_max: 500,
   chat_count_min: 50, chat_count_max: 300,
   is_featured: false, is_active: false,
-  sort_order: 0, model_label: '',
+  sort_order: 0, model_label: '', hidden_story: '',
 }
 
 export default function AdminGalleryPage() {
@@ -46,6 +47,7 @@ export default function AdminGalleryPage() {
   const [storyLength, setStoryLength] = useState<'short' | 'mid' | 'long'>('mid')
   const [msg, setMsg] = useState('')
   const [saving, setSaving] = useState(false)
+  const [generatingStory, setGeneratingStory] = useState(false)
   const [tagsInput, setTagsInput] = useState('')
   const [adminTab, setAdminTab] = useState<'gallery' | 'pending'>('gallery')
   const [pendingItems, setPendingItems] = useState<any[]>([])
@@ -197,6 +199,38 @@ export default function AdminGalleryPage() {
       setMsg('❌ 產圖失敗')
       setGeneratingImg(false)
     }
+  }
+
+  const handleGenHiddenStory = async () => {
+    if (!editItem.name) { setMsg('請先填入角色名稱'); return }
+    if (!editItem.story) { setMsg('請先填入公開故事'); return }
+    setGeneratingStory(true)
+    setMsg('✍️ 產生隱藏故事中，約10秒...')
+    try {
+      const res = await fetch('/api/admin/gallery/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          adminEmail: session?.user?.email,
+          mode: 'hidden_story',
+          name: editItem.name,
+          age: editItem.age,
+          personality_tags: editItem.personality_tags,
+          story: editItem.story,
+          appearance: editItem.appearance || '',
+        })
+      })
+      const data = await res.json()
+      if (data.hiddenStory) {
+        setEditItem(p => ({ ...p, hidden_story: data.hiddenStory }))
+        setMsg('✅ 隱藏故事產生完成，可手動微調後儲存')
+      } else {
+        setMsg('❌ ' + (data.error || '產生失敗'))
+      }
+    } catch {
+      setMsg('❌ 產生失敗')
+    }
+    setGeneratingStory(false)
   }
 
   const handleSave = async () => {
@@ -515,6 +549,22 @@ export default function AdminGalleryPage() {
                 <input value={editItem.video_url || ''} onChange={e => setEditItem(p => ({ ...p, video_url: e.target.value }))}
                   placeholder="https://..."
                   className="w-full bg-[#0d2318] border border-[#2d5a3d] rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-[#89f5a2]" />
+              </div>
+
+              <div className="mb-3">
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-white/60 text-xs">🔒 隱藏故事（付費解鎖，選填）</label>
+                  <button onClick={handleGenHiddenStory} disabled={generatingStory}
+                    className="px-3 py-1 bg-purple-500/20 border border-purple-500/40 rounded-lg text-purple-300 text-xs font-bold hover:bg-purple-500/30 transition disabled:opacity-40">
+                    {generatingStory ? '產生中...' : '✨ AI 產生'}
+                  </button>
+                </div>
+                <textarea value={editItem.hidden_story || ''} onChange={e => setEditItem(p => ({ ...p, hidden_story: e.target.value }))}
+                  rows={6} placeholder="填入角色隱藏背景，用戶花費點數才能解鎖閱讀，或點右上角 AI 產生..."
+                  className="w-full bg-[#0d2318] border border-[#2d5a3d] rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-[#89f5a2] resize-none" />
+                {editItem.hidden_story && (
+                  <p className="text-white/30 text-xs mt-1 text-right">{(editItem.hidden_story || '').length} 字</p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3 mb-3">
