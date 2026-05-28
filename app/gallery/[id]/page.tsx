@@ -264,7 +264,7 @@ const handleDeleteWork = async (workId: string) => {
               }}
               className={`flex items-center gap-1.5 transition-all ${liked ? "text-red-400" : "text-white/25 hover:text-red-300"}`}
             >
-              {liked ? "❤️" : "🤍"} {(likeCount + (liked ? 1 : 0)).toLocaleString()}
+              {liked ? "❤️" : "🤍"} {likeCount.toLocaleString()}
             </button>
             <span className="text-white/25 flex items-center gap-1.5">💬 {chatCount.toLocaleString()}</span>
           </div>
