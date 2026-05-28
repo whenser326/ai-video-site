@@ -294,7 +294,15 @@ const [showUpgradeModal, setShowUpgradeModal] = useState(false);
     setMessages(prev => prev.map(m =>
       m.id === msgId ? { ...m, selfieLoading: true, selfieType: intent } : m
     ));
-
+// 預先檢查每日圖片額度（免費用戶每日2張）
+      const quotaCheck = await fetch(`/api/user/credits?email=${session?.user?.email}`).then(r => r.json());
+      if (quotaCheck.plan === 'free') {
+        const dailyCount = quotaCheck.daily_image_count ?? 0;
+        const dailyLimit = 2;
+        if (dailyCount >= dailyLimit) {
+          throw new Error("DAILY_LIMIT");
+        }
+      }
     try {
       // Step 1: 用 flux-kontext-pro 鎖定角色臉孔生成照片
       const charRes = await fetch("/api/character", {
@@ -314,7 +322,7 @@ const [showUpgradeModal, setShowUpgradeModal] = useState(false);
       let imageUrl: string | null = null;
       for (let i = 0; i < 30; i++) {
         await new Promise(r => setTimeout(r, 3000));
-        const poll = await fetch(`/api/character?id=${charData.id}`);
+        const poll = await fetch(`/api/character?id=${charData.id}&email=${session?.user?.email}`);
         const pollData = await poll.json();
         if (pollData.status === "succeeded") {
           imageUrl = Array.isArray(pollData.output) ? pollData.output[0] : pollData.output;
@@ -392,7 +400,7 @@ const [showUpgradeModal, setShowUpgradeModal] = useState(false);
       let videoUrl: string | null = null;
       for (let i = 0; i < 60; i++) {
         await new Promise(r => setTimeout(r, 3000));
-        const poll = await fetch(`/api/character?id=${videoPred.id}`);
+        const poll = await fetch(`/api/character?id=${videoPred.id}&email=${session?.user?.email}`);
         const pollData = await poll.json();
         if (pollData.status === "succeeded") {
           videoUrl = Array.isArray(pollData.output) ? pollData.output[0] : pollData.output;
@@ -435,13 +443,16 @@ const [showUpgradeModal, setShowUpgradeModal] = useState(false);
       }
 
     } catch (err: any) {
-      const isBlocked = err?.message?.includes("E005") || err?.message?.includes("content") || err?.message?.includes("policy") || err?.message?.includes("failed");
+      const isDailyLimit = err?.message === "DAILY_LIMIT";
+      const isBlocked = !isDailyLimit && (err?.message?.includes("E005") || err?.message?.includes("content") || err?.message?.includes("policy") || err?.message?.includes("failed"));
       setMessages(prev => prev.map(m =>
         m.id === msgId ? { ...m, selfieLoading: false } : m
       ));
       setMessages(prev => [...prev, {
         role: "assistant",
-        content: isBlocked
+        content: isDailyLimit
+          ? "📅 今日自拍次數已達上限（免費方案每日2張），明天再來，或升級方案享無限自拍～"
+          : isBlocked
           ? "⚠️ 此圖片因內容涉及違規或過於露骨，已被系統拒絕，無法生成。"
           : `⚠️ 自拍生成失敗：${err?.message || "請稍後再試"}`,
         characterName: character?.name,

@@ -67,6 +67,7 @@ export default function GalleryDetailPage() {
   const [commentError, setCommentError] = useState("");
   const [copied, setCopied] = useState(false);
   const [liked, setLiked] = useState(false);
+  const [likeLoading, setLikeLoading] = useState(false);
   const [activeSlide, setActiveSlide] = useState<{ type: "original" } | { type: "work"; work: GalleryWork }>({ type: "original" });
   const [works, setWorks] = useState<GalleryWork[]>([]);
   const [worksLoading, setWorksLoading] = useState(true);
@@ -83,6 +84,13 @@ export default function GalleryDetailPage() {
           const item = data.item;
           setCharacter(item);
           setLikeCount(seededRandom(item.id + "_like", item.like_count_min ?? 100, item.like_count_max ?? 500));
+          // 查詢該用戶是否已點讚
+          if (session?.user?.email) {
+            fetch(`/api/gallery/like?galleryId=${item.id}&userEmail=${encodeURIComponent(session.user.email)}`)
+              .then(r => r.json())
+              .then(d => { if (d.hasLiked) setLiked(true); })
+              .catch(() => {});
+          }
           setChatCount(seededRandom(item.id + "_chat", item.chat_count_min ?? 50, item.chat_count_max ?? 300) + (item.actual_chat_count ?? 0));
         }
       })
@@ -233,7 +241,27 @@ const handleDeleteWork = async (workId: string) => {
           </div>
           <div className="flex gap-4 text-xs mb-4">
             <button
-              onClick={() => setLiked(prev => !prev)}
+              onClick={async () => {
+                if (likeLoading || !session?.user?.email) return;
+                setLikeLoading(true);
+                const newLiked = !liked;
+                setLiked(newLiked);
+                setLikeCount(prev => prev + (newLiked ? 1 : -1));
+                await fetch("/api/gallery/like", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    galleryId,
+                    userEmail: session.user.email,
+                    action: newLiked ? "like" : "unlike",
+                  }),
+                }).catch(() => {
+                  // 失敗時還原
+                  setLiked(!newLiked);
+                  setLikeCount(prev => prev + (newLiked ? -1 : 1));
+                });
+                setLikeLoading(false);
+              }}
               className={`flex items-center gap-1.5 transition-all ${liked ? "text-red-400" : "text-white/25 hover:text-red-300"}`}
             >
               {liked ? "❤️" : "🤍"} {(likeCount + (liked ? 1 : 0)).toLocaleString()}
@@ -274,7 +302,7 @@ const handleDeleteWork = async (workId: string) => {
 {/* 作品相簿 */}
         {works.length > 0 && (
           <div className="mb-8">
-            <p className="text-white/30 text-[10px] font-black tracking-widest uppercase mb-3">📸 聊天作品，聊天當中觸發自拍後可投稿分享的作品欄</p>
+            <p className="text-white/30 text-[10px] font-black tracking-widest uppercase mb-3">📸 聊天作品，點擊會將圖放大至上方</p>
             <div className="grid grid-cols-3 gap-2">
               {works.map((w, idx) => {
                 const email = session?.user?.email;
