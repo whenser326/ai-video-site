@@ -347,7 +347,9 @@ export async function POST(req: NextRequest) {
   const messages = [
     ...history.map((m: any) => ({
       role: m.role as "user" | "assistant",
-      content: m.content,
+      content: m.role === "assistant"
+        ? m.content.replace(/^【[^】]*】/, "").trim()
+        : m.content,
     })),
     { role: "user" as const, content: userContent },
   ];
@@ -370,8 +372,8 @@ export async function POST(req: NextRequest) {
     const autoPrompt = isAutoMessage
       ? `用戶已經一段時間沒有回應了。請主動開口，用自然的方式詢問用戶在做什麼、為什麼不說話，或者開啟一個新的有趣話題。不要提到「你好久沒說話了」這種死板的說法，要像真實的人一樣自然地主動聊天。`
       : "";
-    const minSentences = Math.floor(Math.random() * 4) + 1; // 1到4
-    const maxSentences = minSentences + Math.floor(Math.random() * 2) + 1; // min+1 到 min+2
+    const minSentences = Math.floor(Math.random() * 2) + 1; // 1到2
+    const maxSentences = minSentences + 1; // 最多3句
     const randomLength = `這次回覆請用${minSentences}到${maxSentences}句話回應，不要超過${maxSentences}句。`;
     const memoryPrefix = backgroundStory
       ? `【對話背景摘要】${backgroundStory}\n\n`
@@ -423,7 +425,7 @@ const charSystem = `${memoryPrefix}${hiddenStoryHint ? hiddenStoryHint + "\n\n" 
 
     const claudePayload = {
       model: "claude-haiku-4-5",
-      max_tokens: 500,
+      max_tokens: 300,
       system: charSystem,
       messages,
     };

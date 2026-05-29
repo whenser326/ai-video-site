@@ -369,7 +369,7 @@ const [galleryWorksSaved, setGalleryWorksSaved] = useState<Set<string>>(new Set(
             }
           }
         } catch { }
-        if (!selfieActiveRef.current || selfieAutoMsgCountRef.current < 3) {
+        if (!(selfieActiveRef.current && selfieAutoMsgCountRef.current >= 3)) {
           startTimer();
         }
       }, 60000);
@@ -591,7 +591,7 @@ const [galleryWorksSaved, setGalleryWorksSaved] = useState<Set<string>>(new Set(
         <div className="fixed inset-0 z-50 flex items-end justify-center pb-10 px-4 bg-black/50 backdrop-blur-sm">
           <div className="w-full max-w-sm bg-[#0d2318] border border-[#89f5a2]/25 rounded-3xl p-6 space-y-4 shadow-2xl">
             <p className="text-white font-black text-base">💬 聊天室說明</p>
-            <p className="text-white/40 text-xs leading-relaxed">角色由 AI 扮演，可以自由聊天、曖昧互動、情感陪伴。</p>
+            <p className="text-white/40 text-xs leading-relaxed">角色由 AI 扮演，可以自由聊天、曖昧互動、情感陪伴。聊到關鍵字會觸發自拍與錄影，會根據聊天當下紀錄判斷場所、服裝和正在做的事。</p>
             <div className="space-y-2">
               <p className="text-[#89f5a2]/70 text-xs font-bold">✅ 可以聊</p>
               <div className="space-y-1 pl-2">
