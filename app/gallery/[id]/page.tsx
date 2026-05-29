@@ -366,7 +366,7 @@ const handleDeleteWork = async (workId: string) => {
 {/* 作品相簿 */}
         {works.length > 0 && (
           <div className="mb-8">
-            <p className="text-white/30 text-[10px] font-black tracking-widest uppercase mb-3">📸 聊天作品，點擊會將圖放大至上方</p>
+            <p className="text-white/30 text-[10px] font-black tracking-widest uppercase mb-3">📸 聊天作品，點擊會將圖放大至上方，手機長按可儲存</p>
             <div className="grid grid-cols-3 gap-2">
               {works.map((w, idx) => {
                 const email = session?.user?.email;
