@@ -378,7 +378,8 @@ IP 限流：
 - Kling 影片比例受參考圖影響，根本解法是生圖時就選好目標比例，不做裁切
 - 儲存成果按鈕改為 downloadFile（不用 window.open，iOS Safari 新分頁無法顯示 Supabase 圖片）
 - Hero 影片不放在 public/ 資料夾（git 無法追蹤 mp4），改用 Supabase Storage CDN 托管
-- Hero 影片 URL: https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/hero.mp4
+- Hero 影片 URL（首頁）: https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/hero-home.mp4
+Hero 影片 URL（角色生成頁）: https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/hero.mp4
 - Hero 影片 `<video>` 標籤必須有 absolute inset-0，否則無法填滿容器
 - Cloudflare Turnstile Site Key：0x4AAAAAC-_FUGtx2UlyaYF（公開無妨）
 - Turnstile Sensitive 變數無法套用 Development 環境，只能 Production + Preview

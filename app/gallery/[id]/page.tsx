@@ -108,7 +108,7 @@ export default function GalleryDetailPage() {
         }
       })
       .finally(() => setLoading(false));
-  }, [galleryId]);
+  }, [galleryId, session]);
   // 查詢解鎖狀態 + 讀取 unlock_story_credits
   useEffect(() => {
     if (!galleryId || !session?.user?.email) return;
