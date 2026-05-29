@@ -41,7 +41,7 @@ function seededRandom(seed: string, min: number, max: number) {
   return Math.floor(normalized * (max - min + 1)) + min;
 }
 
-const HERO_VIDEO = "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/hero.mp4";
+const HERO_VIDEO = "https://ahctwdttcecmqnjjibdo.supabase.co/storage/v1/object/public/character-images/hero-home.mp4.MP4";
 const FREE_LIMIT = 12;
 
 export default function GallerySection({ userEmail, plan, isLoggedIn, onLoginRequest }: Props) {
