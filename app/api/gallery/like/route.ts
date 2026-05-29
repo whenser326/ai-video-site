@@ -42,5 +42,11 @@ export async function GET(req: NextRequest) {
     .eq("user_email", userEmail)
     .maybeSingle();
 
-  return NextResponse.json({ hasLiked: !!data });
+  const { data: galleryRow } = await supabase
+    .from("public_gallery")
+    .select("like_count_min")
+    .eq("id", galleryId)
+    .single();
+
+  return NextResponse.json({ hasLiked: !!data, likeCountMin: galleryRow?.like_count_min ?? null });
 }
