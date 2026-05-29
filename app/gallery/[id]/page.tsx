@@ -345,7 +345,7 @@ const handleDeleteWork = async (workId: string) => {
             ) : (
               <div className="text-center py-2">
                 <p className="text-white/30 text-xs mb-3">解鎖閱讀角色的隱藏背景故事，花費 <span className="text-[#89f5a2]">{unlockCost} 點</span></p>
-                <p className="text-[#89f5a2] text-xs mt-1 font-medium">✨ 解鎖後角色將對你敞開心扉，聊天內容將有所不同</p>
+                <p className="text-[#89f5a2] text-xs mt-1 mb-3 font-medium">✨ 解鎖後角色將對你敞開心扉，聊天內容將有所不同</p>
                 {unlockError && <p className="text-red-400 text-xs mb-2">{unlockError}</p>}
                 <button onClick={handleUnlock} disabled={unlocking || !session}
                   className="px-5 py-2 bg-[#89f5a2]/20 border border-[#89f5a2]/40 text-[#89f5a2] rounded-full text-sm font-bold hover:bg-[#89f5a2]/30 transition disabled:opacity-40">
