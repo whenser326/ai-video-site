@@ -35,6 +35,7 @@ profiles 表新增欄位：chat_count（已使用對話次數，預設0）
 ## AI 模型
 
 圖片生成：black-forest-labs/flux-1.1-pro（約 $0.04/張）
+圖片生成備選評估：GPT Image 2（OpenAI，4K寫實質感，競品 ChatArt 主打，中期列入評估，目前 Flux 1.1 Pro 為主力）
 影片生成：kwaivgi/kling-v3-omni-video（約 $0.28/支，mode: "standard"）
 角色一致性：black-forest-labs/flux-kontext-pro（已串接，免費付費均可用）
 影片生成第二選擇：bytedance/seedance-2.0（Replicate，1080p，原生音訊，約 $1.26/支）
@@ -715,4 +716,11 @@ CRON_SECRET=（自訂隨機字串，Vercel Cron cleanup-gallery-works 驗證用�
 ## 留存與付費轉換（E系列）
 → 規劃詳見 DNA_ROADMAP.md E 系列章節
 ✅ E06 隱藏故事解鎖系統（2026/05/28 完成）：public_gallery 新增 hidden_story 欄位（text）、新建 gallery_unlocks 表（id/gallery_id/user_email/created_at，UNIQUE on gallery_id+user_email，RLS停用）、admin_settings unlock_story_credits=3。/api/gallery/unlock/route.ts（GET查詢是否已解鎖/POST扣點+寫入，免費用戶回403，點數不足回402，解鎖後回傳hiddenStory+newCredits）。後台/admin/gallery編輯Modal新增hidden_story欄位+「✨ AI產生」按鈕（呼叫/api/admin/gallery/generate mode:hidden_story，Claude Haiku產800-1000字私密故事，可手動微調後儲存，顯示字數）。/api/admin/gallery/generate新增mode:hidden_story分支（不影響現有產角色邏輯）。前端/gallery/[id]/page.tsx：有hidden_story才顯示解鎖區塊，已解鎖顯示全文，未解鎖顯示扣點按鈕，解鎖狀態從/api/gallery/unlock GET查詢，費用從/api/referral/settings-public讀取unlock_story_credits。分等級隱藏故事列入長期觀察，待日後評估。
+✅ E06 chat API 整合（2026/05/29）：gallery 聊天室 /api/chat 加入 galleryId 參數，判斷 gallery_unlocks 表，未解鎖注入迴避指令，已解鎖注入 hidden_story 至 charSystem。前端 handleSend 和上傳圖片兩個呼叫點均已補 galleryId。
+✅ 管理員作品永久化修正（2026/05/29）：gallery-works/route.ts POST 加入 isAdmin 判斷，whenser@gmail.com 的作品 expires_at 固定為 null，不受 plan 影響。
+✅ gallery 聊天室追問邏輯修正（2026/05/29）：selfieActiveRef + selfieAutoMsgCountRef 條件從 !selfieActiveRef.current || count < 3 改為 !(selfieActiveRef.current && count >= 3)，修復自拍後追問不停止的問題。
+✅ 聊天回覆長度縮短（2026/05/29）：/api/chat/route.ts minSentences 改為1-2句，maxSentences 最多3句，max_tokens 從500降至300。
+✅ history assistant 訊息去除【角色名】前綴（2026/05/29）：組 messages 時 assistant role 先 replace(/^【[^】]*】/, "") 再傳給 Claude，解決重複角色名問題。
+✅ ConditionalFooter 元件（2026/05/29）：新建 app/components/ConditionalFooter.tsx，/chat/ 開頭和 /admin 路徑不顯示 Footer，解決 Footer 擠入聊天室導致輸入列被推擠問題。
+✅ 點讚持久化修正（2026/05/29）：/api/gallery/like GET 新增回傳 likeCountMin，前端 gallery/[id]/page.tsx 改用 API 回傳的最新 like_count_min 當 seededRandom 基數，刷新後點讚數不再重置。
 chat API 整合：gallery 聊天室判斷 gallery_unlocks，未解鎖加迴避指令，已解鎖注入 hidden_story 至 charSystem。前端需在 /api/chat body 傳入 galleryId 參數。
