@@ -124,14 +124,20 @@ export default function GalleryDetailPage() {
 // 讀取公開作品
   useEffect(() => {
     if (!galleryId) return;
-    const email = session?.user?.email ? `&email=${session.user.email}` : "";
-    fetch(`/api/gallery-works?galleryId=${galleryId}${email}`)
-      .then(r => r.json())
-      .then(data => {
-        if (Array.isArray(data.works)) setWorks(data.works);
-        if (data.viewerPlan) setViewerPlan(data.viewerPlan);
-      })
-      .finally(() => setWorksLoading(false));
+    const loadWorks = () => {
+      const email = session?.user?.email ? `&email=${session.user.email}` : "";
+      fetch(`/api/gallery-works?galleryId=${galleryId}${email}`)
+        .then(r => r.json())
+        .then(data => {
+          if (Array.isArray(data.works)) setWorks(data.works);
+          if (data.viewerPlan) setViewerPlan(data.viewerPlan);
+        })
+        .finally(() => setWorksLoading(false));
+    };
+    loadWorks();
+    const onVisible = () => { if (document.visibilityState === "visible") loadWorks(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
   }, [galleryId, session]);
   // 讀取留言
   useEffect(() => {

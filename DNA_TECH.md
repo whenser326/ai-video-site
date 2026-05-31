@@ -671,7 +671,7 @@ CRON_SECRET=（自訂隨機字串，Vercel Cron cleanup-gallery-works 驗證用�
   - /api/chat/birthday-text（POST，純文字，不查 DB，適用 gallery/default 聊天室）
   - /api/chat/anniversary（GET，查 chat_sessions 最早建立日回傳 firstChatMMDD）
   - /api/chat/most-active（GET，查 chat_messages group by character_id 回傳最多的 characterId，只做 SELECT）
-✅ 自拍 prompt 升級為 Claude 推斷（本視窗）：detectSelfieIntent 改為純關鍵字同步函式只回傳 intent，新增 async buildSelfiePrompt 函式呼叫 Claude Haiku 從最近10筆對話推斷具體 prompt，格式：wearing [衣物], [行為/姿勢], [場景], [光線], selfie photo, high quality, realistic，加 no phone in hand 防雙手持機。Claude 失敗時 fallback 用舊關鍵字邏輯。單人和群組均已套用（群組透過後端共用）。
+✅ 自拍 prompt 升級為 Claude 推斷（2026/05 本視窗，2026/05/31 防違規強化）：detectSelfieIntent 改為純關鍵字同步函式只回傳 intent，新增 async buildSelfiePrompt 函式呼叫 Claude Haiku 從最近10筆對話推斷具體 prompt，格式：wearing [衣物], [行為/姿勢], [場景], [光線], selfie photo, high quality, realistic，加 no phone in hand 防雙手持機。Claude 失敗時 fallback 用舊關鍵字邏輯。單人和群組均已套用（群組透過後端共用）。【2026/05/31 防違規】：移除 characterDesc 拼入 prompt（中文個性詞干擾 Flux 表情，臉由 flux-kontext-pro input_image 鎖定即可），system prompt 加禁令「只描述衣物/場景/動作/光線，禁止裸露/性暗示/身體部位」，避免觸發 Replicate 內容政策導致生成失敗。
 ✅ 自拍移除隨機延遲（本視窗）：單人（/chat/[characterId]）和群組（/chat/group）自拍觸發改為立刻執行，不再有 3-10 秒隨機延遲。提示文字統一為「📸 圖片生成上傳中，扣1點\n⚠️ 請勿關閉視窗！」和「🎬 影片生成中，扣4-6點\n⚠️ 請耐心等候，請勿關閉視窗！」。
 ✅ 群組自拍接力邏輯（本視窗）：selfieQueue 第一個立刻觸發，剩餘角色隨機選 1 到 N-1 個跟拍，每個間隔 3-10秒 + idx*1000ms 錯開，每次觸發前檢查 selfieLoading 冷卻。
 ✅ charSystem 禁止角色名標記（本視窗）：所有聊天室 charSystem 加入「⚠️ 絕對禁止在回覆開頭或任何位置使用【角色名】方括號標記」，解決單人/群組回覆重複出現【角色名】問題。群組另有「只能以自己身份說話，不能代替其他角色發言」禁令。
@@ -692,7 +692,7 @@ CRON_SECRET=（自訂隨機字串，Vercel Cron cleanup-gallery-works 驗證用�
 - 免費用戶作品expires_at=建立後+3天，詳細頁顯示「X天後過期／升級可永久保留」琥珀色提示
 - 付費用戶expires_at=null，不顯示到期提示
 - Vercel Cron cleanup-gallery-works每日台灣凌晨3點自動清理過期作品
-✅ 自拍後追問限制（2026/05/27）：三個聊天室（單人自創/群組/gallery）加入 selfieActiveRef 和 selfieAutoMsgCountRef，自拍觸發後 autoMessage timer 最多追問3次後停止，自拍完成後 finally 重置兩個 ref，未觸發自拍時可無限追問。
+✅ 自拍後追問限制（2026/05/27，2026/05/31 改 B 方案）：三個聊天室（單人自創/群組/gallery）加入 selfieActiveRef 和 selfieAutoMsgCountRef，自拍觸發後 autoMessage timer 最多追問3次後停止，未觸發自拍時可無限追問。【gallery B 方案 2026/05/31】：finally 不重置 selfieActiveRef（維持 true），autoMessage timer 在 selfieActiveRef 為 true 時計數+1 達3停；用戶說話時 handleSend 設 selfieActiveRef=false + 計數歸零回到無限追問，再觸發自拍則重新限3次；waitTimer 等待訊息改用自己的 waitCount，不再 +1 污染 selfieAutoMsgCountRef。
 ✅ gallery 聊天室自拍功能完整上線（2026/05/27）：F1 完成，條件邏輯同自創單人，含 triggerSelfie/selfieLoading/imageUrl/videoUrl 渲染/存至公開相簿按鈕/F3 錯誤提示。
 ✅ 公開作品相簿系統（2026/05/27）：新表 gallery_works（欄位：id/gallery_id/user_email/image_url/video_url/work_type/expires_at/created_at），免費用戶 expires_at=建立後+3天，付費永久null，Vercel Cron 每日台灣凌晨3點清理過期作品。API：/api/gallery-works（GET/POST/DELETE），刪除權限：免費不能刪、入門/標準只能刪自己、pro和管理員可刪任何人。
 ✅ 首頁 GallerySection 卡片縮圖（2026/05/27）：卡片底部顯示該角色最新作品縮圖一排（最多4格），影片顯示▶圖示，批次讀取全部角色不限筆數。
@@ -719,11 +719,12 @@ CRON_SECRET=（自訂隨機字串，Vercel Cron cleanup-gallery-works 驗證用�
 ✅ E06 隱藏故事解鎖系統（2026/05/28 完成）：public_gallery 新增 hidden_story 欄位（text）、新建 gallery_unlocks 表（id/gallery_id/user_email/created_at，UNIQUE on gallery_id+user_email，RLS停用）、admin_settings unlock_story_credits=3。/api/gallery/unlock/route.ts（GET查詢是否已解鎖/POST扣點+寫入，免費用戶回403，點數不足回402，解鎖後回傳hiddenStory+newCredits）。後台/admin/gallery編輯Modal新增hidden_story欄位+「✨ AI產生」按鈕（呼叫/api/admin/gallery/generate mode:hidden_story，Claude Haiku產800-1000字私密故事，可手動微調後儲存，顯示字數）。/api/admin/gallery/generate新增mode:hidden_story分支（不影響現有產角色邏輯）。前端/gallery/[id]/page.tsx：有hidden_story才顯示解鎖區塊，已解鎖顯示全文，未解鎖顯示扣點按鈕，解鎖狀態從/api/gallery/unlock GET查詢，費用從/api/referral/settings-public讀取unlock_story_credits。分等級隱藏故事列入長期觀察，待日後評估。
 ✅ E06 chat API 整合（2026/05/29）：gallery 聊天室 /api/chat 加入 galleryId 參數，判斷 gallery_unlocks 表，未解鎖注入迴避指令，已解鎖注入 hidden_story 至 charSystem。前端 handleSend 和上傳圖片兩個呼叫點均已補 galleryId。
 ✅ 管理員作品永久化修正（2026/05/29）：gallery-works/route.ts POST 加入 isAdmin 判斷，whenser@gmail.com 的作品 expires_at 固定為 null，不受 plan 影響。
-✅ gallery 聊天室追問邏輯修正（2026/05/29）：selfieActiveRef + selfieAutoMsgCountRef 條件從 !selfieActiveRef.current || count < 3 改為 !(selfieActiveRef.current && count >= 3)，修復自拍後追問不停止的問題。
-✅ 聊天回覆長度縮短（2026/05/29）：/api/chat/route.ts minSentences 改為1-2句，maxSentences 最多3句，max_tokens 從500降至300。
+✅ gallery 聊天室追問邏輯（2026/05/31 定案 B 方案）：詳見上方「自拍後追問限制」B 方案說明。歷史過程：2026/05/29 曾改條件但仍有漏洞（waitTimer 與 autoMessage 共用計數互相污染），2026/05/31 改為 finally 不重置 + handleSend 解除 + waitTimer 獨立計數。
+✅ 聊天回覆長度縮短（2026/05/29，2026/05/31 強化）：/api/chat/route.ts minSentences 改為1-2句，maxSentences 最多3句，max_tokens 從500降至300。【2026/05/31】randomLength 改為【嚴格限制】最多 N 句、含旁白總字數不超過 80 字、旁白整段對話最多出現 1 次，解決旁白過多過長問題。
 ✅ history assistant 訊息去除【角色名】前綴（2026/05/29）：組 messages 時 assistant role 先 replace(/^【[^】]*】/, "") 再傳給 Claude，解決重複角色名問題。
 ✅ ConditionalFooter 元件（2026/05/29）：新建 app/components/ConditionalFooter.tsx，/chat/ 開頭和 /admin 路徑不顯示 Footer，解決 Footer 擠入聊天室導致輸入列被推擠問題。
 ✅ 點讚持久化修正（2026/05/29）：/api/gallery/like GET 新增回傳 likeCountMin，前端 gallery/[id]/page.tsx 改用 API 回傳的最新 like_count_min 當 seededRandom 基數，刷新後點讚數不再重置。
 chat API 整合：gallery 聊天室判斷 gallery_unlocks，未解鎖加迴避指令，已解鎖注入 hidden_story 至 charSystem。前端需在 /api/chat body 傳入 galleryId 參數。
 ✅ VideoSettingsModal onGenerate closure 修正（本視窗）：onGenerate 改為 (refs, ratio, duration) 三參數，避免 React stale closure 導致影片比例不跟選的走。
 ✅ create/page.tsx Step 6 textarea value 補回（本視窗）：textarea 遺失 value={prompt} 受控屬性，已補回。清空按鈕邏輯（清空 prompt/translatedPrompt/selectedClothing/selectedAction）已存在且正確。
+✅ gallery-works 管理員永久保留（2026/05/31 釐清）：後端 isAdmin 判斷一直正確，「3天後過期」是角色詳細頁 /gallery/[id] 前端顯示快取問題——讀作品的 useEffect 依賴 [galleryId, session]，client-side 導航切回頁面時依賴未變不重 fetch，顯示舊的 expires_at。已加 document visibilitychange 監聽，頁面重新可見時自動 reload 作品列表。日後遇到「管理員/付費作品仍顯示過期」先確認是否前端未刷新，非後端 bug。

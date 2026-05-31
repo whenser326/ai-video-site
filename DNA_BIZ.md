@@ -100,7 +100,7 @@ Apple Pay：幕前支付已串接（checkout tradeInfo 加入 APPLEPAY:"1"），
 - 送出訊息後立即解鎖輸入欄，角色回覆在背景獨立顯示，不阻塞用戶繼續輸入
 
 AI 自拍：扣1點，在聊天中要求角色傳照片，Flux Kontext Pro 生成
-AI 自拍實作：/api/chat/route.ts 的 detectSelfieIntent 函式負責偵測，回傳 selfieIntent("photo"|"video"|null) 和 selfiePrompt（根據聊天紀錄推斷場景）
+AI 自拍實作：/api/chat/route.ts 的 detectSelfieIntent 函式負責偵測（純關鍵字，只回傳 selfieIntent("photo"|"video"|null)），prompt 由 async buildSelfiePrompt 呼叫 Claude Haiku 從最近10筆對話推斷（詳見 DNA_TECH「自拍 prompt 升級為 Claude 推斷」）
 照片生成：/api/generate-image → Flux 1.1 Pro，扣1點
 影片生成：先生成照片 → /api/upload-image 上傳 Supabase → /api/character mode:video Kling，依方案扣點
 AI 自拍場景：用戶可在對話中指定場景（例如「在海邊自拍」），生成時帶入場景描述
