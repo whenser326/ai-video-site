@@ -105,7 +105,6 @@ const [galleryWorksSaved, setGalleryWorksSaved] = useState<Set<string>>(new Set(
     let waitCount = 0;
     const waitTimer = setInterval(() => {
       if (waitCount >= 3) { clearInterval(waitTimer); return; }
-      selfieAutoMsgCountRef.current += 1;
       setMessages(prev => [...prev, {
         role: "assistant",
         content: waitingMessages[Math.floor(Math.random() * waitingMessages.length)],
@@ -258,8 +257,7 @@ const [galleryWorksSaved, setGalleryWorksSaved] = useState<Set<string>>(new Set(
       }]);
     } finally {
       clearInterval(waitTimer);
-      selfieActiveRef.current = false;
-      // 不歸零，保留 waitTimer 累計的次數，讓 autoMessage timer 繼續沿用上限判斷
+      // selfieActiveRef 維持 true（自拍冷卻中），追問受 3 次上限，由用戶說話時解除
     }
   };
 
@@ -369,7 +367,7 @@ const [galleryWorksSaved, setGalleryWorksSaved] = useState<Set<string>>(new Set(
             }
           }
         } catch { }
-        if (selfieAutoMsgCountRef.current > 0) {
+        if (selfieActiveRef.current) {
           selfieAutoMsgCountRef.current += 1;
           if (selfieAutoMsgCountRef.current < 3) {
             startTimer();
@@ -423,6 +421,8 @@ const [galleryWorksSaved, setGalleryWorksSaved] = useState<Set<string>>(new Set(
 
   const handleSend = async () => {
     if (!input.trim() || !session?.user?.email || !character) return;
+    selfieActiveRef.current = false;
+    selfieAutoMsgCountRef.current = 0;
     const userMsg = input.trim();
     setInput("");
     setReplyTo(null);
