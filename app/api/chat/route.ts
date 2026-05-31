@@ -209,7 +209,7 @@ async function buildSelfiePrompt(
       body: JSON.stringify({
         model: "claude-haiku-4-5",
         max_tokens: 120,
-        system: `你是圖像生成 prompt 專家。根據對話內容推斷角色此刻的狀態，輸出一段英文 image prompt。
+        system: `你是圖像生成 prompt 專家。根據對話內容推斷角色此刻的狀態，輸出一段英文 image prompt。只描述衣物、場景、動作、光線，禁止包含任何裸露、性暗示、身體部位的描述。
 
 格式必須嚴格按照：
 wearing [具體衣物描述], [具體行為/姿勢], [具體場景背景], [光線/時間氛圍], selfie photo, high quality, realistic
@@ -237,7 +237,7 @@ wearing [具體衣物描述], [具體行為/姿勢], [具體場景背景], [光�
       const selfieStyle = usesTripod
         ? "on a tripod, timer selfie, no phone visible, no phone in hand"
         : "no phone in hand, no device visible";
-      return `${characterDesc || "attractive person"}, ${prompt}, ${selfieStyle}`;
+      return `attractive Asian woman, ${prompt}, ${selfieStyle}`;
     }
   } catch {
     // fallback
@@ -250,7 +250,7 @@ wearing [具體衣物描述], [具體行為/姿勢], [具體場景背景], [光�
   const selfieStyleFallback = usesTripodFallback
     ? "on a tripod, timer selfie, no phone visible"
     : "selfie photo, no phone in hand";
-  return `${characterDesc || "attractive person"}, ${randomPose}, ${mood}, ${scene}, ${selfieStyleFallback}, high quality, realistic`;
+  return `attractive Asian woman, ${randomPose}, ${mood}, ${scene}, ${selfieStyleFallback}, high quality, realistic`;
 }
 
 export async function POST(req: NextRequest) {
@@ -374,7 +374,7 @@ export async function POST(req: NextRequest) {
       : "";
     const minSentences = Math.floor(Math.random() * 2) + 1; // 1到2
     const maxSentences = minSentences + 1; // 最多3句
-    const randomLength = `這次回覆請用${minSentences}到${maxSentences}句話回應，不要超過${maxSentences}句。`;
+    const randomLength = `【嚴格限制】這次回覆最多${maxSentences}句話，包含旁白在內總字數不超過80字，超過視為違規。旁白整個對話最多出現1次。`;
     const memoryPrefix = backgroundStory
       ? `【對話背景摘要】${backgroundStory}\n\n`
       : "";

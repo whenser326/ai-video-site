@@ -259,7 +259,7 @@ const [galleryWorksSaved, setGalleryWorksSaved] = useState<Set<string>>(new Set(
     } finally {
       clearInterval(waitTimer);
       selfieActiveRef.current = false;
-      selfieAutoMsgCountRef.current = 0;
+      // 不歸零，保留 waitTimer 累計的次數，讓 autoMessage timer 繼續沿用上限判斷
     }
   };
 
@@ -369,7 +369,12 @@ const [galleryWorksSaved, setGalleryWorksSaved] = useState<Set<string>>(new Set(
             }
           }
         } catch { }
-        if (!(selfieActiveRef.current && selfieAutoMsgCountRef.current >= 3)) {
+        if (selfieAutoMsgCountRef.current > 0) {
+          selfieAutoMsgCountRef.current += 1;
+          if (selfieAutoMsgCountRef.current < 3) {
+            startTimer();
+          }
+        } else {
           startTimer();
         }
       }, 60000);

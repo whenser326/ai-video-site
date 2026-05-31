@@ -322,7 +322,7 @@ export default function CheckinPage() {
         {/* 規則說明 */}
         <div className="bg-black/15 rounded-2xl border border-white/5 p-4 space-y-2">
           <p className="text-white/40 text-xs font-bold uppercase tracking-widest">獎勵規則</p>
-          <p className="text-white/50 text-xs">📅 每日簽到 → +1點</p>
+          <p className="text-white/50 text-xs">📅 每日簽到 → +1~5點隨機</p>
           <p className="text-white/50 text-xs">🎯 連續簽到第7天 → 額外 +3點</p>
           <p className="text-white/50 text-xs">⭐ 連續簽到第14天 → 額外 +5點</p>
           <p className="text-white/50 text-xs">⭐ 連續簽到第21天 → 額外 +5點</p>
