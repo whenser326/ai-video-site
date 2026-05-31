@@ -91,6 +91,8 @@ const [selectedPersona, setSelectedPersona] = useState("");
 const [selectedPersonality, setSelectedPersonality] = useState("");
 const [selectedJob, setSelectedJob] = useState("");
 const [selectedScene, setSelectedScene] = useState("");
+const [selectedClothing, setSelectedClothing] = useState("");
+const [selectedAction, setSelectedAction] = useState("");
 const [selectedShot, setSelectedShot] = useState("");
 // [DNA_PATCH_START] 自訂欄位 + 翻譯狀態
 const [customPersona, setCustomPersona] = useState("");
@@ -2119,8 +2121,16 @@ localStorage.setItem(key, '1');
                             { label: "💃 晚禮服", en: "wearing an elegant evening gown" },
                           ].map((item) => (
                             <button key={item.en} type="button"
-                              onClick={() => setPrompt(prev => prev ? prev + ", " + item.en : item.en)}
-                              className="px-3 py-1.5 rounded-full text-xs font-bold border transition-all bg-amber-400/8 text-amber-300/70 border-amber-400/25 hover:bg-amber-400/20 hover:border-amber-400/50 hover:text-amber-300">
+                              onClick={() => {
+                                const isSelected = selectedClothing === item.en;
+                                setSelectedClothing(isSelected ? "" : item.en);
+                                setPrompt(prev => {
+                                  const parts = prev.split(", ").filter(p => p !== selectedClothing && p !== item.en);
+                                  if (!isSelected) parts.push(item.en);
+                                  return parts.filter(Boolean).join(", ");
+                                });
+                              }}
+              className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${selectedClothing === item.en ? "bg-amber-400/30 text-amber-200 border-amber-400/70" : "bg-amber-400/8 text-amber-300/70 border-amber-400/25 hover:bg-amber-400/20 hover:border-amber-400/50 hover:text-amber-300"}`}>
                               {item.label}
                             </button>
                           ))}
@@ -2237,15 +2247,29 @@ localStorage.setItem(key, '1');
                             { label: "👀 側目", en: "glancing sideways, subtle expression" },
                           ].map((item) => (
                             <button key={item.en} type="button"
-                              onClick={() => setPrompt(prev => prev ? prev + ", " + item.en : item.en)}
-                              className="px-3 py-1.5 rounded-full text-xs font-bold border transition-all bg-amber-400/8 text-amber-300/70 border-amber-400/25 hover:bg-amber-400/20 hover:border-amber-400/50 hover:text-amber-300">
+                              onClick={() => {
+                                const isSelected = selectedAction === item.en;
+                                setSelectedAction(isSelected ? "" : item.en);
+                                setPrompt(prev => {
+                                  const parts = prev.split(", ").filter(p => p !== selectedAction && p !== item.en);
+                                  if (!isSelected) parts.push(item.en);
+                                  return parts.filter(Boolean).join(", ");
+                                });
+                              }}
+                              className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${selectedAction === item.en ? "bg-white/20 text-white border-white/50" : "bg-white/5 text-white/50 border-white/15 hover:bg-white/10 hover:border-white/30 hover:text-white/70"}`}>
                               {item.label}
                             </button>
                           ))}
                         </div>
                       </div>
                       <div className="relative">
-                        <textarea
+                        {prompt && (
+                          <button type="button" onClick={() => { setPrompt(""); setTranslatedPrompt(null); setUseTranslated(false); setSelectedClothing(""); setSelectedAction(""); }}
+                            className="absolute top-2 right-2 z-10 px-2 py-1 text-xs text-white/40 hover:text-white/70 bg-white/5 hover:bg-white/10 rounded-lg transition-all">
+                            ✕ 清空
+                          </button>
+                        )}
+                          <textarea
                           value={prompt}
                           onChange={(e) => { setPrompt(e.target.value); setTranslatedPrompt(null); setUseTranslated(false); }}
                           placeholder="補充細節（選填，中文也可以！輸入後點「翻譯成英文」按鈕，我們幫你自動翻譯 🌐）：服裝顏色、表情、動作...&#10;標籤已幫你建立骨架，這裡補充細節"
@@ -2715,9 +2739,9 @@ localStorage.setItem(key, '1');
     setOmniRef3={setOmniRef3}
     predictionOutput={prediction?.output ?? null}
     onClose={() => { setShowVideoModal(false); setGenerationMode("image"); }}
-    onGenerate={(refs) => {
+    onGenerate={(refs, ratio, dur) => {
       setShowVideoModal(false);
-      handleGenerateVideo(prediction.output, videoTranslatedPrompt || videoPrompt, videoRatio, videoDuration, videoModel, refs);
+      handleGenerateVideo(prediction.output, videoTranslatedPrompt || videoPrompt, ratio, dur, videoModel, refs);
     }}
   />
 )}

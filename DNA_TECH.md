@@ -725,3 +725,5 @@ CRON_SECRET=（自訂隨機字串，Vercel Cron cleanup-gallery-works 驗證用�
 ✅ ConditionalFooter 元件（2026/05/29）：新建 app/components/ConditionalFooter.tsx，/chat/ 開頭和 /admin 路徑不顯示 Footer，解決 Footer 擠入聊天室導致輸入列被推擠問題。
 ✅ 點讚持久化修正（2026/05/29）：/api/gallery/like GET 新增回傳 likeCountMin，前端 gallery/[id]/page.tsx 改用 API 回傳的最新 like_count_min 當 seededRandom 基數，刷新後點讚數不再重置。
 chat API 整合：gallery 聊天室判斷 gallery_unlocks，未解鎖加迴避指令，已解鎖注入 hidden_story 至 charSystem。前端需在 /api/chat body 傳入 galleryId 參數。
+✅ VideoSettingsModal onGenerate closure 修正（本視窗）：onGenerate 改為 (refs, ratio, duration) 三參數，避免 React stale closure 導致影片比例不跟選的走。
+✅ create/page.tsx Step 6 textarea value 補回（本視窗）：textarea 遺失 value={prompt} 受控屬性，已補回。清空按鈕邏輯（清空 prompt/translatedPrompt/selectedClothing/selectedAction）已存在且正確。

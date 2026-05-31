@@ -82,8 +82,12 @@ export default function PricingPage() {
     countdown_text: "",
   });
   const [isPaidUser, setIsPaidUser] = React.useState(false);
+  const [successBonus, setSuccessBonus] = React.useState<{plan: string, credits: number, bonus: number} | null>(null);
   const [prices, setPrices] = React.useState<Record<string, string>>({
     starter: "250", standard: "450", pro: "799",
+  });
+  const [planCredits, setPlanCredits] = React.useState<Record<string, string>>({
+    starter: "30", standard: "80", pro: "200",
   });
   // [DNA_PATCH_START] 動態影片點數
   const [videoCredits, setVideoCredits] = React.useState({
@@ -107,7 +111,7 @@ export default function PricingPage() {
         bg: "#1a2e1a", border: "#3B6D11", badgeBg: "", badgeText: "", badge: "",
         titleColor: "#C0DD97", subColor: "#639922",
         features: [
-          "30 點數", "圖片生成 1點/張",
+          `${planCredits.starter} 點數`, "圖片生成 1點/張",
           `Kling 3.0 影片 ${videoCredits.kling_5s_starter}點/支`,
           `Seedance 2.0 ${videoCredits.seedance_5s_starter}點/支（5秒）`,
           `Seedance Omni-Reference ${omniStarter}點/支（5秒）`,
@@ -122,7 +126,7 @@ export default function PricingPage() {
         bg: "#1a2435", border: "#378ADD", badgeBg: "#185FA5", badgeText: "#B5D4F4", badge: "最多人選",
         titleColor: "#B5D4F4", subColor: "#378ADD",
         features: [
-          "80 點數", "圖片生成 1點/張",
+          `${planCredits.standard} 點數`, "圖片生成 1點/張",
           `Kling 3.0 影片 ${videoCredits.kling_5s_standard}點/支`,
           `Seedance 2.0 ${videoCredits.seedance_5s_standard}點/支（5秒）`,
           `Seedance Omni-Reference ${omniStandard}點/支（5秒）`,
@@ -137,7 +141,7 @@ export default function PricingPage() {
         bg: "#2a1f0a", border: "#BA7517", badgeBg: "#854F0B", badgeText: "#FAC775", badge: "最划算",
         titleColor: "#FAC775", subColor: "#EF9F27",
         features: [
-          "200 點數", "圖片生成 1點/張",
+          `${planCredits.pro} 點數`, "圖片生成 1點/張",
           `Kling 3.0 影片 ${videoCredits.kling_5s_pro}點/支`,
           `Seedance 2.0 ${videoCredits.seedance_5s_pro}點/支（5秒）`,
           `Seedance Omni-Reference ${omniPro}點/支（5秒）`,
@@ -154,6 +158,15 @@ export default function PricingPage() {
   React.useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const refCode = urlParams.get("ref");
+    if (urlParams.get("success") === "1") {
+      const savedPlan = localStorage.getItem("last_purchased_plan");
+      if (savedPlan) {
+        const creditsMap: Record<string,number> = { starter: 35, standard: 90, pro: 160 };
+        const bonusMap: Record<string,number> = { starter: 1, standard: 2, pro: 3 };
+        setSuccessBonus({ plan: savedPlan, credits: creditsMap[savedPlan] || 0, bonus: bonusMap[savedPlan] || 0 });
+        localStorage.removeItem("last_purchased_plan");
+      }
+    }
     if (refCode) {
       const code = refCode.toUpperCase();
       setReferralCode(code);
@@ -173,6 +186,11 @@ export default function PricingPage() {
             starter: data.settings.plan_price_starter || "250",
             standard: data.settings.plan_price_standard || "450",
             pro: data.settings.plan_price_pro || "799",
+          });
+          setPlanCredits({
+            starter: data.settings.plan_credits_starter || "30",
+            standard: data.settings.plan_credits_standard || "80",
+            pro: data.settings.plan_credits_pro || "200",
           });
           setVideoCredits(prev => ({ ...prev, ...data.settings }));
           setPromo({
@@ -210,6 +228,7 @@ export default function PricingPage() {
 });
 const data = await res.json();
 if (data.TradeInfo) {
+  localStorage.setItem("last_purchased_plan", plan);
   localStorage.removeItem("referral_code");
   // 建立隱藏表單 POST 到藍新
   const form = document.createElement("form");
@@ -259,6 +278,14 @@ if (data.TradeInfo) {
           <img src="/logo.png" alt="Consistent Flow" className="w-full h-full object-contain" />
         </div>
 {/* [DNA_PATCH_START] N04 優惠控制系統 */}
+        {successBonus && (
+          <div className="mb-6 p-4 bg-[#89f5a2]/15 border border-[#89f5a2]/40 rounded-2xl text-center">
+            <p className="text-[#89f5a2] font-black text-base mb-1">🎉 付款成功！點數已入帳</p>
+            <p className="text-white/70 text-sm">已獲得 <span className="text-[#89f5a2] font-black">{successBonus.credits} 點</span>，今日加贈 <span className="text-yellow-300 font-black">+{successBonus.bonus} 點</span></p>
+            <button onClick={() => setSuccessBonus(null)} className="mt-3 text-white/30 text-xs hover:text-white/50">關閉</button>
+          </div>
+        )}
+        {/* 公告條 */}
         {/* 公告條 */}
         {promo.banner_text && (
           <div className="mb-6 p-3 bg-yellow-400/10 border border-yellow-400/30 rounded-2xl text-center">

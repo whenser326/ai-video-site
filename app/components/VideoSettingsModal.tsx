@@ -27,7 +27,7 @@ interface VideoSettingsModalProps {
   setOmniRef3: (v: string | null) => void;
   predictionOutput: string | null;
   onClose: () => void;
-  onGenerate: (refs: (string | null)[]) => void;
+  onGenerate: (refs: (string | null)[], ratio: string, duration: number) => void;
 }
 
 export default function VideoSettingsModal({
@@ -302,7 +302,7 @@ export default function VideoSettingsModal({
           <button
             onClick={() => {
               const refs = videoModel === "seedance" ? [omniRef1, omniRef2, omniRef3] : [];
-              onGenerate(refs);
+              onGenerate(refs, videoRatio, videoDuration);
               setOmniRef1(null);
               setOmniRef2(null);
               setOmniRef3(null);
