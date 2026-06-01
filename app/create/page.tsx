@@ -230,6 +230,7 @@ const [batchCurrentIndex, setBatchCurrentIndex] = useState(-1);
 const [showPromoCard, setShowPromoCard] = useState(false)
 const [promoCollapsed, setPromoCollapsed] = useState(false)
 const [promoBonus, setPromoBonus] = useState({ starter: 5, standard: 7, pro: 10 })
+const [planPrice, setPlanPrice] = useState({ starter: "250", standard: "450", pro: "799" })
 const [adultEnabled, setAdultEnabled] = useState(false)
 // [DNA_PATCH_START] Onboarding 引導狀態
 const [showOnboarding, setShowOnboarding] = useState(false);
@@ -384,11 +385,19 @@ useEffect(() => {
   fetch("/api/referral/settings-public")
     .then(r => r.json())
     .then(d => {
-      if (d) setPromoBonus({
-        starter: Number(d.plan_bonus_credits_starter) || 5,
-        standard: Number(d.plan_bonus_credits_standard) || 7,
-        pro: Number(d.plan_bonus_credits_pro) || 10,
-      });
+      if (d) {
+        setPromoBonus({
+          starter: Number(d.plan_bonus_credits_starter) || 5,
+          standard: Number(d.plan_bonus_credits_standard) || 7,
+          pro: Number(d.plan_bonus_credits_pro) || 10,
+        });
+        const s = d.settings || d;
+        setPlanPrice({
+          starter: s.plan_price_starter || "250",
+          standard: s.plan_price_standard || "450",
+          pro: s.plan_price_pro || "799",
+        });
+      }
     })
     .catch(() => {});
 }, []);
@@ -3445,7 +3454,7 @@ customAppearance={customAppearance}
               <div className="flex-1 min-w-0">
                 <div style={{ fontSize: 12, fontWeight: 700, color: '#b8ffc8', letterSpacing: '0.03em' }}>今日限定優惠！</div>
                 {!promoCollapsed && (
-                  <div style={{ fontSize: 10, color: 'rgba(184,255,200,0.5)', marginTop: 1 }}>今天午夜前購買即享加贈點數</div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,180,120,0.7)', marginTop: 1 }}>你只剩 {credits ?? 0} 點，快升級補充！</div>
                 )}
               </div>
               <button
@@ -3478,8 +3487,8 @@ customAppearance={customAppearance}
                         <div style={{ fontSize: 13, fontWeight: 700, color: '#d4ffe0' }}>30 點</div>
                       </div>
                       <div className="text-right">
-                        <div style={{ fontSize: 10, color: 'rgba(184,255,200,0.4)', marginBottom: 2 }}>今日額外贈送</div>
-                        <div style={{ fontSize: 16, fontWeight: 800, color: '#89f5a2' }}>+{promoBonus.starter} 點 🎁</div>
+                        <div style={{ fontSize: 10, color: 'rgba(184,255,200,0.4)', marginBottom: 2 }}>立即升級</div>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: '#89f5a2' }}>${planPrice.starter} NTD</div>
                       </div>
                     </div>
 
@@ -3493,8 +3502,8 @@ customAppearance={customAppearance}
                         <div style={{ fontSize: 13, fontWeight: 700, color: '#d4ffe0' }}>80 點</div>
                       </div>
                       <div className="text-right">
-                        <div style={{ fontSize: 10, color: 'rgba(184,255,200,0.4)', marginBottom: 2 }}>今日額外贈送</div>
-                        <div style={{ fontSize: 16, fontWeight: 800, color: '#89f5a2' }}>+{promoBonus.standard} 點 🎁</div>
+                        <div style={{ fontSize: 10, color: 'rgba(184,255,200,0.4)', marginBottom: 2 }}>立即升級</div>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: '#89f5a2' }}>${planPrice.standard} NTD</div>
                       </div>
                     </div>
 
@@ -3505,8 +3514,8 @@ customAppearance={customAppearance}
                         <div style={{ fontSize: 13, fontWeight: 700, color: '#d4ffe0' }}>200 點</div>
                       </div>
                       <div className="text-right">
-                        <div style={{ fontSize: 10, color: 'rgba(184,255,200,0.4)', marginBottom: 2 }}>今日額外贈送</div>
-                        <div style={{ fontSize: 16, fontWeight: 800, color: '#89f5a2' }}>+{promoBonus.pro} 點 🎁</div>
+                        <div style={{ fontSize: 10, color: 'rgba(184,255,200,0.4)', marginBottom: 2 }}>立即升級</div>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: '#89f5a2' }}>${planPrice.pro} NTD</div>
                       </div>
                     </div>
 

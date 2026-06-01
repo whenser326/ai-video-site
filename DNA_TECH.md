@@ -728,3 +728,5 @@ chat API 整合：gallery 聊天室判斷 gallery_unlocks，未解鎖加迴避�
 ✅ VideoSettingsModal onGenerate closure 修正（本視窗）：onGenerate 改為 (refs, ratio, duration) 三參數，避免 React stale closure 導致影片比例不跟選的走。
 ✅ create/page.tsx Step 6 textarea value 補回（本視窗）：textarea 遺失 value={prompt} 受控屬性，已補回。清空按鈕邏輯（清空 prompt/translatedPrompt/selectedClothing/selectedAction）已存在且正確。
 ✅ gallery-works 管理員永久保留（2026/05/31 釐清）：後端 isAdmin 判斷一直正確，「3天後過期」是角色詳細頁 /gallery/[id] 前端顯示快取問題——讀作品的 useEffect 依賴 [galleryId, session]，client-side 導航切回頁面時依賴未變不重 fetch，顯示舊的 expires_at。已加 document visibilitychange 監聽，頁面重新可見時自動 reload 作品列表。日後遇到「管理員/付費作品仍顯示過期」先確認是否前端未刷新，非後端 bug。
+✅ pricing 入門包內建 badge（2026/05/31）：入門包原 badge:"" 改為 badge:"入門首選"、badgeBg:"#3B6D11"、badgeText:"#C0DD97"，後台 promo_badge_starter 清空時 fallback 顯示。顯示邏輯 promo.badge_xxx || p.badge 不變。
+✅ pricing 加贈顯示移除（2026/05/31，選項一）：移除倒數橫幅「入門+X點/標準+X點/專業+X點」那行 + 付款成功提示框「今日加贈+X點」+ CountdownBanner bonus prop/參數。倒數計時本體、successBonus 本體、後台 plan_bonus_credits 設定、金流加贈入帳全部保留。promo state bonus_* 欄位保留未刪（刪除牽動讀取邏輯,留著不顯示無害）。

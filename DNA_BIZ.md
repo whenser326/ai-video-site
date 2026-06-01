@@ -218,11 +218,11 @@ AI 自拍媒體類型與扣點：
 - /api/referral/settings-public/route.ts 新增回傳以上所有 promo key 及 plan_bonus_credits_*
 - /pricing 頁面六種優惠前台連動：
   1. 限時倒數：後台設截止時間，自動顯示天/時/分/秒倒數，時間到自動消失
-  2. 加贈點數：倒數計時器內顯示動態加贈點數（讀 plan_bonus_credits）
+  2. 加贈點數：【2026/05/31 前台顯示已移除】倒數橫幅和付款成功提示框不再顯示加贈點數，CountdownBanner 移除 bonus prop。後台 plan_bonus_credits 設定與 checkout/notify 入帳邏輯保留（金流仍會加贈，只是前台不揭露）。promo state 的 bonus_* 欄位保留未刪。
   3. 限量名額：各方案可設數字，顯示「⚡ 僅剩X名優惠名額」（0=不顯示）
   4. 首購優惠：只對 plan=free 用戶顯示綠色標語
   5. 公告條：定價頁最上方黃色公告條（空白=不顯示）
-  6. 方案Badge：各方案紅色標籤，後台有設定則覆蓋原有badge
+  6. 方案Badge：各方案後台有填則顯示紅色標籤覆蓋原有badge，清空則 fallback 回內建預設。內建預設：入門包「入門首選」（綠 #3B6D11/#C0DD97，2026/05/31 補）、標準包「最多人選」（藍）、專業包「最划算」（橘）。
 - 倒數計時器標題文字可後台設定（promo_countdown_text），空白顯示預設文字
 - 後台優惠控制中心：含emoji快選按鈕（12個常用emoji）、datetime-local 時間選擇器
 

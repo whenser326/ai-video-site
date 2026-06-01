@@ -5,7 +5,7 @@ import React from "react";
 import { WHY_DIFFERENT } from "../data/whyDifferent";
 
 // [DNA_PATCH_START] 優惠倒數計時元件（後台控制截止時間）
-function CountdownBanner({ endTime, bonus, countdownText }: { endTime: string; bonus: { starter: string; standard: string; pro: string }; countdownText: string }) {
+function CountdownBanner({ endTime, countdownText }: { endTime: string; countdownText: string }) {
   const [timeLeft, setTimeLeft] = React.useState({ days: 0, hours: 0, minutes: 0, seconds: 0, expired: false });
 
   React.useEffect(() => {
@@ -34,10 +34,7 @@ function CountdownBanner({ endTime, bonus, countdownText }: { endTime: string; b
 
   return (
     <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-2xl text-center">
-      <p className="text-red-300 font-black text-sm mb-1">{countdownText || "🔥 限時優惠！購買任一方案加贈點數"}</p>
-      <p className="text-white/50 text-xs mb-3">
-        入門+{bonus.starter}點 ／ 標準+{bonus.standard}點 ／ 專業+{bonus.pro}點
-      </p>
+      <p className="text-red-300 font-black text-sm mb-1">{countdownText || "🔥 限時優惠！"}</p>
       <div className="flex items-center justify-center gap-2">
         {timeLeft.days > 0 && (
           <>
@@ -108,7 +105,7 @@ export default function PricingPage() {
     return [
       {
         name: "入門包", emoji: "🌱", credits: 30,
-        bg: "#1a2e1a", border: "#3B6D11", badgeBg: "", badgeText: "", badge: "",
+        bg: "#1a2e1a", border: "#3B6D11", badgeBg: "#3B6D11", badgeText: "#C0DD97", badge: "入門首選",
         titleColor: "#C0DD97", subColor: "#639922",
         features: [
           `${planCredits.starter} 點數`, "圖片生成 1點/張",
@@ -281,7 +278,7 @@ if (data.TradeInfo) {
         {successBonus && (
           <div className="mb-6 p-4 bg-[#89f5a2]/15 border border-[#89f5a2]/40 rounded-2xl text-center">
             <p className="text-[#89f5a2] font-black text-base mb-1">🎉 付款成功！點數已入帳</p>
-            <p className="text-white/70 text-sm">已獲得 <span className="text-[#89f5a2] font-black">{successBonus.credits} 點</span>，今日加贈 <span className="text-yellow-300 font-black">+{successBonus.bonus} 點</span></p>
+            <p className="text-white/70 text-sm">已獲得 <span className="text-[#89f5a2] font-black">{successBonus.credits} 點</span></p>
             <button onClick={() => setSuccessBonus(null)} className="mt-3 text-white/30 text-xs hover:text-white/50">關閉</button>
           </div>
         )}
@@ -301,7 +298,6 @@ if (data.TradeInfo) {
         {/* 倒數計時 */}
         <CountdownBanner
           endTime={promo.countdown_end}
-          bonus={{ starter: promo.bonus_starter, standard: promo.bonus_standard, pro: promo.bonus_pro }}
           countdownText={promo.countdown_text}
         />
         {/* [DNA_PATCH_END] */}
