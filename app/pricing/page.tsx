@@ -162,6 +162,9 @@ export default function PricingPage() {
         const bonusMap: Record<string,number> = { starter: 1, standard: 2, pro: 3 };
         setSuccessBonus({ plan: savedPlan, credits: creditsMap[savedPlan] || 0, bonus: bonusMap[savedPlan] || 0 });
         localStorage.removeItem("last_purchased_plan");
+        window.dispatchEvent(new CustomEvent("refresh-credits"));
+        // 強制 GlobalHeader 重新抓點數
+        window.dispatchEvent(new CustomEvent("refresh-credits"));
       }
     }
     if (refCode) {

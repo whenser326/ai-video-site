@@ -75,18 +75,23 @@ useEffect(() => {
   // 點數同步
   useEffect(() => {
   if (!session?.user?.email) return;
-  fetch(`/api/user/credits?email=${session.user.email}`)
-    .then(r => r.json())
-    .then(d => {
-      if (d.credits !== undefined) {
-        setCredits(d.credits);
-        if (d.credits <= 5 && d.credits > 0 && !hasShownLowCreditToast.current) {
-          hasShownLowCreditToast.current = true;
-          setShowLowCreditToast(true);
-          setTimeout(() => setShowLowCreditToast(false), 8000);
+  const fetchCredits = () => {
+    fetch(`/api/user/credits?email=${session?.user?.email}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.credits !== undefined) {
+          setCredits(d.credits);
+          if (d.credits <= 5 && d.credits > 0 && !hasShownLowCreditToast.current) {
+            hasShownLowCreditToast.current = true;
+            setShowLowCreditToast(true);
+            setTimeout(() => setShowLowCreditToast(false), 8000);
+          }
         }
-      }
-    });
+      });
+  };
+  fetchCredits();
+  window.addEventListener("refresh-credits", fetchCredits);
+  return () => window.removeEventListener("refresh-credits", fetchCredits);
 }, [session]);
 
   // [DNA_PATCH_START] 點外部關閉 Drawer（排除漢堡按鈕本身）
