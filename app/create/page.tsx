@@ -2217,8 +2217,8 @@ localStorage.setItem(key, '1');
                 <div id="step6-section" className="border border-white/8 rounded-2xl overflow-hidden">
                   <button type="button" onClick={() => setActiveStep(isOpen ? 0 : 6)}
                     className="w-full flex items-center gap-3 px-4 py-3 bg-white/4 hover:bg-white/7 transition-all">
-                    <span className="text-[10px] font-black text-white/30 w-12 flex-shrink-0">STEP 6：亦可直接在這裡輸入純文字提示詞產生圖片</span>
-                    <span className="text-sm font-bold text-white/80 flex-1 text-left">補充細節</span>
+                    <span className="text-[10px] font-black text-white/30 w-12 flex-shrink-0">STEP 6</span>
+                    <span className="text-sm font-bold text-white/80 flex-1 text-left">補充細節：亦可直接在這輸入純提示詞產生圖片</span>
                     <span className="text-white/20 text-[10px] mr-1">選填</span>
                     <span className="text-white/30 text-xs">{isOpen ? "▲" : "▼"}</span>
                   </button>
@@ -2283,7 +2283,7 @@ localStorage.setItem(key, '1');
                           onChange={(e) => { setPrompt(e.target.value); setTranslatedPrompt(null); setUseTranslated(false); }}
                           placeholder="補充細節（選填，中文也可以！輸入後點「翻譯成英文」按鈕，我們幫你自動翻譯 🌐）：服裝顏色、表情、動作...&#10;標籤已幫你建立骨架，這裡補充細節"
                           className="w-full p-4 rounded-xl bg-white/8 border border-white/10 text-white placeholder-white/25 focus:outline-none focus:ring-2 focus:ring-[#89f5a2]/40 text-base resize-none transition-all"
-                          rows={6}
+                          rows={10}
                         />
                         <div className="absolute bottom-2 right-2 flex items-center gap-2">
                           {hasChinese(prompt) && !translatedPrompt && (
