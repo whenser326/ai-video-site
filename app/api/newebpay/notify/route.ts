@@ -30,32 +30,31 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const tradeInfo = formData.get("TradeInfo") as string;
     const status = formData.get("Status") as string;
+    console.log("[notify] status:", status, "tradeInfo length:", tradeInfo?.length);
 
-    // 付款失敗直接回傳
-    if (status !== "SUCCESS") {
-      return NextResponse.json({ received: true });
-    }
-    
-    // [DNA_PATCH_START] 驗證 TradeSha 防偽造
     const tradeSha = formData.get("TradeSha") as string;
     const expectedSha = crypto
       .createHash("sha256")
       .update(`HashKey=${HASH_KEY}&${tradeInfo}&HashIV=${HASH_IV}`)
       .digest("hex")
       .toUpperCase();
+    console.log("[notify] tradeSha match:", tradeSha === expectedSha);
     if (tradeSha !== expectedSha) {
+      console.log("[notify] SHA mismatch, expected:", expectedSha.slice(0,20), "got:", tradeSha?.slice(0,20));
       return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
     }
-    // [DNA_PATCH_END]
-    // AES 解密
+
+    if (status !== "SUCCESS") {
+      return NextResponse.json({ received: true });
+    }
+
     const decrypted = aesDecrypt(tradeInfo);
+    console.log("[notify] decrypted ok, length:", decrypted.length);
     const parsed = JSON.parse(decrypted);
     const result = parsed.Result || parsed;
     const merchantOrderNo = result.MerchantOrderNo || "";
-    console.log("[notify] decrypted:", decrypted.substring(0, 300));
     console.log("[notify] merchantOrderNo:", JSON.stringify(merchantOrderNo));
 
-    // 從 pending_orders 查訂單資訊
     const { data: order } = await supabase
       .from("pending_orders")
       .select("email, plan, referral_code")
@@ -65,7 +64,7 @@ export async function POST(req: NextRequest) {
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
-// [DNA_PATCH_START] 防重複：先檢查是否已有 payment_logs 紀錄
+
     const { data: existingLog } = await supabase
       .from("payment_logs")
       .select("id")
@@ -73,7 +72,7 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (existingLog) {
-      return NextResponse.json({ received: true }); // 已處理過，直接回傳成功
+      return NextResponse.json({ received: true });
     }
 
     await supabase.from("payment_logs").insert({
@@ -81,17 +80,15 @@ export async function POST(req: NextRequest) {
       email: order.email,
       plan: order.plan,
     });
-    // [DNA_PATCH_END]
+
     const { email, plan, referral_code } = order;
 
-    // 取得現有 profile
     const { data: profile } = await supabase
       .from("profiles")
       .select("credits, referred_by")
       .eq("email", email)
       .single();
 
-    // 從 admin_settings 動態讀取點數（有 fallback 預設值）
     const DEFAULT_CREDITS: Record<string, number> = { starter: 30, standard: 80, pro: 200 };
     const DEFAULT_BONUS: Record<string, number> = { starter: 5, standard: 7, pro: 10 };
 
@@ -101,11 +98,11 @@ export async function POST(req: NextRequest) {
     ]);
 
     const planCredits = parseInt(creditsRow.data?.value || "") || (DEFAULT_CREDITS[plan] ?? 0);
-const bonusCredits = parseInt(bonusRow.data?.value || "") || (DEFAULT_BONUS[plan] ?? 0);
+    const bonusCredits = parseInt(bonusRow.data?.value || "") || (DEFAULT_BONUS[plan] ?? 0);
     const addCredits = planCredits + bonusCredits;
     const currentCredits = profile?.credits ?? 0;
+    console.log("[notify] plan:", plan, "planCredits:", planCredits, "bonus:", bonusCredits, "adding:", addCredits);
 
-    // 更新點數、方案、歷史上限
     await supabase
       .from("profiles")
       .update({
@@ -116,7 +113,8 @@ const bonusCredits = parseInt(bonusRow.data?.value || "") || (DEFAULT_BONUS[plan
       })
       .eq("email", email);
 
-    // 分潤邏輯
+    console.log("[notify] credits updated successfully");
+
     if (profile?.referred_by) {
       const { data: setting } = await supabase
         .from("admin_settings")
@@ -152,10 +150,8 @@ const bonusCredits = parseInt(bonusRow.data?.value || "") || (DEFAULT_BONUS[plan
       }
     }
 
-    // 里程碑自動發放（非同步，不阻塞主流程）
     checkAndAwardMilestones(email).catch(() => {});
 
-    // 刪除已處理的訂單
     await supabase
       .from("pending_orders")
       .delete()
@@ -163,10 +159,11 @@ const bonusCredits = parseInt(bonusRow.data?.value || "") || (DEFAULT_BONUS[plan
 
     return NextResponse.json({ received: true });
   } catch (error: any) {
+    console.log("[notify] ERROR:", error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
-// 里程碑檢查與發放（防重複由 DB unique index 保證）
+
 async function checkAndAwardMilestones(email: string) {
   const DEFAULT_MILESTONES = [
     { index: 1, count: 1, credits: 5 },
@@ -174,7 +171,6 @@ async function checkAndAwardMilestones(email: string) {
     { index: 3, count: 5, credits: 30 },
   ];
 
-  // 讀里程碑設定
   const rows = await Promise.all([
     supabase.from("admin_settings").select("value").eq("key", "referral_milestone_1").single(),
     supabase.from("admin_settings").select("value").eq("key", "referral_milestone_2").single(),
@@ -189,9 +185,6 @@ async function checkAndAwardMilestones(email: string) {
     return DEFAULT_MILESTONES[i];
   });
 
-  // 查成功推薦數（以 referrer_email 為 email 的 referral_logs 筆數）
-  // 注意：這裡是找推薦人 = email 的紀錄，即剛才這筆付款者的推薦人不算
-  // 里程碑是給「推薦別人」的獎勵，查的是 referrer_email = email
   const { count: referralCount } = await supabase
     .from("referral_logs")
     .select("referred_email", { count: "exact" })
@@ -199,7 +192,6 @@ async function checkAndAwardMilestones(email: string) {
 
   if (!referralCount || referralCount === 0) return;
 
-  // 查已發放紀錄
   const { data: claimed } = await supabase
     .from("referral_milestone_logs")
     .select("milestone_index")
@@ -207,18 +199,14 @@ async function checkAndAwardMilestones(email: string) {
 
   const claimedSet = new Set((claimed ?? []).map((r: any) => r.milestone_index));
 
-  // 逐一檢查並發放
   for (const m of milestones) {
     if (referralCount >= m.count && !claimedSet.has(m.index)) {
-      // 嘗試寫入 milestone_logs（unique index 防重複）
       const { error } = await supabase
         .from("referral_milestone_logs")
         .insert({ email, milestone_index: m.index, credits_awarded: m.credits });
 
-      // error 代表已被其他請求搶先寫入，跳過
       if (error) continue;
 
-      // 發點數
       const { data: profile } = await supabase
         .from("profiles")
         .select("credits")

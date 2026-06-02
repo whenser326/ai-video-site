@@ -156,19 +156,7 @@ export default function PricingPage() {
     const urlParams = new URLSearchParams(window.location.search);
     const refCode = urlParams.get("ref");
     if (urlParams.get("success") === "1") {
-      const savedPlan = localStorage.getItem("last_purchased_plan");
-      if (savedPlan) {
-        const creditsMap: Record<string,number> = {
-          starter: (parseInt(planCredits.starter) || 35) + (parseInt(promo.bonus_starter) || 5),
-          standard: (parseInt(planCredits.standard) || 90) + (parseInt(promo.bonus_standard) || 7),
-          pro: (parseInt(planCredits.pro) || 160) + (parseInt(promo.bonus_pro) || 10),
-        };
-        setSuccessBonus({ plan: savedPlan, credits: creditsMap[savedPlan] || 0, bonus: 0 });
-        localStorage.removeItem("last_purchased_plan");
-        window.dispatchEvent(new CustomEvent("refresh-credits"));
-        // 強制 GlobalHeader 重新抓點數
-        window.dispatchEvent(new CustomEvent("refresh-credits"));
-      }
+      window.dispatchEvent(new CustomEvent("refresh-credits"));
     }
     if (refCode) {
       const code = refCode.toUpperCase();
@@ -211,6 +199,17 @@ export default function PricingPage() {
             bonus_pro: data.settings.plan_bonus_credits_pro || "10",
             countdown_text: data.settings.promo_countdown_text || "",
           });
+          // 等後台資料載入完再顯示付款成功彈窗
+          const savedPlan = localStorage.getItem("last_purchased_plan");
+          if (savedPlan) {
+            localStorage.removeItem("last_purchased_plan");
+            const creditsMap: Record<string,number> = {
+              starter: (parseInt(data.settings.plan_credits_starter) || 35) + (parseInt(data.settings.plan_bonus_credits_starter) || 5),
+              standard: (parseInt(data.settings.plan_credits_standard) || 90) + (parseInt(data.settings.plan_bonus_credits_standard) || 7),
+              pro: (parseInt(data.settings.plan_credits_pro) || 160) + (parseInt(data.settings.plan_bonus_credits_pro) || 10),
+            };
+            setSuccessBonus({ plan: savedPlan, credits: creditsMap[savedPlan] || 0, bonus: 0 });
+          }
         }
       });
     // 檢查是否首購用戶
