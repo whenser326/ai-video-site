@@ -204,9 +204,9 @@ export default function PricingPage() {
           if (savedPlan) {
             localStorage.removeItem("last_purchased_plan");
             const creditsMap: Record<string,number> = {
-              starter: (parseInt(data.settings.plan_credits_starter) || 35) + (parseInt(data.settings.plan_bonus_credits_starter) || 5),
-              standard: (parseInt(data.settings.plan_credits_standard) || 90) + (parseInt(data.settings.plan_bonus_credits_standard) || 7),
-              pro: (parseInt(data.settings.plan_credits_pro) || 160) + (parseInt(data.settings.plan_bonus_credits_pro) || 10),
+              starter: (parseInt(data.settings.plan_credits_starter) || 35),
+              standard: (parseInt(data.settings.plan_credits_standard) || 90),
+              pro: (parseInt(data.settings.plan_credits_pro) || 160),
             };
             setSuccessBonus({ plan: savedPlan, credits: creditsMap[savedPlan] || 0, bonus: 0 });
           }
