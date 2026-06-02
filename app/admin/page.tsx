@@ -227,18 +227,17 @@ export default function AdminPage() {
         <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
           <h2 className="text-lg font-bold mb-1">💰 方案設定</h2>
           <p className="text-white/40 text-xs mb-4">調整後影響前台顯示，綠界售價需另至綠界後台同步修改</p>
-          <div className="grid grid-cols-4 gap-2 mb-2">
+          <div className="grid grid-cols-3 gap-2 mb-2">
             <span className="text-white/30 text-xs">方案</span>
             <span className="text-white/30 text-xs text-center">售價 (NTD)</span>
             <span className="text-white/30 text-xs text-center">給買家點數</span>
-            <span className="text-white/30 text-xs text-center">今日加贈🎁</span>
           </div>
           {[
-            { label: "🌱 入門包", priceKey: "plan_price_starter", creditsKey: "plan_credits_starter", bonusKey: "plan_bonus_credits_starter" },
-            { label: "⭐ 標準包", priceKey: "plan_price_standard", creditsKey: "plan_credits_standard", bonusKey: "plan_bonus_credits_standard" },
-            { label: "🚀 專業包", priceKey: "plan_price_pro", creditsKey: "plan_credits_pro", bonusKey: "plan_bonus_credits_pro" },
+            { label: "🌱 入門包", priceKey: "plan_price_starter", creditsKey: "plan_credits_starter" },
+            { label: "⭐ 標準包", priceKey: "plan_price_standard", creditsKey: "plan_credits_standard" },
+            { label: "🚀 專業包", priceKey: "plan_price_pro", creditsKey: "plan_credits_pro" },
           ].map((item) => (
-            <div key={item.priceKey} className="grid grid-cols-4 gap-2 mb-3 items-center">
+            <div key={item.priceKey} className="grid grid-cols-3 gap-2 mb-3 items-center">
               <span className="text-sm">{item.label}</span>
               <div className="flex items-center gap-1">
                 <span className="text-white/40 text-sm">NT$</span>
@@ -260,16 +259,7 @@ export default function AdminPage() {
                 />
                 <span className="text-white/40 text-sm">點</span>
               </div>
-              <div className="flex items-center gap-1">
-                <input
-                  type="number"
-                  min="0"
-                  value={settings[item.bonusKey as keyof Settings]}
-                  onChange={(e) => setSettings({ ...settings, [item.bonusKey]: e.target.value })}
-                  className="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-[#89f5a2]/50"
-                />
-                <span className="text-white/40 text-sm">點</span>
-              </div>
+              
             </div>
           ))}
           <button
