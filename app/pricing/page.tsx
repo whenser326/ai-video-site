@@ -104,7 +104,7 @@ export default function PricingPage() {
     const omniPro = parseInt(videoCredits.seedance_5s_pro) + parseInt(videoCredits.omni_extra_pro);
     return [
       {
-        name: "入門包", emoji: "🌱", credits: 35,
+        name: "入門包", emoji: "🌱", credits: parseInt(planCredits.starter) || 35,
         bg: "#1a2e1a", border: "#3B6D11", badgeBg: "#3B6D11", badgeText: "#C0DD97", badge: "入門首選",
         titleColor: "#C0DD97", subColor: "#639922",
         features: [
@@ -119,7 +119,7 @@ export default function PricingPage() {
         plan: "starter",
       },
       {
-        name: "標準包", emoji: "⭐", credits: 90,
+        name: "標準包", emoji: "⭐", credits: parseInt(planCredits.standard) || 90,
         bg: "#1a2435", border: "#378ADD", badgeBg: "#185FA5", badgeText: "#B5D4F4", badge: "最多人選",
         titleColor: "#B5D4F4", subColor: "#378ADD",
         features: [
@@ -134,7 +134,7 @@ export default function PricingPage() {
         plan: "standard",
       },
       {
-        name: "專業包", emoji: "🚀", credits: 160,
+        name: "專業包", emoji: "🚀", credits: parseInt(planCredits.pro) || 160,
         bg: "#2a1f0a", border: "#BA7517", badgeBg: "#854F0B", badgeText: "#FAC775", badge: "最划算",
         titleColor: "#FAC775", subColor: "#EF9F27",
         features: [
@@ -158,9 +158,12 @@ export default function PricingPage() {
     if (urlParams.get("success") === "1") {
       const savedPlan = localStorage.getItem("last_purchased_plan");
       if (savedPlan) {
-        const creditsMap: Record<string,number> = { starter: 35, standard: 90, pro: 160 };
-        const bonusMap: Record<string,number> = { starter: 1, standard: 2, pro: 3 };
-        setSuccessBonus({ plan: savedPlan, credits: creditsMap[savedPlan] || 0, bonus: bonusMap[savedPlan] || 0 });
+        const creditsMap: Record<string,number> = {
+          starter: (parseInt(planCredits.starter) || 35) + (parseInt(promo.bonus_starter) || 5),
+          standard: (parseInt(planCredits.standard) || 90) + (parseInt(promo.bonus_standard) || 7),
+          pro: (parseInt(planCredits.pro) || 160) + (parseInt(promo.bonus_pro) || 10),
+        };
+        setSuccessBonus({ plan: savedPlan, credits: creditsMap[savedPlan] || 0, bonus: 0 });
         localStorage.removeItem("last_purchased_plan");
         window.dispatchEvent(new CustomEvent("refresh-credits"));
         // 強制 GlobalHeader 重新抓點數
