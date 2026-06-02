@@ -104,7 +104,7 @@ export default function PricingPage() {
     const omniPro = parseInt(videoCredits.seedance_5s_pro) + parseInt(videoCredits.omni_extra_pro);
     return [
       {
-        name: "入門包", emoji: "🌱", credits: 30,
+        name: "入門包", emoji: "🌱", credits: 35,
         bg: "#1a2e1a", border: "#3B6D11", badgeBg: "#3B6D11", badgeText: "#C0DD97", badge: "入門首選",
         titleColor: "#C0DD97", subColor: "#639922",
         features: [
@@ -119,7 +119,7 @@ export default function PricingPage() {
         plan: "starter",
       },
       {
-        name: "標準包", emoji: "⭐", credits: 80,
+        name: "標準包", emoji: "⭐", credits: 90,
         bg: "#1a2435", border: "#378ADD", badgeBg: "#185FA5", badgeText: "#B5D4F4", badge: "最多人選",
         titleColor: "#B5D4F4", subColor: "#378ADD",
         features: [
@@ -134,7 +134,7 @@ export default function PricingPage() {
         plan: "standard",
       },
       {
-        name: "專業包", emoji: "🚀", credits: 200,
+        name: "專業包", emoji: "🚀", credits: 160,
         bg: "#2a1f0a", border: "#BA7517", badgeBg: "#854F0B", badgeText: "#FAC775", badge: "最划算",
         titleColor: "#FAC775", subColor: "#EF9F27",
         features: [
