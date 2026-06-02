@@ -26,6 +26,7 @@ function aesDecrypt(encrypted: string): string {
 
 export async function POST(req: NextRequest) {
   try {
+    console.log("[notify] HASH_KEY length:", HASH_KEY?.length, "HASH_IV length:", HASH_IV?.length);
     const formData = await req.formData();
     const tradeInfo = formData.get("TradeInfo") as string;
     const status = formData.get("Status") as string;
