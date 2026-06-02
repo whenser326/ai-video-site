@@ -21,7 +21,8 @@ function aesDecrypt(encrypted: string): string {
   decipher.setAutoPadding(false);
   let decrypted = decipher.update(encrypted, "hex", "utf8");
   decrypted += decipher.final("utf8");
-  return decrypted.replace(/\x00+$/, "").trim();
+  // 去除所有非可見字元（null bytes 和其他控制字元）
+  return decrypted.replace(/[\x00-\x1F\x7F]+/g, "").trim();
 }
 
 export async function POST(req: NextRequest) {
