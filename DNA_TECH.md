@@ -538,7 +538,14 @@ TURNSTILE_SECRET_KEY=（已設定於 Vercel Sensitive）
 ANTHROPIC_API_KEY=sk-ant-你的金鑰
 CRON_SECRET=（自訂隨機字串，Vercel Cron cleanup-gallery-works 驗證用）
 ✅ 自拍每日限制與內容違規錯誤訊息分開（2026/05/28）：三個聊天室（/chat/[characterId]、/chat/group、/chat/gallery/[id]）triggerSelfie 呼叫 /api/character 前先查 /api/user/credits 確認免費用戶每日額度，額度用完 throw new Error("DAILY_LIMIT")，catch 區塊新增 isDailyLimit 判斷，顯示「📅 今日自拍次數已達上限」；內容違規顯示「⚠️ 此圖片因內容涉及違規」；其他錯誤顯示原始訊息。
-✅ 藍新 notify 解析修復（2026/05/28）：notify/route.ts 的 TradeInfo 解密後格式為 JSON（非 URLSearchParams），已改用 JSON.parse 解析，取 parsed.Result.MerchantOrderNo。修復前所有 notify 均回傳 404（order not found），點數無法自動入帳。yaomay1981@gmail.com 已手動補35點（入門包30+加贈5）。待下次真實付款確認自動入帳正常。
+✅ 藍新 notify 完整修復（2026/06/02）：
+- 根本原因1：NEWEBPAY_HASH_KEY/HASH_IV 環境變數為空，導致 crypto.createDecipheriv 在模組載入時炸掉，500 error 且 No outgoing requests。修復：Vercel Environment Variables 重新填入正確值並 Redeploy。
+- 根本原因2：aesDecrypt 用 setAutoPadding(false) 但只去除 \x00，導致 PKCS7 padding 殘留字元使 JSON.parse 失敗（Unexpected non-whitespace character at position 486）。修復：改用 replace(/[\x00-\x1F\x7F]+/g, "") 移除所有控制字元。
+- 根本原因3：notify/route.ts 疊加修改導致 tradeSha/expectedSha/decrypted 重複宣告，TS 編譯失敗。修復：整份檔案重寫清理。
+- 付款後右上角點數未刷新：GlobalHeader fetchCredits 改為具名函式，監聽 window CustomEvent("refresh-credits")；pricing/page.tsx 付款成功時 dispatch 此事件。
+- 付款成功彈窗顯示點數：移至 settings-public fetch 的 .then 內計算，確保後台資料載入完才顯示，解決 race condition。彈窗不再加贈點數，只顯示方案本身點數。
+- settings-public/route.ts 補回 plan_credits_starter/standard/pro 三個 key，前台方案卡片點數正式連動後台。
+- 後台設定頁面移除「今日加贈」欄位（金流 notify 仍會加贈，只是前台不揭露）。
 ✅ mediaUrl 圖片渲染修復完成（已確認 2026/05/27）：app/chat/gallery/[id]/page.tsx、app/chat/default/[characterId]/page.tsx、app/chat/default-group/page.tsx 三個聊天室均已補齊 mediaUrl 欄位定義和氣泡渲染邏輯，上傳圖片可正常顯示。
 ✅ 所有聊天室訊息區背景色統一（2026/05/19）：bg-black（純黑），涵蓋單人/群組/預設單人/預設群組/gallery 五個聊天室
 ✅ 所有聊天室 textarea 輸入框內部背景色統一（2026/05/19）：bg-black，涵蓋五個聊天室

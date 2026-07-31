@@ -1654,6 +1654,63 @@ localStorage.setItem(key, '1');
               </div>
             )}
 
+{/* [DNA_PATCH_START] 上傳照片鎖定角色 */}
+            {!lockedCharacterUrl && (
+              <div className="px-4 py-3 bg-white/4 border border-white/10 rounded-2xl mb-2">
+                <p className="text-white/60 text-xs font-bold mb-2">📷 已有角色照片？上傳直接鎖定</p>
+                <label className="block w-full py-2.5 bg-[#89f5a2]/10 border border-[#89f5a2]/30 rounded-xl text-[#89f5a2] text-xs font-black text-center cursor-pointer hover:bg-[#89f5a2]/20 transition-all active:scale-95">
+                  選擇照片上傳
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setToastMessage("🔄 上傳中，請稍候...");
+                      setShowToast(true);
+                      try {
+                        const reader = new FileReader();
+                        const base64 = await new Promise<string>((res, rej) => {
+                          reader.onload = () => res(reader.result as string);
+                          reader.onerror = () => rej(new Error("讀取失敗"));
+                          reader.readAsDataURL(file);
+                        });
+                        const uploadRes = await fetch("/api/upload-image", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ imageUrl: base64, email: session?.user?.email }),
+                        });
+                        const data = await uploadRes.json();
+                        if (data.url) {
+                          await fetch("/api/user/save-locked-character", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ email: session?.user?.email ?? '', url: data.url }),
+                          });
+                          localStorage.setItem('locked_character', data.url);
+                          setLockedCharacterUrl(data.url);
+                          const matched = savedCharacters.find((c: any) => c.image_url === data.url);
+                          if (matched) setLockedCharacterId(matched.id);
+                          else setLockedCharacterId(null);
+                          setToastMessage("✅ 已自動鎖定此角色");
+                          setTimeout(() => setShowToast(false), 8000);
+                        } else {
+                          setToastMessage("❌ 上傳失敗，請重試");
+                          setTimeout(() => setShowToast(false), 8000);
+                        }
+                      } catch {
+                        setToastMessage("❌ 上傳失敗，請重試");
+                        setTimeout(() => setShowToast(false), 8000);
+                      }
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
+              </div>
+            )}
+            {/* [DNA_PATCH_END] */}
+
             {/* Step 2：角色人設 */}
             {(() => {
               const isOpen = activeStep === 2;

@@ -258,3 +258,4 @@ AI 自拍媒體類型與扣點：
 - 推薦賺點 Modal：顯示專屬介紹碼、一鍵複製介紹碼/連結、三方案獎勵對照（從 admin_settings 動態抓取）
 - ReferralModal 已移至 GlobalHeader.tsx 統一管理，所有頁面均可開啟，不再依賴 page.tsx 事件監聽
 - ✅ 分潤系統全流程確認正常（2026/05/11）：notify/route.ts TradeSha驗證、防重複payment_logs、動態讀取referral_credits_${plan}、寫入referral_logs 均正確。ReferralModal 顯示邏輯正確。settings-public/route.ts 讀取三個方案分潤點數正確。admin_settings 表需先初始化才能正常運作（見 DNA_TECH.md）。
+✅ 藍新 notify 付款入帳全流程驗證正常（2026/06/02）：環境變數、AES解密、JSON解析、DB寫入、點數更新全部確認正常。前台付款成功後右上角點數自動刷新。
